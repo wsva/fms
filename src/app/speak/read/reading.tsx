@@ -165,7 +165,7 @@ export default function Page({ email }: Props) {
                         }}
                     >
                         {stateChapterList.map((v) => (
-                            <SelectItem key={v.uuid}>{v.name}</SelectItem>
+                            <SelectItem key={v.uuid}>{v.order_num}&nbsp;{v.name}</SelectItem>
                         ))}
                     </Select>
                     <div className='flex flex-row gap-1'>
