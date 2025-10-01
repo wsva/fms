@@ -83,25 +83,13 @@ export default function TopNav({ session }: Props) {
     }
 
     useEffect(() => {
-        let isRecording = false;
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === 'F2' && !isRecording && !stateProcessing) {
-                e.preventDefault();
-                isRecording = true;
-                toggleRecordingLocal("start");
-            }
-        };
-        const handleKeyUp = (e: KeyboardEvent) => {
-            // 这里不能添加 isF2Pressed == true 这个条件，否则就无法触发
-            // 不知道原因，可能跟异步有关
             if (e.code === 'F2') {
-                isRecording = false;
-                toggleRecordingLocal("stop");
+                e.preventDefault();
+                toggleRecordingLocal("toggle");
             }
         };
-
         window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
 
         let blinkTimer: NodeJS.Timeout | null = null;
         if (stateRecording) {
@@ -117,13 +105,12 @@ export default function TopNav({ session }: Props) {
             setStateSTTAvailable(available)
         }
         checkSTT()
-        const sttTimer = setInterval(checkSTT, 60000);
+        const sttTimer = setInterval(checkSTT, 30000);
 
         return () => {
             if (blinkTimer) clearInterval(blinkTimer);
             clearInterval(sttTimer);
             window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
         };
     }, [stateRecording, stateProcessing, stateSTTAvailable]);
 
@@ -200,7 +187,7 @@ export default function TopNav({ session }: Props) {
                                 </Button>
                             </Tooltip>
                         }
-                        value={stateSTTAvailable ? stateSTT || "Voice Access: hold F2 to activate" : "service not available"}
+                        value={stateSTTAvailable ? stateSTT || "Voice Access: F2 to activate" : "service not available"}
                     />
                 </NavbarContent>
 
