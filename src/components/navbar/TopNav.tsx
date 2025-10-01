@@ -12,6 +12,7 @@ import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
 import { startRecording, stopRecording, toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
+import { checkSTTServiceStatus } from "@/app/actions/audio";
 
 type Props = {
     session: Session | null
@@ -23,6 +24,7 @@ export default function TopNav({ session }: Props) {
     const [stateRecording, setStateRecording] = React.useState(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSTT, setStateSTT] = React.useState<string>("");
+    const [stateSTTAvailable, setStateSTTAvailable] = React.useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
@@ -30,6 +32,10 @@ export default function TopNav({ session }: Props) {
     const router = useRouter();
 
     const toggleRecordingLocal = (action: "start" | "stop" | "toggle") => {
+        if (!stateSTTAvailable) {
+            return
+        }
+
         const handleLog = (log: string) => {
             setStateSTT(log);
         }
@@ -97,21 +103,29 @@ export default function TopNav({ session }: Props) {
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
-        let timer: NodeJS.Timeout | null = null;
+        let blinkTimer: NodeJS.Timeout | null = null;
         if (stateRecording) {
-            timer = setInterval(() => {
+            blinkTimer = setInterval(() => {
                 setStateColor(prev => (prev === "success" ? "warning" : "success"));
             }, 200);
         } else {
             setStateColor("default");
         }
 
+        const checkSTT = async () => {
+            const available = await checkSTTServiceStatus();
+            setStateSTTAvailable(available)
+        }
+        checkSTT()
+        const sttTimer = setInterval(checkSTT, 1000);
+
         return () => {
-            if (timer) clearInterval(timer);
+            if (blinkTimer) clearInterval(blinkTimer);
+            clearInterval(sttTimer);
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [stateRecording, stateProcessing]);
+    }, [stateRecording, stateProcessing, stateSTTAvailable]);
 
     return (
         <>
@@ -172,20 +186,24 @@ export default function TopNav({ session }: Props) {
                     {/* <NavLink href='/card/test' label='Test' /> */}
                 </NavbarContent>
 
+
                 <NavbarContent justify='center'>
                     <Input className="mx-0 w-[60vw] lg:w-[30vw]"
+                        disabled={!stateSTTAvailable}
                         startContent={
                             <Tooltip content="Shortcuts: F2 to activate">
                                 <Button isIconOnly size="sm" color={stateColor}
+                                    disabled={!stateSTTAvailable}
                                     onPress={() => toggleRecordingLocal("toggle")}
                                 >
                                     {stateRecording ? <MdMic size={24} /> : <MdMicOff size={24} />}
                                 </Button>
                             </Tooltip>
                         }
-                        value={stateSTT || "Voice Access: F2 to activate"}
+                        value={stateSTTAvailable ? stateSTT || "Voice Access: F2 to activate" : "service not available"}
                     />
                 </NavbarContent>
+
 
                 <NavbarContent justify='end'>
                     {session?.user ? (
