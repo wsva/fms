@@ -5,7 +5,7 @@ import { Action } from "@/lib/types";
 import { voice_access_action } from '@prisma/client';
 
 function parseAction(action_db: voice_access_action): Action {
-    let payloadMap: Map<string, string> = new Map();
+    const payloadMap: Map<string, string> = new Map();
     try {
         const obj = JSON.parse(action_db.payload);
         Object.entries(obj).forEach(([key, value]) => payloadMap.set(key, value as string));
