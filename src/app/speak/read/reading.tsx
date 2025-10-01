@@ -50,6 +50,44 @@ export default function Page({ email }: Props) {
         setStateSentenceList((prev) => prev.filter((item) => item.uuid !== uuid));
     }
 
+    const handleSave = async () => {
+        try {
+            await Promise.all(
+                stateSentenceList.map(async (v, i) => {
+                    if (v.modified_fs && !!v.audioBlob) {
+                        const resultFs = await saveAudio(v.audioBlob, "reading", `${v.uuid}.wav`);
+                        if (resultFs.status === "error") {
+                            throw new Error("save audio failed");
+                        }
+                    }
+                    if (v.modified_db) {
+                        const resultDb = await saveSentence({
+                            uuid: v.uuid,
+                            chapter_uuid: stateChapter,
+                            order_num: i,
+                            original: v.original,
+                            recognized: v.recognized,
+                            audio_path: `/data/reading/${v.uuid}.wav`,
+                            created_by: email,
+                            created_at: new Date(),
+                            updated_at: new Date(),
+                        });
+                        if (resultDb.status === "error") {
+                            throw new Error("save sentence failed");
+                        }
+                    }
+                    return true; // 表示这一条成功
+                })
+            );
+
+            // 全部成功
+            toast.success("All sentences saved successfully!");
+        } catch (err: any) {
+            // 任意一个失败会进入这里
+            toast.error(err.message || "Failed to save sentences");
+        }
+    }
+
     const toggleRecordingLocal = () => {
         const handleLog = (log: string) => {
             console.log(log)
@@ -199,35 +237,7 @@ export default function Page({ email }: Props) {
                 >
                     {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
                 </Button>
-                <Button variant='solid' color='primary' onPress={() => {
-                    stateSentenceList.forEach(async (v, i) => {
-                        if (v.modified_fs && !!v.audioBlob) {
-                            const resultFs = await saveAudio(v.audioBlob, "reading", `${v.uuid}.wav`)
-                            if (resultFs.status === "error") {
-                                toast.error('save audio failed')
-                                return
-                            }
-                        }
-                        if (v.modified_db) {
-                            const resultDb = await saveSentence({
-                                uuid: v.uuid,
-                                chapter_uuid: stateChapter,
-                                order_num: i,
-                                original: v.original,
-                                recognized: v.recognized,
-                                audio_path: `reading/${v.uuid}.wav`,
-                                created_by: email,
-                                created_at: new Date(),
-                                updated_at: new Date(),
-                            })
-                            if (resultDb.status === "error") {
-                                toast.error('save sentence failed')
-                                return
-                            }
-                        }
-                    })
-                }}
-                >
+                <Button variant='solid' color='primary' onPress={handleSave}>
                     save all sentences
                 </Button>
             </div>
