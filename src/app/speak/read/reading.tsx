@@ -126,7 +126,7 @@ export default function Page({ email }: Props) {
                     <div className='flex flex-row gap-1'>
                         <Popover placement='bottom' classNames={{ content: 'bg-slate-200' }} >
                             <PopoverTrigger>
-                                <Chip>new</Chip>
+                                <Button size="sm" radius="full">new</Button>
                             </PopoverTrigger>
                             <PopoverContent>
                                 <div className=''>
@@ -134,8 +134,8 @@ export default function Page({ email }: Props) {
                                 </div>
                             </PopoverContent>
                         </Popover>
-                        <Chip
-                            onClick={async () => {
+                        <Button size="sm" radius="full"
+                            onPress={async () => {
                                 const resultBook = await getBookAll(email)
                                 if (resultBook.status === "success") {
                                     setStateBookList(resultBook.data)
@@ -143,7 +143,7 @@ export default function Page({ email }: Props) {
                             }}
                         >
                             refresh
-                        </Chip>
+                        </Button>
                     </div>
                 </div>
 
@@ -171,7 +171,7 @@ export default function Page({ email }: Props) {
                     <div className='flex flex-row gap-1'>
                         <Popover placement='bottom' classNames={{ content: 'bg-slate-200' }} >
                             <PopoverTrigger>
-                                <Chip>new</Chip>
+                                <Button size="sm" radius="full">new</Button>
                             </PopoverTrigger>
                             <PopoverContent>
                                 <div className=''>
@@ -179,8 +179,8 @@ export default function Page({ email }: Props) {
                                 </div>
                             </PopoverContent>
                         </Popover>
-                        <Chip
-                            onClick={async () => {
+                        <Button size="sm" radius="full"
+                            onPress={async () => {
                                 const resultChapter = await getChapterAll(stateBook)
                                 if (resultChapter.status === "success") {
                                     setStateChapterList(resultChapter.data)
@@ -188,7 +188,7 @@ export default function Page({ email }: Props) {
                             }}
                         >
                             refresh
-                        </Chip>
+                        </Button>
                     </div>
                 </div>
             </div>
