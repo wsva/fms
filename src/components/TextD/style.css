@@ -1,0 +1,63 @@
+.cover-text-pre {
+    border: 3px solid #888;
+    box-shadow: 0px 0px 0px #eee;
+    background-color: rgb(200, 200, 200);
+    padding: 0 0 2px 0;
+    margin: 5px 0 5px 0;
+    overflow: auto;
+    cursor: default;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    text-indent: 0;
+    white-space: pre-wrap;
+    /*css-3*/
+    white-space: -moz-pre-wrap;
+    /*Mozilla,since1999*/
+    white-space: -pre-wrap;
+    /*Opera4-6*/
+    white-space: -o-pre-wrap;
+    /*Opera7*/
+    word-wrap: break-word;
+    /*InternetExplorer5.5+*/
+
+    /*允许单词内断行*/
+    /* 这两个在技术上是一样的, 为了兼容了浏览器两个都加上 */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+
+    -ms-word-break: break-all;
+    /* 这个的使用在web-kit中有些危险，他可能会截断所有东西 */
+    word-break: break-all;
+    /* Instead use this non-standard one: */
+    word-break: break-word;
+
+    /* 如果浏览器支持的话增加一个连接符(Blink不支持) */
+    -ms-hyphens: auto;
+    -moz-hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+}
+
+.cover-text-code {
+    /*从translate.google.com原文处找到的字体*/
+    font-family: Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+    font-size: 20pt;
+    line-height: 1.2;
+}
+
+.cover-text-code > span.cover {
+    color: rgb(200, 200, 200);
+    /*与pre中的background-color一致，实现隐藏文字的效果*/
+    border-bottom: 3px solid brown;
+    /*通过设置font-size和vertical-align也能实现border-bottom向上提的效果*/
+    /*font-size: 80%;
+    vertical-align: top;*/
+}
+
+.cover-text-code > span.odd {
+    border-bottom: 3px solid blue;
+}
+
+.cover-text-code > span.cover:hover {
+    color: inherit;
+}

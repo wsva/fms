@@ -1,0 +1,45 @@
+<div className='flex flex-row my-5 items-center'>
+                <div className='mr-2 text-sm'>familiarity feedback</div>
+                <Tooltip content='strange' placement='top' color='primary'>
+                    <Button variant='bordered' color='primary' className='mr-2'
+                        onClick={() => { setCardFamiliarity(user_id, item.uuid, 1) }}
+                    >
+                        1
+                    </Button>
+                </Tooltip>
+                <Tooltip content='known' placement='top' color='primary'>
+                    <Button variant='bordered' color='primary' className='mr-2'
+                        onClick={() => { setCardFamiliarity(user_id, item.uuid, 2) }}
+                    >
+                        2
+                    </Button>
+                </Tooltip>
+                <Tooltip content='familiar' placement='top' color='primary'>
+                    <Button variant='bordered' color='primary' className='mr-2'
+                        onClick={() => { setCardFamiliarity(user_id, item.uuid, 3) }}
+                    >
+                        3
+                    </Button>
+                </Tooltip>
+                <Tooltip content='skilled' placement='top' color='warning'>
+                    <Button variant='bordered' color='warning' className='mr-2'
+                        onClick={() => { setCardFamiliarity(user_id, item.uuid, 4) }}
+                    >
+                        4
+                    </Button>
+                </Tooltip>
+                <Tooltip content='practiced' placement='top' color='warning'>
+                    <Button variant='bordered' color='warning' className='mr-2'
+                        onClick={() => { setCardFamiliarity(user_id, item.uuid, 5) }}
+                    >
+                        5
+                    </Button>
+                </Tooltip>
+                <Tooltip content='never appear again' placement='top' color='success'>
+                    <Button variant='bordered' color='success' className='mr-2'
+                        onClick={() => { setCardFamiliarity(user_id, item.uuid, 6) }}
+                    >
+                        6
+                    </Button>
+                </Tooltip>
+            </div>

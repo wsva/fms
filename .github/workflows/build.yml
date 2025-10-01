@@ -1,0 +1,57 @@
+name: Build and upgrade Next.js app
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.19.0
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma Client
+        run: |
+          cd src
+          npm exec prisma@6.16.2 generate
+
+      - name: Build Next.js project
+        run: |
+          npm run build
+          sed -i "s/BUILD_TIME/$(date +"%Y%m%d_%H%M%S")/g" deployment.yaml
+
+      - name: Configure Git for build repo
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@users.noreply.github.com"
+
+      - name: Clone build repo
+        env:
+          BUILD_REPO_PAT: ${{ secrets.BUILD_REPO_PAT }}
+        run: |
+          git clone https://x-access-token:${BUILD_REPO_PAT}@github.com/wsva/fms_build.git fms_build
+
+      - name: Copy build artifacts to build repo
+        run: |
+          rsync -av --delete --exclude '.git/' .next/standalone/ fms_build/
+          cp -r .next/static/ fms_build/.next/
+          mkdir -p fms_build/kustomize/
+          cp deployment.yaml fms_build/kustomize/
+          
+      - name: Commit and push changes
+        working-directory: fms_build
+        run: |
+          git add .
+          git commit -m "Update from workflow: $GITHUB_RUN_ID" || echo "No changes to commit"
+          git push -u origin main

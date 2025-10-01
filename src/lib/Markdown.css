@@ -1,0 +1,109 @@
+/*
+Markdown HTML
+*/
+
+.MD {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; /* 设置垂直间距为 0.25rem，即 space-y-1 */
+}
+
+.MD h1 {
+  font-size: 125% /* 20px */;
+  line-height: 1.75rem /* 28px */;
+  font-weight: 700;
+  color: blue;
+  display: flex;
+  align-items: center;
+}
+
+.MD h1::before {
+  content: "🟦 ";
+  color: blue;
+  font-size: 0.6em;
+  margin-right: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.MD h2 {
+  font-size: 125% /* 20px */;
+  font-weight: 500;
+  color: blue;
+  display: flex;
+  align-items: center;
+}
+
+.MD h2::before {
+  content: "🟦🟦 ";
+  color: blue;
+  font-size: 0.5em;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.MD h3 {
+  font-size: 125% /* 20px */;
+  font-weight: 300;
+  color: blue;
+  display: flex;
+  align-items: center;
+}
+
+.MD h3::before {
+  content: "🟦🟦🟦 ";
+  color: blue;
+  font-size: 0.5em;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.MD p {
+  line-height: 1;
+  padding-bottom: 10px;
+}
+
+.MD a {
+  color: #0070f3;
+  text-decoration: none;
+}
+
+.MD a:hover {
+  text-decoration: underline;
+}
+
+.MD pre {
+  background-color: rgb(209 213 219);
+  padding: 2px;
+  margin: 5px 0 5px 0;
+  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  text-indent: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.MD code {
+  font-family: Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+}
+
+.MD table {
+  border-collapse: collapse;
+}
+
+.MD th, td {
+    border: 2px solid #aaa;
+    word-break: break-all;
+    word-wrap: break-word;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.MD td {
+    min-width: 8%;
+    max-width: 15%;
+}

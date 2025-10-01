@@ -1,0 +1,73 @@
+import React, { useState, useRef, useEffect } from "react";
+import WaveSurfer from 'wavesurfer.js';
+import WavesurferPlayer from '@wavesurfer/react';
+import LinearProgress from "@mui/material/LinearProgress";
+import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
+import Typography from "@mui/material/Typography";
+import { useTheme } from "@mui/material/styles";
+import { throttle } from "throttle-typescript";
+
+const classFocus = "focus:bg-orange-400 focus:border-2 focus:border-gray-400 focus:border-solid focus:rounded";
+
+type Props = {
+    audio?: HTMLAudioElement
+}
+
+export default function WaveformAudio({ audio }: Props) {
+    const [loading, setLoading] = useState(true);
+    const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [wavesurfer, setWavesurfer] = useState<WaveSurfer>();
+    const [playing, setPlaying] = useState(false);
+
+    const theme = useTheme();
+
+    const toTimeString = (time: number) => {
+        const date = new Date();
+        date.setHours(0);
+        date.setMinutes(0);
+        date.setSeconds(time);
+        return date.toTimeString().slice(3, 8);
+    }
+
+    const onPlayPause = () => {
+        wavesurfer && wavesurfer.playPause();
+    }
+
+    return (
+        <div className={`w-full flex flex-col items-center justify-center py-1 ${classFocus}`}
+            tabIndex={1}
+            onMouseOver={(ev) => {
+                (ev.target as HTMLAudioElement).focus();
+            }}
+        >
+            <div className="flex flex-row w-full bg-cyan-400 rounded-full items-center justify-between"
+                style={{ height: "50px" }}
+            >
+                <div className="grow">
+                    <WavesurferPlayer
+                        height={50}
+                        waveColor="green"
+                        url={src}
+                        onLoad={() => setLoading(true)}
+                        onLoading={(_, percent) => setProgress(percent)}
+                        onReady={(ws, duration) => {
+                            setWavesurfer(ws);
+                            setDuration(duration);
+                            setLoading(false);
+                            setPlaying(false);
+                        }}
+                        onPlay={() => setPlaying(true)}
+                        onPause={() => setPlaying(false)}
+                        onSeeking={throttle((_, currentTime) => setCurrentTime(currentTime), 100)}
+                        onTimeupdate={throttle((_, currentTime) => setCurrentTime(currentTime), 100)}
+                    />
+                </div>
+            </div>
+        </div >
+    );
+}
