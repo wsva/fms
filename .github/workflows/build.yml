@@ -46,6 +46,7 @@ jobs:
         run: |
           rsync -av --delete --exclude '.git/' .next/standalone/ fms_build/
           cp -r .next/static/ fms_build/.next/
+          cp -r public fms_build/
           mkdir -p fms_build/kustomize/
           cp deployment.yaml fms_build/kustomize/
           

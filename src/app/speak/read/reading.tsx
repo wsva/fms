@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { Button, Chip, Popover, PopoverContent, PopoverTrigger, Select, SelectItem } from "@heroui/react";
+import { Button, Popover, PopoverContent, PopoverTrigger, Select, SelectItem } from "@heroui/react";
 import Sentence from './sentence';
 import { toggleRecording } from '@/lib/recording';
 import { ActionResult, read_sentence_browser } from '@/lib/types';
@@ -82,9 +82,9 @@ export default function Page({ email }: Props) {
 
             // 全部成功
             toast.success("All sentences saved successfully!");
-        } catch (err: any) {
+        } catch (err: unknown) {
             // 任意一个失败会进入这里
-            toast.error(err.message || "Failed to save sentences");
+            toast.error((err as Error).message || "Failed to save sentences");
         }
     }
 
