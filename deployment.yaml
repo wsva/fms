@@ -32,17 +32,17 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
+                  name: secrets
                   key: POSTGRES_PASSWORD
             - name: AUTH_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: node-auth-secret
+                  name: secrets
                   key: AUTH_SECRET
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: redis-secret
+                  name: secrets
                   key: REDIS_PASSWORD
           command:
             - sh
@@ -51,7 +51,7 @@ spec:
               set -e
               git clone https://github.com/wsva/fms_next.js_build /home/node/app
               cd /home/node/app
-              echo 'DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/alsdb' > .env
+              echo 'DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/fmsdb' > .env
               echo 'NEXTAUTH_URL=https://yanansworkshop.site' >> .env
               echo 'AUTH_SECRET="${AUTH_SECRET}"' >> .env
               echo 'AUTH_TRUST_HOST=true' >> .env
