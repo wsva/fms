@@ -62,12 +62,13 @@ spec:
               echo 'OAUTH2_CLIENT_ID=als_next.js' >> .env
               echo 'REDIS_HOST=redis' >> .env
               echo 'REDIS_PASSWORD=${REDIS_PASSWORD}' >> .env
+              ln -s /home/node/torsten_voice /home/node/app/public/torsten_voice
               node server.js
           ports:
             - containerPort: 3000
           volumeMounts:
             - name: torsten-voice
-              mountPath: /home/node/app/public/torsten_voice
+              mountPath: /home/node/torsten_voice
       volumes:
         - name: torsten-voice
           hostPath:
