@@ -117,7 +117,7 @@ export default function TopNav({ session }: Props) {
             setStateSTTAvailable(available)
         }
         checkSTT()
-        const sttTimer = setInterval(checkSTT, 1000);
+        const sttTimer = setInterval(checkSTT, 60000);
 
         return () => {
             if (blinkTimer) clearInterval(blinkTimer);
@@ -200,7 +200,7 @@ export default function TopNav({ session }: Props) {
                                 </Button>
                             </Tooltip>
                         }
-                        value={stateSTTAvailable ? stateSTT || "Voice Access: F2 to activate" : "service not available"}
+                        value={stateSTTAvailable ? stateSTT || "Voice Access: hold F2 to activate" : "service not available"}
                     />
                 </NavbarContent>
 
