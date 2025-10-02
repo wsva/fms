@@ -1,13 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 
-export async function GET(
-    req: Request,
-    { params }: { params: { filename: string[] } }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ filename: string[] }> }) {
+    const p = await context.params;
     try {
-        const filePath = path.join("/fms_data", ...params.filename);
+        const filePath = path.join("/fms_data", ...p.filename);
         const fileBuffer = await readFile(filePath);
 
         return new NextResponse(new Uint8Array(fileBuffer), {
