@@ -68,7 +68,7 @@ export default function Page({ email }: Props) {
                             order_num: i,
                             original: v.original,
                             recognized: v.recognized,
-                            audio_path: `/data/reading/${v.uuid}.wav`,
+                            audio_path: `/api/data/reading/${v.uuid}.wav`,
                             created_by: email,
                             created_at: new Date(),
                             updated_at: new Date(),

@@ -62,7 +62,7 @@ export async function recognizeAudio(audioBlob: Blob, timeoutMs = 30000): Promis
 export async function saveAudio(blob: Blob, filedir: string, filename: string): Promise<ActionResult<boolean>> {
     try {
         const buffer = Buffer.from(await blob.arrayBuffer());
-        const filePath = path.join(process.cwd(), 'public', 'data', filedir, filename);
+        const filePath = path.join('/fms_data', filedir, filename);
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
         fs.writeFileSync(filePath, buffer);
 
