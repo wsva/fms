@@ -11,8 +11,16 @@ export default async function Home() {
       />
       <div className="m-4 col-span-full"></div>
 
-      <IndexItem href='/word/store' label='Word Store'
-        description='Words from public subtitles, ordered by frequency.'
+      <IndexItem href='/speak/read' label='Reading'
+        description='Read a book sentence by sentence.'
+      />
+      <IndexItem href='/speak/ask' label='Asking'
+        description='Ask or answer a question'
+      />
+      <div className="m-4 col-span-full"></div>
+
+      <IndexItem href='/word/top' label='Top Words'
+        description='Top words ordered by frequency.'
       />
       <IndexItem href='/card/add?edit=y' label='New Card'
         description='Card is for words, sentences or others.'

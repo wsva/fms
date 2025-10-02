@@ -14,6 +14,27 @@ import { startRecording, stopRecording, toggleRecording } from "@/lib/recording"
 import { ActionResult } from "@/lib/types";
 import { checkSTTServiceStatus } from "@/app/actions/audio";
 
+export const ChevronDown = () => {
+    return (
+        <svg
+            fill="none"
+            height={16}
+            viewBox="0 0 24 24"
+            width={16}
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                d="m19.92 8.95-6.52 6.52c-.77.77-2.03.77-2.8 0L4.08 8.95"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeMiterlimit={10}
+                strokeWidth={1.5}
+            />
+        </svg>
+    );
+};
+
 type Props = {
     session: Session | null
 }
@@ -150,15 +171,26 @@ export default function TopNav({ session }: Props) {
                     </NavbarBrand>
                 </NavbarContent>
 
-                <NavbarContent className="hidden lg:flex gap-4" justify="start">
+                <NavbarContent className="hidden lg:flex gap-3" justify="start">
                     {menuList.map((group, index) => (
-                        <Dropdown key={`group-${index}`}>
+                        <Dropdown key={`group-${index}`} className="bg-sand-200">
                             <NavbarItem>
-                                <DropdownTrigger>{group.name}</DropdownTrigger>
+                                <DropdownTrigger>
+                                    <Button
+                                        disableRipple
+                                        className="p-0 bg-transparent data-[hover=true]:bg-transparent gap-0 min-w-0"
+                                        endContent={<ChevronDown />}
+                                        radius="sm"
+                                        variant="light"
+                                    >
+                                        {group.name}
+                                    </Button>
+                                </DropdownTrigger>
                             </NavbarItem>
                             <DropdownMenu>
                                 {group.items.map((item) => (
                                     <DropdownItem
+                                        className="bg-sand-300"
                                         href={item.href}
                                         key={item.key}
                                         description={item.description}

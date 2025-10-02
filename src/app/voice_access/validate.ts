@@ -40,7 +40,7 @@ export const validatePayload = (action_type: string, payload: string): string =>
             default:
                 return "unknown action_type"
         }
-    } catch (e) {
+    } catch {
         return "invalid payload";
     }
 }

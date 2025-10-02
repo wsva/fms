@@ -1,5 +1,5 @@
 import { ActionResult } from "./types";
-import { sendAudioAndWaitForResult } from "@/app/actions/audio";
+import { recognizeAudio } from "@/app/actions/audio";
 
 export const startRecording = async (
     stateRecording: boolean,
@@ -40,7 +40,7 @@ export const startRecording = async (
                 handleLog("Sending to STT service, waiting for response...");
                 setStateProcessing(true);
                 try {
-                    const result = await sendAudioAndWaitForResult(audioBlob, 30000);
+                    const result = await recognizeAudio(audioBlob, 30000);
                     handleLog("STT recognition completed.");
                     handleResult({ status: "success", data: result }, audioBlob);
                 } catch (err) {

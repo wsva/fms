@@ -22,7 +22,7 @@ export async function checkSTTServiceStatus(): Promise<boolean> {
     }
 }
 
-export async function sendAudioAndWaitForResult(audioBlob: Blob, timeoutMs = 30000): Promise<string> {
+export async function recognizeAudio(audioBlob: Blob, timeoutMs = 30000): Promise<string> {
     const uuid = getUUID();
 
     // 1. 连接 Redis

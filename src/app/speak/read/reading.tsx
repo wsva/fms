@@ -12,7 +12,6 @@ import { getBookAll, getChapterAll, getSentenceAll, saveSentence } from '@/app/a
 import Chapter from './chapter';
 import { toast } from 'react-toastify';
 import { checkSTTServiceStatus, saveAudio } from '@/app/actions/audio';
-import { MdRefresh } from 'react-icons/md';
 
 type Props = {
     email: string;
@@ -140,7 +139,7 @@ export default function Page({ email }: Props) {
         loadData()
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.ctrlKey && event.key.toLowerCase() === 'y' && !(!stateRecording && stateProcessing)) {
+            if (event.code === "Space" && !(!stateRecording && stateProcessing)) {
                 event.preventDefault();
                 toggleRecordingLocal();
             }
@@ -261,7 +260,7 @@ export default function Page({ email }: Props) {
                         toggleRecordingLocal()
                     }}
                 >
-                    {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
+                    {stateRecording ? '⏹ Stop Recording (SPACE)' : '🎤 Speak a Sentence (SPACE)'}
                 </Button>
                 <Button variant='solid' color='primary' onPress={handleSave}>
                     save all sentences
