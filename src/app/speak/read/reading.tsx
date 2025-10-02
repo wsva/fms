@@ -139,7 +139,7 @@ export default function Page({ email }: Props) {
         loadData()
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.code === "Space") {
+            if (event.ctrlKey && event.code === "y") {
                 event.preventDefault();
                 const btn = document.getElementById("button-toggel-recording") as HTMLButtonElement | null;
                 btn?.click();
@@ -261,7 +261,7 @@ export default function Page({ email }: Props) {
                         }
                     }}
                 >
-                    {stateRecording ? '⏹ Stop Recording (SPACE)' : '🎤 Speak a Sentence (SPACE)'}
+                    {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
                 </Button>
                 <Button variant='solid' color='primary' onPress={handleSave}>
                     save all sentences
