@@ -139,7 +139,7 @@ export default function Page({ email }: Props) {
         loadData()
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.ctrlKey && event.code === "KeyY") {
+            if (event.ctrlKey && event.key === "y") {
                 event.preventDefault();
                 const btn = document.getElementById("button-toggel-recording") as HTMLButtonElement | null;
                 btn?.click();
