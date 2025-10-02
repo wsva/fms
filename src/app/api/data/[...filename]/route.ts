@@ -11,6 +11,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ fil
         return new NextResponse(new Uint8Array(fileBuffer), {
             headers: {
                 "Content-Type": "application/octet-stream",
+                "Content-Disposition": "inline",
             },
         });
     } catch {
