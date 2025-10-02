@@ -62,7 +62,7 @@ export const Item = ({ row }: { row: torsten_voice }) => {
     }
 
     const handleDownloadOriginal = () => {
-        const audioUrl = `/torsten_voice/${row.source}/${row.id}.wav`;
+        const audioUrl = `/api/data/torsten_voice/${row.source}/${row.id}.wav`;
         window.open(audioUrl, '_blank');
     }
 
@@ -71,7 +71,7 @@ export const Item = ({ row }: { row: torsten_voice }) => {
             <div className="card-subtitle mb-2 text-muted flex justify-between items-center">
                 <Button isIconOnly variant='light' size="sm"
                     onPress={() => {
-                        const audio = new Audio(`/torsten_voice/${row.source}/${row.id}.wav`);
+                        const audio = new Audio(`/api/data/torsten_voice/${row.source}/${row.id}.wav`);
                         audio.play();
                     }}
                 >

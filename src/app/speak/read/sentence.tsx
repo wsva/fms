@@ -118,7 +118,7 @@ export default function Sentence({ rsp, onUpdate, onDelete }: Props) {
                     <Tooltip placement='bottom' content="download audio">
                         <Button isIconOnly variant='light' as={Link}
                             href={!!rsp.audioBlob ? URL.createObjectURL(rsp.audioBlob!) : rsp.audio_path}
-                            download={`sentence.wav`}
+                            download={`reading_${rsp.uuid}.wav`}
                         >
                             <MdDownloadForOffline size={30} />
                         </Button>
