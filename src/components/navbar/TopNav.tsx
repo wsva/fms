@@ -82,6 +82,11 @@ export default function TopNav({ session }: Props) {
         }
     }
 
+    const checkSTT = async () => {
+        const available = await checkSTTServiceStatus();
+        setStateSTTAvailable(available)
+    }
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.code === 'F2') {
@@ -100,10 +105,6 @@ export default function TopNav({ session }: Props) {
             setStateColor("default");
         }
 
-        const checkSTT = async () => {
-            const available = await checkSTTServiceStatus();
-            setStateSTTAvailable(available)
-        }
         checkSTT()
         const sttTimer = setInterval(checkSTT, 30000);
 
@@ -188,12 +189,7 @@ export default function TopNav({ session }: Props) {
                             </Tooltip>
                         }
                         endContent={
-                            <Button isIconOnly size="sm" variant="light"
-                                onPress={async () => {
-                                    const available = await checkSTTServiceStatus();
-                                    setStateSTTAvailable(available)
-                                }}
-                            >
+                            <Button isIconOnly size="sm" variant="light" onPress={checkSTT}>
                                 <MdRefresh size={24} />
                             </Button>
                         }

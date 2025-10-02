@@ -35,7 +35,7 @@ export const startRecording = async (
             recorderRef.current = null;
 
             if (!recognize) {
-                handleResult({ status: "success", data: "recognize=false" }, audioBlob);
+                handleResult({ status: "success", data: "" }, audioBlob);
             } else {
                 handleLog("Sending to STT service, waiting for response...");
                 setStateProcessing(true);
@@ -54,7 +54,6 @@ export const startRecording = async (
 
         recorder.start();
         setStateRecording(true);
-        setStateProcessing(true);
         handleLog("Recording...");
     } catch (err) {
         console.error(err);

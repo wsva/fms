@@ -11,7 +11,8 @@ import Book from './book';
 import { getBookAll, getChapterAll, getSentenceAll, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
 import { toast } from 'react-toastify';
-import { saveAudio } from '@/app/actions/audio';
+import { checkSTTServiceStatus, saveAudio } from '@/app/actions/audio';
+import { MdRefresh } from 'react-icons/md';
 
 type Props = {
     email: string;
@@ -25,6 +26,7 @@ export default function Page({ email }: Props) {
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSentenceList, setStateSentenceList] = useState<read_sentence_browser[]>([]);
+    const [stateSTTAvailable, setStateSTTAvailable] = React.useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
@@ -114,10 +116,15 @@ export default function Page({ email }: Props) {
             setStateRecording,
             sentenceChunks,
             recorderRef,
-            true,
+            stateSTTAvailable,
             setStateProcessing,
             handleLog,
             handleResult);
+    }
+
+    const checkSTT = async () => {
+        const available = await checkSTTServiceStatus();
+        setStateSTTAvailable(available)
     }
 
     useEffect(() => {
@@ -138,13 +145,25 @@ export default function Page({ email }: Props) {
                 toggleRecordingLocal();
             }
         };
-
         document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
+
+        checkSTT()
+        const sttTimer = setInterval(checkSTT, 30000);
+
+        return () => {
+            clearInterval(sttTimer);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
     }, [stateRecording, stateProcessing]);
 
     return (
         <div>
+            <div className='flex flex-row gap-4 my-2'>
+                <Button size="sm" variant='solid' color={stateSTTAvailable ? "success" : "danger"} onPress={checkSTT}>
+                    Speech-to-Text service is {stateSTTAvailable ? "available" : "not available"}, click to refresh
+                </Button>
+            </div>
+
             <div className='flex flex-row gap-4 my-2'>
                 <div className='flex flex-col gap-1 w-full'>
                     <Select label="Select book"
@@ -158,7 +177,7 @@ export default function Page({ email }: Props) {
                         }}
                     >
                         {stateBookList.map((v) => (
-                            <SelectItem key={v.uuid}>{v.name}</SelectItem>
+                            <SelectItem key={v.uuid} textValue={v.name}>{v.name}</SelectItem>
                         ))}
                     </Select>
                     <div className='flex flex-row gap-1'>
@@ -203,7 +222,7 @@ export default function Page({ email }: Props) {
                         }}
                     >
                         {stateChapterList.map((v) => (
-                            <SelectItem key={v.uuid}>{v.order_num}&nbsp;{v.name}</SelectItem>
+                            <SelectItem key={v.uuid} textValue={`${v.order_num}, ${v.name}`}>{v.order_num}, {v.name}</SelectItem>
                         ))}
                     </Select>
                     <div className='flex flex-row gap-1'>
@@ -232,8 +251,15 @@ export default function Page({ email }: Props) {
             </div>
 
             <div className='flex flex-row items-center justify-center gap-4 my-2'>
-                <Button variant='solid' color='primary' onPress={toggleRecordingLocal}
+                <Button variant='solid' color='primary'
                     isDisabled={!stateRecording && stateProcessing}
+                    onPress={() => {
+                        if (!stateBook || !stateChapter) {
+                            alert("select book and chapter first")
+                            return
+                        }
+                        toggleRecordingLocal()
+                    }}
                 >
                     {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
                 </Button>
