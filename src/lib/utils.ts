@@ -69,3 +69,13 @@ export const getWeightedRandom = (weights: number[]) => {
             break;
     return i
 }
+
+export const indentJsonString = (jsonStr: string, spaces: number = 2): string => {
+    try {
+        const obj = JSON.parse(jsonStr);
+        return JSON.stringify(obj, null, spaces);
+    } catch (e) {
+        console.error("Invalid JSON string:", e);
+        return jsonStr; // 如果不是合法 JSON，原样返回
+    }
+}

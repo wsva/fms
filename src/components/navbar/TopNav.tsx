@@ -7,7 +7,7 @@ import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react"
 import { Session } from "next-auth"
-import { MdMic, MdMicOff, MdRefresh } from "react-icons/md";
+import { MdHelpOutline, MdMic, MdMicOff, MdRefresh } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
 import { startRecording, stopRecording, toggleRecording } from "@/lib/recording";
@@ -189,9 +189,14 @@ export default function TopNav({ session }: Props) {
                             </Tooltip>
                         }
                         endContent={
-                            <Button isIconOnly size="sm" variant="light" onPress={checkSTT}>
-                                <MdRefresh size={24} />
-                            </Button>
+                            <div className="flex flex-row items-center gap-0">
+                                <Button isIconOnly size="sm" variant="light" onPress={checkSTT}>
+                                    <MdRefresh size={24} />
+                                </Button>
+                                <Button isIconOnly size="sm" variant="light" onPress={() => router.push("/voice_access")}>
+                                    <MdHelpOutline size={24} />
+                                </Button>
+                            </div>
                         }
                         value={stateSTTAvailable ? stateSTT || "Voice Access: F2 to activate" : "service not available"}
                     />

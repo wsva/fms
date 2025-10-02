@@ -366,7 +366,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                     </>
                 )}
             </div>
-        </form >
+        </form>
     )
 }
 

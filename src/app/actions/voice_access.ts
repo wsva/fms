@@ -1,8 +1,33 @@
 'use server';
 
 import { prisma } from "@/lib/prisma";
-import { Action } from "@/lib/types";
-import { voice_access_action } from '@prisma/client';
+import { Action, ActionResult } from "@/lib/types";
+import { voice_access_action, voice_access_command } from '@prisma/client';
+
+export async function getActionAll(): Promise<ActionResult<voice_access_action[]>> {
+    try {
+        const result = await prisma.voice_access_action.findMany({
+            orderBy: { name: 'asc' }
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
+
+export async function getCommandByAction(action_uuid: string): Promise<ActionResult<voice_access_command[]>> {
+    try {
+        const result = await prisma.voice_access_command.findMany({
+            where: { action_uuid },
+            orderBy: { language: 'asc' }
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
 
 function parseAction(action_db: voice_access_action): Action {
     const payloadMap: Map<string, string> = new Map();

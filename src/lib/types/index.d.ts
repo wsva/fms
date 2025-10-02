@@ -55,4 +55,4 @@ type Action =
     | { action_type: "click", elementId: string } // click a button on the page
     | { action_type: "function", name: string } // call a function
     | { action_type: "keydown", event: KeyboardEventInit } // press key
-    | { action_type: "invalid", info: string }; // press key
+    | { action_type: "invalid", info: string };
