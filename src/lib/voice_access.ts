@@ -1,12 +1,7 @@
 import { initCmdMap } from "@/app/actions/voice_access";
-import { Action } from "./types";
-
-let cmdMap: Map<string, Action> = new Map();
 
 export const handleSTTResult = async (result: string) => {
-    if (cmdMap.size === 0) {
-        cmdMap = await initCmdMap();
-    }
+    const cmdMap = await initCmdMap();
     const cmd = result.toLowerCase().trim().replaceAll(/[.,!?]/g, '')
     const action = cmdMap.get(cmd)
     if (!action || action.action_type === "invalid") {

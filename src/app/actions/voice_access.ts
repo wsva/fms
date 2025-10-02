@@ -68,9 +68,9 @@ export async function initCmdMap(): Promise<Map<string, Action>> {
     for (const v of resultC) {
         const action = actionMap.get(v.action_uuid);
         if (!action) {
-            actionMap.set(v.text.toLowerCase(), { action_type: "invalid", info: `uuid: ${v.uuid}, no action found` });
+            cmdMap.set(v.text.toLowerCase(), { action_type: "invalid", info: `uuid: ${v.uuid}, no action found` });
         } else {
-            actionMap.set(v.text.toLowerCase(), action);
+            cmdMap.set(v.text.toLowerCase(), action);
         }
     }
 
