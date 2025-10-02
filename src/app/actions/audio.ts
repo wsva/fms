@@ -48,7 +48,7 @@ export async function recognizeAudio(audioBlob: Blob, timeoutMs = 30000): Promis
             }
             if (Date.now() - start > timeoutMs) {
                 await client.quit();
-                reject(new Error("Recognition timed out"));
+                resolve("Recognition timed out");
                 return;
             }
             setTimeout(check, 500); // 每 500ms 检查一次
