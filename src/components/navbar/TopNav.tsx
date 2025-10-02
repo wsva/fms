@@ -52,7 +52,7 @@ export default function TopNav({ session }: Props) {
 
     const router = useRouter();
 
-    const toggleRecordingLocal = (action: "start" | "stop" | "toggle") => {
+    const toggleRecordingLocal = () => {
         if (!stateSTTAvailable) {
             return
         }
@@ -69,38 +69,16 @@ export default function TopNav({ session }: Props) {
             }
         }
 
-        switch (action) {
-            case "start":
-                startRecording(
-                    stateRecording,
-                    setStateRecording,
-                    sentenceChunks,
-                    recorderRef,
-                    true,
-                    setStateProcessing,
-                    handleLog,
-                    handleResult,
-                );
-                break
-            case "stop":
-                stopRecording(
-                    stateRecording,
-                    recorderRef,
-                );
-                break
-            case "toggle":
-                toggleRecording(
-                    stateRecording,
-                    setStateRecording,
-                    sentenceChunks,
-                    recorderRef,
-                    true,
-                    setStateProcessing,
-                    handleLog,
-                    handleResult,
-                );
-                break
-        }
+        toggleRecording(
+            stateRecording,
+            setStateRecording,
+            sentenceChunks,
+            recorderRef,
+            true,
+            setStateProcessing,
+            handleLog,
+            handleResult,
+        );
     }
 
     const checkSTT = async () => {
@@ -135,7 +113,7 @@ export default function TopNav({ session }: Props) {
             clearInterval(sttTimer);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [stateRecording, stateProcessing, stateSTTAvailable]);
+    }, [stateRecording, stateSTTAvailable]);
 
     return (
         <>
@@ -215,7 +193,7 @@ export default function TopNav({ session }: Props) {
                             <Tooltip content="F2" placement="right">
                                 <Button isIconOnly size="sm" color={stateColor} id="button-voice-access"
                                     disabled={!stateSTTAvailable}
-                                    onPress={() => toggleRecordingLocal("toggle")}
+                                    onPress={toggleRecordingLocal}
                                 >
                                     {stateRecording ? <MdMic size={24} /> : <MdMicOff size={24} />}
                                 </Button>
