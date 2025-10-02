@@ -139,9 +139,10 @@ export default function Page({ email }: Props) {
         loadData()
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.code === "Space" && !(!stateRecording && stateProcessing)) {
+            if (event.code === "Space") {
                 event.preventDefault();
-                toggleRecordingLocal();
+                const btn = document.getElementById("button-toggel-recording") as HTMLButtonElement | null;
+                btn?.click();
             }
         };
         document.addEventListener('keydown', handleKeyDown);
@@ -250,14 +251,14 @@ export default function Page({ email }: Props) {
             </div>
 
             <div className='flex flex-row items-center justify-center gap-4 my-2'>
-                <Button variant='solid' color='primary'
+                <Button variant='solid' color='primary' id='button-toggel-recording'
                     isDisabled={!stateRecording && stateProcessing}
                     onPress={() => {
                         if (!stateBook || !stateChapter) {
                             alert("select book and chapter first")
-                            return
+                        } else {
+                            toggleRecordingLocal()
                         }
-                        toggleRecordingLocal()
                     }}
                 >
                     {stateRecording ? '⏹ Stop Recording (SPACE)' : '🎤 Speak a Sentence (SPACE)'}

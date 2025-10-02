@@ -14,7 +14,7 @@ import { startRecording, stopRecording, toggleRecording } from "@/lib/recording"
 import { ActionResult } from "@/lib/types";
 import { checkSTTServiceStatus } from "@/app/actions/audio";
 
-export const ChevronDown = () => {
+const ChevronDown = () => {
     return (
         <svg
             fill="none"
@@ -112,7 +112,8 @@ export default function TopNav({ session }: Props) {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.code === 'F2') {
                 e.preventDefault();
-                toggleRecordingLocal("toggle");
+                const btn = document.getElementById("button-voice-access") as HTMLButtonElement | null;
+                btn?.click();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -211,8 +212,8 @@ export default function TopNav({ session }: Props) {
                     <Input className="mx-0 w-[60vw] lg:w-[30vw]"
                         disabled={!stateSTTAvailable}
                         startContent={
-                            <Tooltip content="Shortcuts: F2 to activate">
-                                <Button isIconOnly size="sm" color={stateColor}
+                            <Tooltip content="F2" placement="right">
+                                <Button isIconOnly size="sm" color={stateColor} id="button-voice-access"
                                     disabled={!stateSTTAvailable}
                                     onPress={() => toggleRecordingLocal("toggle")}
                                 >
