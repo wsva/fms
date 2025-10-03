@@ -73,6 +73,17 @@ export async function saveAudio(blob: Blob, filedir: string, filename: string): 
     }
 }
 
+export async function removeAudio(filedir: string, filename: string): Promise<ActionResult<boolean>> {
+    try {
+        const filePath = path.join('/fms_data', filedir, filename);
+        fs.promises.unlink(filePath);
+        return { status: "success", data: true }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
+
 function safeText(text: string) {
     return text
         .replaceAll('&', '&amp;')

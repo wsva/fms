@@ -1,22 +1,26 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
-import { Button, Input, Link, Tooltip } from "@heroui/react";
-import { MdDelete, MdDone, MdDownloadForOffline, MdEdit, MdHelpOutline, MdMic, MdMicOff, MdPlayCircle, MdSave } from 'react-icons/md'
+import { Button, Link, Textarea, Tooltip } from "@heroui/react";
+import { MdDelete, MdDownloadForOffline, MdEdit, MdEditOff, MdMic, MdMicOff, MdOutlineSave, MdPlayCircle } from 'react-icons/md'
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { toggleRecording } from '@/lib/recording';
 import { toast } from 'react-toastify';
+import { escapeHtml, lcs, tokenize } from './utils';
+import { removeAudio, saveAudio } from '@/app/actions/audio';
+import { removeSentence, saveSentence } from '@/app/actions/reading';
 
 type Props = {
-    rsp: read_sentence_browser;
-    onUpdate: (uuid: string, original: string, recognized: string, audioBlob: Blob | null) => void;
+    user_id: string;
+    item: read_sentence_browser;
+    onUpdate: (new_item: read_sentence_browser) => void;
     onDelete: (uuid: string) => void;
 }
 
-export default function Sentence({ rsp, onUpdate, onDelete }: Props) {
+export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
     const [stateRecording, setStateRecording] = useState<boolean>(false);
-    const [stateProcessing, setStateProcessing] = React.useState(false);
-    const [stateOriginal, setStateOriginal] = useState<string>(rsp.original);
+    const [stateProcessing, setStateProcessing] = useState(false);
+    const [stateData, setStateData] = useState<read_sentence_browser>(item);
     const [stateEdit, setStateEdit] = useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
@@ -28,7 +32,14 @@ export default function Sentence({ rsp, onUpdate, onDelete }: Props) {
         }
         const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
             if (result.status === 'success') {
-                onUpdate(rsp.uuid, "", result.data, audioBlob)
+                setStateData({
+                    ...stateData,
+                    recognized: result.data,
+                    audioBlob: audioBlob,
+                    modified_db: true,
+                    modified_fs: true,
+                })
+                onUpdate(stateData)
             } else {
                 toast.error(result.error as string)
             }
@@ -45,82 +56,148 @@ export default function Sentence({ rsp, onUpdate, onDelete }: Props) {
             handleResult);
     }
 
+    const highlightDifferences = (original: string, recognized: string) => {
+        const originalTokens = tokenize(original);
+        const recognizedTokens = tokenize(recognized);
+        const { matchesB } = lcs(originalTokens, recognizedTokens);
+        const matchSetB = new Set(matchesB);
+
+        return recognizedTokens.map((t, idx) => {
+            if (matchSetB.has(idx)) {
+                return <span key={idx}>{escapeHtml(t)}</span>;
+            } else {
+                return <span key={idx} style={{ "background": "#ffeb3b" }}>{escapeHtml(t)}</span>;
+            }
+        });
+    }
+
+    const handleSave = async () => {
+        if (stateData.modified_fs && !!stateData.audioBlob) {
+            const result = await saveAudio(stateData.audioBlob, "reading", `${stateData.uuid}.wav`);
+            if (result.status === "success") {
+                toast.success("save audio success");
+                setStateData({ ...stateData, modified_fs: false })
+            } else {
+                toast.error("save audio failed");
+            }
+        }
+        if (stateData.modified_db) {
+            const result = await saveSentence({
+                ...stateData,
+                audio_path: `/api/data/reading/${stateData.uuid}.wav`,
+                created_by: user_id,
+                created_at: stateData.created_at || new Date(),
+                updated_at: new Date(),
+            });
+            if (result.status === "success") {
+                toast.success("save sentence success");
+                setStateData({ ...stateData, modified_db: false })
+            } else {
+                toast.error("save sentence failed");
+            }
+        }
+        onUpdate(stateData)
+    }
+
+    const handleDelete = async () => {
+        const resultFs = await removeAudio("reading", `${stateData.uuid}.wav`);
+        if (resultFs.status === "success") {
+            toast.success("save audio success");
+        } else {
+            toast.error("save audio failed");
+            return
+        }
+        const resultDb = await removeSentence(stateData.uuid);
+        if (resultDb.status === "success") {
+            toast.success("save sentence success");
+        } else {
+            toast.error("save sentence failed");
+            return
+        }
+
+        onDelete(stateData.uuid)
+    }
+
     return (
         <div className='flex flex-col w-full gap-2 p-2 bg-sand-300'>
-            <div className="flex flex-row items-center justify-between gap-2 w-full">
-                <Tooltip placement='right' content="original text, should be corrected">
-                    <MdHelpOutline size={24} />
-                </Tooltip>
-                {stateEdit ? (
-                    <Input
-                        size='lg'
-                        className='w-full'
-                        onValueChange={(v) => {
-                            setStateOriginal(v)
-                            onUpdate(rsp.uuid, v, "", null)
-                        }}
-                        value={stateOriginal}
-                    />
-                ) : (
-                    <div className="flex-grow whitespace-normal break-words text-2xl">{stateOriginal}</div>
-                )}
-                <div className="flex flex-row">
-                    <Tooltip content={stateEdit ? "done" : "edit"}>
-                        <Button isIconOnly variant='light'
-                            onPress={() => setStateEdit(!stateEdit)}
-                        >
-                            {stateEdit ? <MdDone size={30} /> : <MdEdit size={30} />}
-                        </Button>
-                    </Tooltip>
-                    <Tooltip content="delete">
-                        <Button isIconOnly variant='light'
-                            onPress={() => onDelete(rsp.uuid)}
-                        >
-                            <MdDelete size={30} />
-                        </Button>
-                    </Tooltip>
+            <div className='flex flex-col'>
+                <div className="text-md text-gray-400">recognized from audio:</div>
+                <div className="text-xl">
+                    {highlightDifferences(stateData.original, stateData.recognized)}
                 </div>
             </div>
 
-            <div className="flex flex-row items-center justify-between gap-2 w-full">
-                <Tooltip placement='right' content="recognised from audio">
-                    <MdHelpOutline size={24} />
-                </Tooltip>
-                <div className="flex-grow whitespace-normal break-words text-2xl">{rsp.recognized}</div>
-                <div className="flex flex-row">
-                    <Tooltip placement='bottom' content="re-record">
-                        <Button isIconOnly variant='light'
-                            isDisabled={!stateRecording && stateProcessing}
-                            onPress={toggleRecordingLocal}
-                        >
-                            {stateRecording ? <MdMic size={30} /> : <MdMicOff size={30} />}
-
-                        </Button>
-                    </Tooltip>
-                    <Tooltip placement='bottom' content="play audio">
-                        <Button isIconOnly variant='light'
-                            onPress={() => {
-                                const audioUrl = !!rsp.audioBlob ? URL.createObjectURL(rsp.audioBlob!) : rsp.audio_path
-                                const audio = new Audio(audioUrl);
-                                audio.play();
-                            }}
-                        >
-                            <MdPlayCircle size={30} />
-                        </Button>
-                    </Tooltip>
-                    <Tooltip placement='bottom' content="download audio">
-                        <Button isIconOnly variant='light' as={Link}
-                            href={!!rsp.audioBlob ? URL.createObjectURL(rsp.audioBlob!) : rsp.audio_path}
-                            download={`reading_${rsp.uuid}.wav`}
-                        >
-                            <MdDownloadForOffline size={30} />
-                        </Button>
-                    </Tooltip>
+            {stateEdit ? (
+                <Textarea label="original text" size='lg' className='w-full'
+                    classNames={{
+                        inputWrapper: "bg-sand-200",
+                        input: "text-xl",
+                    }}
+                    defaultValue={stateData.original}
+                    onChange={(e) => {
+                        setStateData({
+                            ...stateData,
+                            original: e.target.value,
+                            modified_db: true,
+                        })
+                        onUpdate(stateData)
+                    }}
+                />
+            ) : (
+                <div className='flex flex-col'>
+                    <div className="text-md text-gray-400">original text:</div>
+                    <div className="text-xl">{stateData.original}</div>
                 </div>
-            </div>
-            {(rsp.modified_db || rsp.modified_fs) && (
-                <div className='text-red-500'>unsaved</div>
             )}
+
+            <div className="flex flex-row items-center justify-start">
+                <div className='text-red-500 w-full'>
+                    {(stateData.modified_db || stateData.modified_fs) ? "unsaved" : ""}
+                </div>
+                <Tooltip placement='bottom' content="edit original">
+                    <Button isIconOnly variant='light' onPress={() => setStateEdit(!stateEdit)} >
+                        {stateEdit ? <MdEditOff size={30} /> : <MdEdit size={30} />}
+                    </Button>
+                </Tooltip>
+                <Tooltip placement='bottom' content="save">
+                    <Button isIconOnly variant='light' onPress={handleSave} >
+                        <MdOutlineSave size={30} />
+                    </Button>
+                </Tooltip>
+                <Tooltip placement='bottom' content="re-record">
+                    <Button isIconOnly variant='light'
+                        isDisabled={!stateRecording && stateProcessing}
+                        onPress={toggleRecordingLocal}
+                    >
+                        {stateRecording ? <MdMic size={30} /> : <MdMicOff size={30} />}
+
+                    </Button>
+                </Tooltip>
+                <Tooltip placement='bottom' content="play audio">
+                    <Button isIconOnly variant='light'
+                        onPress={() => {
+                            const audioUrl = !!stateData.audioBlob ? URL.createObjectURL(stateData.audioBlob!) : stateData.audio_path
+                            const audio = new Audio(audioUrl);
+                            audio.play();
+                        }}
+                    >
+                        <MdPlayCircle size={30} />
+                    </Button>
+                </Tooltip>
+                <Tooltip placement='bottom' content="download audio">
+                    <Button isIconOnly variant='light' as={Link}
+                        href={!!stateData.audioBlob ? URL.createObjectURL(stateData.audioBlob!) : stateData.audio_path}
+                        download={`reading_${stateData.uuid}.wav`}
+                    >
+                        <MdDownloadForOffline size={30} />
+                    </Button>
+                </Tooltip>
+                <Tooltip content="delete">
+                    <Button isIconOnly variant='light' onPress={handleDelete} >
+                        <MdDelete size={30} />
+                    </Button>
+                </Tooltip>
+            </div>
         </div>
     )
 }

@@ -43,17 +43,10 @@ export default function Page({ email }: Props) {
         setStateLoading(false)
     }
 
-    const handleUpdate = (uuid: string, original: string, recognized: string, audioBlob: Blob | null) => {
+    const handleUpdate = (new_item: read_sentence_browser) => {
         setStateSentenceList((prev) => {
             return prev.map((item) =>
-                item.uuid === uuid ? {
-                    ...item,
-                    original: !!original ? original : item.original,
-                    recognized: !!recognized ? recognized : item.recognized,
-                    audioBlob: !!audioBlob ? audioBlob : item.audioBlob,
-                    modified_db: !!original ? true : false,
-                    modified_fs: !!audioBlob ? true : false,
-                } : item
+                item.uuid === new_item.uuid ? new_item : item
             );
         });
     }
@@ -220,7 +213,8 @@ export default function Page({ email }: Props) {
                     {[...stateSentenceList].reverse().map((v) =>
                         <Sentence
                             key={v.uuid}
-                            rsp={v}
+                            user_id={email}
+                            item={v}
                             onUpdate={handleUpdate}
                             onDelete={handleDelete}
                         />
