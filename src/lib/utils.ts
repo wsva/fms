@@ -85,10 +85,8 @@ export const indentJsonString = (jsonStr: string, spaces: number = 2): string =>
  */
 export function toExactType<T extends object>(obj: Partial<T>): T {
   const result = {} as T;
-  for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      (result as any)[key] = obj[key];
-    }
-  }
+  (Object.keys(obj) as (keyof T)[]).forEach((key) => {
+    result[key] = obj[key]!;
+  });
   return result;
 }
