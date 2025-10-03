@@ -79,3 +79,15 @@ export const indentJsonString = (jsonStr: string, spaces: number = 2): string =>
         return jsonStr; // 如果不是合法 JSON，原样返回
     }
 }
+
+/**
+ * 类型收缩，裁剪掉额外字段
+ */
+export function toExactType<T>(obj: any): T {
+    const keys = Object.keys(obj) as (keyof T)[];
+    const result: Partial<T> = {};
+    for (const key of keys) {
+        if (key in obj) result[key] = obj[key];
+    }
+    return result as T;
+}

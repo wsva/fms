@@ -46,7 +46,7 @@ export default function Sentence({ rsp, onUpdate, onDelete }: Props) {
     }
 
     return (
-        <div className='flex flex-col gap-2 p-2 bg-sand-300'>
+        <div className='flex flex-col w-full gap-2 p-2 bg-sand-300'>
             <div className="flex flex-row items-center justify-between gap-2 w-full">
                 <Tooltip placement='right' content="original text, should be corrected">
                     <MdHelpOutline size={24} />
@@ -70,13 +70,6 @@ export default function Sentence({ rsp, onUpdate, onDelete }: Props) {
                             onPress={() => setStateEdit(!stateEdit)}
                         >
                             {stateEdit ? <MdDone size={30} /> : <MdEdit size={30} />}
-                        </Button>
-                    </Tooltip>
-                    <Tooltip content="save">
-                        <Button isIconOnly variant='light'
-                            onPress={() => { }}
-                        >
-                            <MdSave size={30} />
                         </Button>
                     </Tooltip>
                     <Tooltip content="delete">
@@ -125,6 +118,9 @@ export default function Sentence({ rsp, onUpdate, onDelete }: Props) {
                     </Tooltip>
                 </div>
             </div>
+            {(rsp.modified_db || rsp.modified_fs) && (
+                <div className='text-red-500'>unsaved</div>
+            )}
         </div>
     )
 }

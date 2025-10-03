@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { Button, Popover, PopoverContent, PopoverTrigger, Select, SelectItem } from "@heroui/react";
+import { Button, Popover, PopoverContent, PopoverTrigger, Select, SelectItem, Spinner } from "@heroui/react";
 import Sentence from './sentence';
 import { toggleRecording } from '@/lib/recording';
 import { ActionResult, read_sentence_browser } from '@/lib/types';
-import { getUUID } from '@/lib/utils';
+import { getUUID, toExactType } from '@/lib/utils';
 import { read_book, read_chapter } from '@prisma/client';
 import Book from './book';
 import { getBookAll, getChapterAll, getSentenceAll, saveSentence } from '@/app/actions/reading';
@@ -26,17 +26,49 @@ export default function Page({ email }: Props) {
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSentenceList, setStateSentenceList] = useState<read_sentence_browser[]>([]);
     const [stateSTTAvailable, setStateSTTAvailable] = React.useState<boolean>(false);
+    const [stateLoading, setStateLoading] = React.useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
+
+    const loadBook = async (user_id: string) => {
+        setStateLoading(true)
+        const resultBook = await getBookAll(user_id)
+        if (resultBook.status === "success") {
+            setStateBookList(resultBook.data)
+        }
+        setStateLoading(false)
+    }
+
+    const loadChapter = async (book_uuid: string) => {
+        setStateLoading(true)
+        const resultChapter = await getChapterAll(book_uuid)
+        if (resultChapter.status === "success") {
+            setStateChapterList(resultChapter.data)
+        }
+        setStateLoading(false)
+    }
+
+    const loadSentence = async (chapter_uuid: string) => {
+        setStateLoading(true)
+        const result = await getSentenceAll(chapter_uuid)
+        if (result.status === "success") {
+            setStateSentenceList(result.data.map((v) => {
+                return {
+                    ...toExactType<read_sentence_browser>(v),
+                    modified_db: false,
+                    modified_fs: false,
+                }
+            }))
+        }
+        setStateLoading(false)
+    }
 
     const handleUpdate = (uuid: string, original: string, recognized: string, audioBlob: Blob | null) => {
         setStateSentenceList((prev) => {
             return prev.map((item) =>
                 item.uuid === uuid ? {
-                    uuid: item.uuid,
-                    chapter_uuid: item.chapter_uuid,
-                    order_num: item.order_num,
+                    ...item,
                     original: !!original ? original : item.original,
                     recognized: !!recognized ? recognized : item.recognized,
                     audioBlob: !!audioBlob ? audioBlob : item.audioBlob,
@@ -51,7 +83,7 @@ export default function Page({ email }: Props) {
         setStateSentenceList((prev) => prev.filter((item) => item.uuid !== uuid));
     }
 
-    const handleSave = async () => {
+    const handleSaveAll = async () => {
         try {
             await Promise.all(
                 stateSentenceList.map(async (v, i) => {
@@ -59,6 +91,15 @@ export default function Page({ email }: Props) {
                         const resultFs = await saveAudio(v.audioBlob, "reading", `${v.uuid}.wav`);
                         if (resultFs.status === "error") {
                             throw new Error("save audio failed");
+                        } else {
+                            setStateSentenceList((prev) => {
+                                return prev.map((item) =>
+                                    item.uuid === v.uuid ? {
+                                        ...item,
+                                        modified_fs: false,
+                                    } : item
+                                );
+                            });
                         }
                     }
                     if (v.modified_db) {
@@ -70,11 +111,20 @@ export default function Page({ email }: Props) {
                             recognized: v.recognized,
                             audio_path: `/api/data/reading/${v.uuid}.wav`,
                             created_by: email,
-                            created_at: new Date(),
+                            created_at: v.created_at || new Date(),
                             updated_at: new Date(),
                         });
                         if (resultDb.status === "error") {
                             throw new Error("save sentence failed");
+                        } else {
+                            setStateSentenceList((prev) => {
+                                return prev.map((item) =>
+                                    item.uuid === v.uuid ? {
+                                        ...item,
+                                        modified_db: false,
+                                    } : item
+                                );
+                            });
                         }
                     }
                     return true; // 表示这一条成功
@@ -128,12 +178,8 @@ export default function Page({ email }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
-            if (!email) {
-                return
-            }
-            const resultBook = await getBookAll(email)
-            if (resultBook.status === "success") {
-                setStateBookList(resultBook.data)
+            if (email) {
+                await loadBook(email)
             }
         }
         loadData()
@@ -170,10 +216,7 @@ export default function Page({ email }: Props) {
                         onChange={async (e) => {
                             const book_uuid = e.target.value
                             setStateBook(book_uuid)
-                            const resultChapter = await getChapterAll(book_uuid)
-                            if (resultChapter.status === "success") {
-                                setStateChapterList(resultChapter.data)
-                            }
+                            await loadChapter(book_uuid)
                         }}
                     >
                         {stateBookList.map((v) => (
@@ -192,12 +235,7 @@ export default function Page({ email }: Props) {
                             </PopoverContent>
                         </Popover>
                         <Button size="sm" radius="full"
-                            onPress={async () => {
-                                const resultBook = await getBookAll(email)
-                                if (resultBook.status === "success") {
-                                    setStateBookList(resultBook.data)
-                                }
-                            }}
+                            onPress={async () => await loadBook(email)}
                         >
                             refresh
                         </Button>
@@ -209,16 +247,7 @@ export default function Page({ email }: Props) {
                         onChange={async (e) => {
                             const chapter_uuid = e.target.value
                             setStateChapter(chapter_uuid)
-                            const result = await getSentenceAll(chapter_uuid)
-                            if (result.status === "success") {
-                                setStateSentenceList(result.data.map((v) => {
-                                    return {
-                                        ...v,
-                                        modified_db: false,
-                                        modified_fs: false,
-                                    }
-                                }))
-                            }
+                            await loadSentence(chapter_uuid)
                         }}
                     >
                         {stateChapterList.map((v) => (
@@ -237,12 +266,7 @@ export default function Page({ email }: Props) {
                             </PopoverContent>
                         </Popover>
                         <Button size="sm" radius="full"
-                            onPress={async () => {
-                                const resultChapter = await getChapterAll(stateBook)
-                                if (resultChapter.status === "success") {
-                                    setStateChapterList(resultChapter.data)
-                                }
-                            }}
+                            onPress={async () => await loadChapter(stateBook)}
                         >
                             refresh
                         </Button>
@@ -263,15 +287,24 @@ export default function Page({ email }: Props) {
                 >
                     {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
                 </Button>
-                <Button variant='solid' color='primary' onPress={handleSave}>
+                <Button variant='solid' color='primary' onPress={handleSaveAll}>
                     save all sentences
                 </Button>
             </div>
 
+            {stateLoading && (
+                <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
+            )}
+
             {stateSentenceList.length > 0 && (
                 <div className="flex flex-col items-start justify-start w-full gap-2 my-8">
                     {[...stateSentenceList].reverse().map((v) =>
-                        <Sentence key={v.uuid} rsp={v} onUpdate={handleUpdate} onDelete={handleDelete} />
+                        <Sentence
+                            key={v.uuid}
+                            rsp={v}
+                            onUpdate={handleUpdate}
+                            onDelete={handleDelete}
+                        />
                     )}
                 </div>
             )}
