@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { getQuestion } from '@/app/actions/ask';
 
 type Props = {
-  params: Promise<{ slug: string }>
+  params: Promise<{ uuid: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 };
 
@@ -14,8 +14,8 @@ export default async function ExamplePage({ params }: Props) {
 
   const p = await params;
 
-  const result = (typeof p.slug === 'string' && p.slug !== 'add')
-    ? (await getQuestion(p.slug)) : undefined
+  const result = (typeof p.uuid === 'string' && p.uuid !== 'add')
+    ? (await getQuestion(p.uuid)) : undefined
 
   return (
     <>

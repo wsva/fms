@@ -1,5 +1,5 @@
 import CryptoJS from "crypto-js";
-import DOMPurify from "dompurify";
+import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 import { v4 as uuidv4 } from "uuid";
 

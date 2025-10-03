@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { getTag } from '@/app/actions/card';
 
 type Props = {
-  params: Promise<{ slug: string }>
+  params: Promise<{ uuid: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 };
 
@@ -13,8 +13,8 @@ export default async function ExamplePage({ params }: Props) {
   const email = session?.user?.email || '';
 
   const p = await params;
-  const result = (typeof p.slug === 'string' && p.slug !== 'add')
-    ? (await getTag(p.slug)) : undefined
+  const result = (typeof p.uuid === 'string' && p.uuid !== 'add')
+    ? (await getTag(p.uuid)) : undefined
 
   return (
     <>

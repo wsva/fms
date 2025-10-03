@@ -33,8 +33,12 @@ npm install uuid
 npm install -D @types/uuid
 npm install react-toastify
 npm install marked
-npm install dompurify
-npm install -D @types/dompurify
+
+# error: sanitize is not a function
+# npm install dompurify
+# npm install -D @types/dompurify
+npm install isomorphic-dompurify
+
 npm install crypto-js
 npm install -D @types/crypto-js
 npm install wretch

@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { getCard } from '@/app/actions/card';
 
 type Props = {
-  params: Promise<{ slug: string }>
+  params: Promise<{ uuid: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 };
 
@@ -23,8 +23,8 @@ export default async function ExamplePage({ params, searchParams }: Props) {
   const simple = 'simple' in sp
   const card = { question, suggestion, answer, note, tag_list_suggestion: tags.split(",") }
 
-  const result = (typeof p.slug === 'string' && p.slug !== 'add')
-    ? (await getCard(p.slug)) : undefined
+  const result = (typeof p.uuid === 'string' && p.uuid !== 'add')
+    ? (await getCard(p.uuid)) : undefined
 
   return (
     <>
