@@ -102,7 +102,7 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
                         </Button>
                     </div>
                     {stateData.map((v) => (
-                        <div className='flex flex-row items-center justify-start gap-2 bg-sand-300'>
+                        <div key={v.uuid} className='flex flex-row items-center justify-start gap-2 bg-sand-300'>
                             {v.order_num} - {v.name}
                             <Button size="sm" radius="full" onPress={() => handleDelete(v.uuid)}>
                                 delete
