@@ -45,14 +45,31 @@ export default function Page({ email }: Props) {
 
     const handleUpdate = (new_item: read_sentence_browser) => {
         setStateSentenceList((prev) => {
-            return prev.map((item) =>
-                item.uuid === new_item.uuid ? new_item : item
+            return prev.map((item, index) =>
+                item.uuid === new_item.uuid ? {
+                    ...new_item,
+                    order_num: index,
+                    modified_db: new_item.order_num === index,
+                } : {
+                    ...item,
+                    order_num: index,
+                    modified_db: item.order_num === index,
+                }
             );
         });
     }
 
     const handleDelete = (uuid: string) => {
         setStateSentenceList((prev) => prev.filter((item) => item.uuid !== uuid));
+        setStateSentenceList((prev) => {
+            return prev.map((item, index) => {
+                return {
+                    ...item,
+                    order_num: index,
+                    modified_db: item.order_num === index,
+                }
+            });
+        });
     }
 
     const handleSaveAll = async () => {
@@ -74,30 +91,26 @@ export default function Page({ email }: Props) {
                             });
                         }
                     }
-                    if (v.modified_db) {
-                        const resultDb = await saveSentence({
-                            uuid: v.uuid,
-                            chapter_uuid: stateChapter,
-                            order_num: i,
-                            original: v.original,
-                            recognized: v.recognized,
-                            audio_path: `/api/data/reading/${v.uuid}.wav`,
-                            created_by: email,
-                            created_at: v.created_at || new Date(),
-                            updated_at: new Date(),
+                    const resultDb = await saveSentence({
+                        ...v,
+                        chapter_uuid: stateChapter,
+                        order_num: i,
+                        audio_path: `/api/data/reading/${v.uuid}.wav`,
+                        created_by: email,
+                        created_at: v.created_at || new Date(),
+                        updated_at: new Date(),
+                    });
+                    if (resultDb.status === "error") {
+                        throw new Error("save sentence failed");
+                    } else {
+                        setStateSentenceList((prev) => {
+                            return prev.map((item) =>
+                                item.uuid === v.uuid ? {
+                                    ...item,
+                                    modified_db: false,
+                                } : item
+                            );
                         });
-                        if (resultDb.status === "error") {
-                            throw new Error("save sentence failed");
-                        } else {
-                            setStateSentenceList((prev) => {
-                                return prev.map((item) =>
-                                    item.uuid === v.uuid ? {
-                                        ...item,
-                                        modified_db: false,
-                                    } : item
-                                );
-                            });
-                        }
                     }
                     return true; // 表示这一条成功
                 })
