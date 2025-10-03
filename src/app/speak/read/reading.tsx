@@ -35,6 +35,8 @@ export default function Page({ email }: Props) {
             setStateSentenceList(result.data.map((v) => {
                 return {
                     ...toExactType<read_sentence_browser>(v),
+                    in_db: true,
+                    on_fs: true,
                     modified_db: false,
                     modified_fs: false,
                 }
@@ -85,6 +87,7 @@ export default function Page({ email }: Props) {
                                 return prev.map((item) =>
                                     item.uuid === v.uuid ? {
                                         ...item,
+                                        on_fs: true,
                                         modified_fs: false,
                                     } : item
                                 );
@@ -107,6 +110,7 @@ export default function Page({ email }: Props) {
                             return prev.map((item) =>
                                 item.uuid === v.uuid ? {
                                     ...item,
+                                    in_db: true,
                                     modified_db: false,
                                 } : item
                             );
@@ -137,6 +141,8 @@ export default function Page({ email }: Props) {
                     original: result.data,
                     recognized: result.data,
                     audioBlob: audioBlob,
+                    in_db: false,
+                    on_fs: false,
                     modified_db: true,
                     modified_fs: true,
                 }]);
@@ -188,7 +194,7 @@ export default function Page({ email }: Props) {
                 </Button>
             </div>
 
-            <div className='flex flex-row gap-4 my-2'>
+            <div className='flex flex-col md:flex-row gap-4 my-2'>
                 <Book user_id={email} onSelect={async (book_uuid: string) => {
                     setStateBook(book_uuid)
                 }} />

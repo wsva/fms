@@ -76,7 +76,7 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
             const result = await saveAudio(stateData.audioBlob, "reading", `${stateData.uuid}.wav`);
             if (result.status === "success") {
                 toast.success("save audio success");
-                setStateData({ ...stateData, modified_fs: false })
+                setStateData({ ...stateData, on_fs: true, modified_fs: false })
             } else {
                 toast.error("save audio failed");
             }
@@ -91,7 +91,7 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
             });
             if (result.status === "success") {
                 toast.success("save sentence success");
-                setStateData({ ...stateData, modified_db: false })
+                setStateData({ ...stateData, in_db: true, modified_db: false })
             } else {
                 toast.error("save sentence failed");
             }
@@ -100,21 +100,24 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
     }
 
     const handleDelete = async () => {
-        const resultFs = await removeAudio("reading", `${stateData.uuid}.wav`);
-        if (resultFs.status === "success") {
-            toast.success("save audio success");
-        } else {
-            toast.error("save audio failed");
-            return
+        if (stateData.on_fs) {
+            const result = await removeAudio("reading", `${stateData.uuid}.wav`);
+            if (result.status === "success") {
+                toast.success("delete audio success");
+            } else {
+                toast.error("delete audio failed");
+                return
+            }
         }
-        const resultDb = await removeSentence(stateData.uuid);
-        if (resultDb.status === "success") {
-            toast.success("save sentence success");
-        } else {
-            toast.error("save sentence failed");
-            return
+        if (stateData.in_db) {
+            const result = await removeSentence(stateData.uuid);
+            if (result.status === "success") {
+                toast.success("delete sentence success");
+            } else {
+                toast.error("delete sentence failed");
+                return
+            }
         }
-
         onDelete(stateData.uuid)
     }
 

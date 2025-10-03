@@ -39,6 +39,8 @@ type read_sentence_browser = {
     audioBlob?: Blob;
     audio_path?: string;
     created_at?: Date;
+    in_db: boolean;
+    on_fs: boolean;
     modified_db: boolean;
     modified_fs: boolean;
 }
