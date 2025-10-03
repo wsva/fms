@@ -1,59 +1,116 @@
-import { saveChapter } from '@/app/actions/reading';
+import { getChapterAll, removeChapter, saveChapter } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
-import { Input, Link } from "@heroui/react";
+import { Button, Input, Select, SelectItem, Spinner } from "@heroui/react";
 import { read_chapter } from '@prisma/client';
-import React from 'react'
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
 
 type Props = {
+    user_id: string;
     book_uuid: string;
-    email: string;
+    onSelect: (chapter_uuid: string) => Promise<void>;
 }
 
-export default function Chapter({ book_uuid, email }: Props) {
-    const { register, handleSubmit } = useForm<read_chapter>();
-    const [stateDisable, setStateDisable] = React.useState<boolean>(false);
+export default function Page({ user_id, book_uuid, onSelect }: Props) {
+    const [stateData, setStateBookList] = useState<read_chapter[]>([]);
+    const [stateOrder, setStateOrder] = useState<string>("");
+    const [stateName, setStateName] = useState<string>("");
+    const [stateEdit, setStateEdit] = useState<boolean>(false);
+    const [stateDisable, setStateDisable] = useState<boolean>(false);
 
-    const onSubmit = async (formData: read_chapter) => {
-        setStateDisable(true)
+    const loadData = async () => {
+        const result = await getChapterAll(book_uuid)
+        if (result.status === "success") {
+            setStateBookList(result.data)
+        }
+    }
+
+    const handleAdd = async () => {
+        if (!user_id) {
+            toast.error('not logged in')
+            return
+        }
         if (!book_uuid) {
             toast.error('no book selected')
-            setStateDisable(false)
             return
         }
-        if (!email) {
-            toast.error('not logged in')
-            setStateDisable(false)
-            return
-        }
+        setStateDisable(true)
         const result = await saveChapter({
-            ...formData,
             uuid: getUUID(),
             book_uuid: book_uuid,
-            order_num: parseInt(`${formData.order_num}`, 10),
-            created_by: email,
+            order_num: parseInt(stateOrder, 10),
+            name: stateName,
+            created_by: user_id,
             created_at: new Date(),
             updated_at: new Date(),
         })
         if (result.status === 'success') {
             toast.success('save chapter success')
+            setStateName("")
         } else {
             toast.error('save chapter failed')
-            setStateDisable(false)
-            return
         }
+        setStateDisable(false)
     }
 
+    const handleDelete = async (uuid: string) => {
+        setStateDisable(true)
+        const result = await removeChapter(uuid)
+        if (result.status === 'success') {
+            toast.success('delete chapter success')
+        } else {
+            toast.error('delete chapter failed')
+        }
+        setStateDisable(false)
+    }
+
+    useEffect(() => {
+        loadData()
+    }, [book_uuid, stateName]);
+
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
-            <div className='flex flex-col items-center gap-1'>
-                <Input label='Order' variant='bordered' type="number" size='sm' {...register('order_num')} />
-                <Input label='Name' variant='bordered' size='sm' {...register('name')} />
-                <Link as='button' isDisabled={stateDisable} type='submit' className='bg-blue-500 rounded-md text-slate-50 px-2'>
-                    add new chapter
-                </Link>
+        <div className='flex flex-col gap-1 w-full'>
+            <Select label="Select chapter"
+                onChange={async (e) => {
+                    const chapter_uuid = e.target.value
+                    await onSelect(chapter_uuid)
+                }}
+            >
+                {stateData.map((v) => (
+                    <SelectItem key={v.uuid} textValue={`${v.order_num}, ${v.name}`}>{v.order_num}, {v.name}</SelectItem>
+                ))}
+            </Select>
+            <div className='flex flex-row gap-1'>
+                <Button size="sm" radius="full" onPress={() => setStateEdit(!stateEdit)}>
+                    {stateEdit ? "finish" : "edit"}
+                </Button>
+                <Button size="sm" radius="full" onPress={loadData}>
+                    refresh
+                </Button>
             </div>
-        </form >
+            {stateEdit && (
+                <div className='flex flex-col gap-1 w-full'>
+                    <div className='flex flex-row items-center justify-start gap-2'>
+                        <Input label='Order' type="number" size='sm' className='w-1/5'
+                            onChange={(e) => setStateOrder(e.target.value)}
+                        />
+                        <Input label='Name of Book' size='sm'
+                            onChange={(e) => setStateName(e.target.value)}
+                        />
+                        <Button size="sm" radius="full" isDisabled={stateDisable} onPress={handleAdd}>
+                            add
+                        </Button>
+                    </div>
+                    {stateData.map((v) => (
+                        <div className='flex flex-row items-center justify-start gap-2 bg-sand-300'>
+                            {v.order_num} - {v.name}
+                            <Button size="sm" radius="full" onPress={() => handleDelete(v.uuid)}>
+                                delete
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     )
 }

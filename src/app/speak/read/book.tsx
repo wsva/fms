@@ -1,51 +1,106 @@
-import { saveBook } from '@/app/actions/reading';
+import { getBookAll, removeBook, saveBook } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
-import { Input, Link } from "@heroui/react";
+import { Button, Input, Select, SelectItem, Spinner } from "@heroui/react";
 import { read_book } from '@prisma/client';
-import React from 'react'
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
 
 type Props = {
-    email: string;
+    user_id: string;
+    onSelect: (book_uuid: string) => Promise<void>;
 }
 
-export default function Book({ email }: Props) {
-    const { register, handleSubmit } = useForm<read_book>();
-    const [stateDisable, setStateDisable] = React.useState<boolean>(false);
+export default function Page({ user_id, onSelect }: Props) {
+    const [stateData, setStateBookList] = useState<read_book[]>([]);
+    const [stateName, setStateName] = useState<string>("");
+    const [stateEdit, setStateEdit] = useState<boolean>(false);
+    const [stateDisable, setStateDisable] = useState<boolean>(false);
 
-    const onSubmit = async (formData: read_book) => {
-        setStateDisable(true)
-        if (!email) {
+    const loadData = async () => {
+        const result = await getBookAll(user_id)
+        if (result.status === "success") {
+            setStateBookList(result.data)
+        }
+    }
+
+    const handleAdd = async () => {
+        if (!user_id) {
             toast.error('not logged in')
-            setStateDisable(false)
             return
         }
+        setStateDisable(true)
         const result = await saveBook({
-            ...formData,
             uuid: getUUID(),
-            user_id: email,
-            created_by: email,
+            user_id: user_id,
+            name: stateName,
+            created_by: user_id,
             created_at: new Date(),
             updated_at: new Date(),
         })
         if (result.status === 'success') {
             toast.success('save book success')
+            setStateName("")
         } else {
             toast.error('save book failed')
-            setStateDisable(false)
-            return
         }
+        setStateDisable(false)
     }
 
+    const handleDelete = async (uuid: string) => {
+        setStateDisable(true)
+        const result = await removeBook(uuid)
+        if (result.status === 'success') {
+            toast.success('delete book success')
+        } else {
+            toast.error('delete book failed')
+        }
+        setStateDisable(false)
+    }
+
+    useEffect(() => {
+        loadData()
+    }, [stateName]);
+
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
-            <div className='flex flex-col items-center gap-1'>
-                <Input label='Name' variant='bordered' size='sm' {...register('name')} />
-                <Link as='button' isDisabled={stateDisable} type='submit' className='bg-blue-500 rounded-md text-slate-50 px-2'>
-                    add new book
-                </Link>
+        <div className='flex flex-col gap-1 w-full'>
+            <Select label="Select book"
+                onChange={async (e) => {
+                    const book_uuid = e.target.value
+                    await onSelect(book_uuid)
+                }}
+            >
+                {stateData.map((v) => (
+                    <SelectItem key={v.uuid} textValue={v.name}>{v.name}</SelectItem>
+                ))}
+            </Select>
+            <div className='flex flex-row gap-1'>
+                <Button size="sm" radius="full" onPress={() => setStateEdit(!stateEdit)}>
+                    {stateEdit ? "finish" : "edit"}
+                </Button>
+                <Button size="sm" radius="full" onPress={loadData}>
+                    refresh
+                </Button>
             </div>
-        </form >
+            {stateEdit && (
+                <div className='flex flex-col gap-1 w-full'>
+                    <div className='flex flex-row items-center justify-start gap-2'>
+                        <Input label='Name of Book' size='sm'
+                            onChange={(e) => setStateName(e.target.value)}
+                        />
+                        <Button size="sm" radius="full" isDisabled={stateDisable} onPress={handleAdd}>
+                            add
+                        </Button>
+                    </div>
+                    {stateData.map((v) => (
+                        <div className='flex flex-row items-center justify-start px-2 gap-2 bg-sand-300'>
+                            {v.name}
+                            <Button size="sm" radius="full" onPress={() => handleDelete(v.uuid)}>
+                                delete
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     )
 }

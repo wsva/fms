@@ -1,14 +1,13 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { Button, Popover, PopoverContent, PopoverTrigger, Select, SelectItem, Spinner } from "@heroui/react";
+import { Button, Spinner } from "@heroui/react";
 import Sentence from './sentence';
 import { toggleRecording } from '@/lib/recording';
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { getUUID, toExactType } from '@/lib/utils';
-import { read_book, read_chapter } from '@prisma/client';
 import Book from './book';
-import { getBookAll, getChapterAll, getSentenceAll, saveSentence } from '@/app/actions/reading';
+import { getSentenceAll, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
 import { toast } from 'react-toastify';
 import { checkSTTServiceStatus, saveAudio } from '@/app/actions/audio';
@@ -18,9 +17,7 @@ type Props = {
 }
 
 export default function Page({ email }: Props) {
-    const [stateBookList, setStateBookList] = useState<read_book[]>([]);
     const [stateBook, setStateBook] = useState<string>("");
-    const [stateChapterList, setStateChapterList] = useState<read_chapter[]>([]);
     const [stateChapter, setStateChapter] = useState<string>("");
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
@@ -30,24 +27,6 @@ export default function Page({ email }: Props) {
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
-
-    const loadBook = async (user_id: string) => {
-        setStateLoading(true)
-        const resultBook = await getBookAll(user_id)
-        if (resultBook.status === "success") {
-            setStateBookList(resultBook.data)
-        }
-        setStateLoading(false)
-    }
-
-    const loadChapter = async (book_uuid: string) => {
-        setStateLoading(true)
-        const resultChapter = await getChapterAll(book_uuid)
-        if (resultChapter.status === "success") {
-            setStateChapterList(resultChapter.data)
-        }
-        setStateLoading(false)
-    }
 
     const loadSentence = async (chapter_uuid: string) => {
         setStateLoading(true)
@@ -177,13 +156,6 @@ export default function Page({ email }: Props) {
     }
 
     useEffect(() => {
-        const loadData = async () => {
-            if (email) {
-                await loadBook(email)
-            }
-        }
-        loadData()
-
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.ctrlKey && event.key === "y") {
                 event.preventDefault();
@@ -211,67 +183,14 @@ export default function Page({ email }: Props) {
             </div>
 
             <div className='flex flex-row gap-4 my-2'>
-                <div className='flex flex-col gap-1 w-full'>
-                    <Select label="Select book"
-                        onChange={async (e) => {
-                            const book_uuid = e.target.value
-                            setStateBook(book_uuid)
-                            await loadChapter(book_uuid)
-                        }}
-                    >
-                        {stateBookList.map((v) => (
-                            <SelectItem key={v.uuid} textValue={v.name}>{v.name}</SelectItem>
-                        ))}
-                    </Select>
-                    <div className='flex flex-row gap-1'>
-                        <Popover placement='bottom' classNames={{ content: 'bg-slate-200' }} >
-                            <PopoverTrigger>
-                                <Button size="sm" radius="full">new</Button>
-                            </PopoverTrigger>
-                            <PopoverContent>
-                                <div className=''>
-                                    <Book email={email} />
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                        <Button size="sm" radius="full"
-                            onPress={async () => await loadBook(email)}
-                        >
-                            refresh
-                        </Button>
-                    </div>
-                </div>
+                <Book user_id={email} onSelect={async (book_uuid: string) => {
+                    setStateBook(book_uuid)
+                }} />
 
-                <div className='flex flex-col gap-1 w-full'>
-                    <Select label="Select chapter"
-                        onChange={async (e) => {
-                            const chapter_uuid = e.target.value
-                            setStateChapter(chapter_uuid)
-                            await loadSentence(chapter_uuid)
-                        }}
-                    >
-                        {stateChapterList.map((v) => (
-                            <SelectItem key={v.uuid} textValue={`${v.order_num}, ${v.name}`}>{v.order_num}, {v.name}</SelectItem>
-                        ))}
-                    </Select>
-                    <div className='flex flex-row gap-1'>
-                        <Popover placement='bottom' classNames={{ content: 'bg-slate-200' }} >
-                            <PopoverTrigger>
-                                <Button size="sm" radius="full">new</Button>
-                            </PopoverTrigger>
-                            <PopoverContent>
-                                <div className=''>
-                                    <Chapter book_uuid={stateBook} email={email} />
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                        <Button size="sm" radius="full"
-                            onPress={async () => await loadChapter(stateBook)}
-                        >
-                            refresh
-                        </Button>
-                    </div>
-                </div>
+                <Chapter user_id={email} book_uuid={stateBook} onSelect={async (chapter_uuid: string) => {
+                    setStateChapter(chapter_uuid)
+                    await loadSentence(chapter_uuid)
+                }} />
             </div>
 
             <div className='flex flex-row items-center justify-center gap-4 my-2'>
