@@ -44,7 +44,7 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: REDIS_PASSWORD
-            - name: REDIS_PASSWORD
+            - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: secrets
