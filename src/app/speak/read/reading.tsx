@@ -10,7 +10,8 @@ import Book from './book';
 import { getSentenceAll, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
 import { toast } from 'react-toastify';
-import { checkSTTServiceStatus, saveAudio } from '@/app/actions/audio';
+import { saveAudio } from '@/app/actions/audio';
+import { checkSTTServiceStatus } from '@/app/actions/ai_local_redis';
 
 type Props = {
     email: string;

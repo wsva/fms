@@ -10,9 +10,9 @@ import { Session } from "next-auth"
 import { MdHelpOutline, MdMic, MdMicOff, MdRefresh } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
-import { startRecording, stopRecording, toggleRecording } from "@/lib/recording";
+import { toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
-import { checkSTTServiceStatus } from "@/app/actions/audio";
+import { checkSTTServiceStatus } from "@/app/actions/ai_local_redis";
 
 const ChevronDown = () => {
     return (
@@ -82,8 +82,9 @@ export default function TopNav({ session }: Props) {
     }
 
     const checkSTT = async () => {
-        const available = await checkSTTServiceStatus();
-        setStateSTTAvailable(available)
+        setStateSTTAvailable(true)
+        //const available = await checkSTTServiceStatus();
+        //setStateSTTAvailable(available)
     }
 
     useEffect(() => {
@@ -192,7 +193,7 @@ export default function TopNav({ session }: Props) {
                         startContent={
                             <Tooltip content="F2" placement="right">
                                 <Button isIconOnly size="sm" color={stateColor} id="button-voice-access"
-                                    disabled={!stateSTTAvailable}
+                                    disabled={!stateSTTAvailable || stateProcessing}
                                     onPress={toggleRecordingLocal}
                                 >
                                     {stateRecording ? <MdMic size={24} /> : <MdMicOff size={24} />}

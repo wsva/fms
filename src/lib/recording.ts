@@ -1,5 +1,6 @@
+//import { recognizeAudio } from "@/app/actions/ai_local_redis";
+import { recognizeAudio } from "@/app/actions/ai_genimi";
 import { ActionResult } from "./types";
-import { recognizeAudio } from "@/app/actions/audio";
 
 export const startRecording = async (
     stateRecording: boolean,
@@ -40,7 +41,8 @@ export const startRecording = async (
                 handleLog("Sending to STT service, waiting for response...");
                 setStateProcessing(true);
                 try {
-                    const result = await recognizeAudio(audioBlob, 30000);
+                    //const result = await recognizeAudio(audioBlob, 30000);
+                    const result = await recognizeAudio(audioBlob);
                     handleLog("STT recognition completed.");
                     handleResult({ status: "success", data: result }, audioBlob);
                 } catch (err) {
