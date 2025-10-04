@@ -3,8 +3,8 @@
 import React, { useState, useRef } from 'react'
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from '@heroui/react'
 import { MdMoreVert, MdPlayCircle } from 'react-icons/md'
-import { callSTT } from '@/app/actions/ai'
 import { torsten_voice } from '@prisma/client'
+import { recognizeAudio } from '@/app/actions/ai_gemini'
 
 export const Item = ({ row }: { row: torsten_voice }) => {
     const [stateRecording, setStateRecording] = useState<boolean>(false)
@@ -37,12 +37,8 @@ export const Item = ({ row }: { row: torsten_voice }) => {
                     console.warn('Empty audio blob — skipping transcription.');
                     return;
                 }
-                const result = await callSTT(audioBlob, "auto");
-                if (result.status === 'success') {
-                    setStateResult(result.data)
-                } else {
-                    setStateResult(result.error as string)
-                }
+                const result = await recognizeAudio(audioBlob);
+                setStateResult(result)
                 sentenceChunks.current = [];
                 recorderRef.current = null;
             };
@@ -53,12 +49,8 @@ export const Item = ({ row }: { row: torsten_voice }) => {
         setStateResult('Transcribing...')
         const audioResponse = await fetch(`/torsten_voice/${row.source}/${row.id}.wav`)
         const audioBlob = await audioResponse.blob()
-        const result = await callSTT(audioBlob, "auto");
-        if (result.status === 'success') {
-            setStateResult(result.data)
-        } else {
-            setStateResult(result.error as string)
-        }
+        const result = await recognizeAudio(audioBlob);
+        setStateResult(result)
     }
 
     const handleDownloadOriginal = () => {

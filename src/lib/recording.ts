@@ -1,5 +1,5 @@
 //import { recognizeAudio } from "@/app/actions/ai_local_redis";
-import { recognizeAudio } from "@/app/actions/ai_genimi";
+import { recognizeAudio } from "@/app/actions/ai_gemini";
 import { ActionResult } from "./types";
 
 export const startRecording = async (
