@@ -3,6 +3,7 @@
 import { ActionResult } from '@/lib/types';
 import { GoogleGenAI, createUserContent, createPartFromUri } from '@google/genai';
 import wav from 'wav';
+import fs from 'fs';
 import path from 'path';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -50,6 +51,7 @@ export async function callTTS(uuid: string, text: string): Promise<ActionResult<
         }
 
         const filePath = path.join('/fms_data', "tts", `${uuid}.wav`);
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
         await saveWaveFile(filePath, Buffer.from(data, 'base64'));
         return { status: "success", data: `/api/data/tts/${uuid}.wav` }
     } catch (e) {
