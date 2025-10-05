@@ -68,6 +68,7 @@ export default function TopNav({ session }: Props) {
             setStateRecording,
             sentenceChunks,
             recorderRef,
+            true,
             setStateProcessing,
             handleLog,
             handleResult,
