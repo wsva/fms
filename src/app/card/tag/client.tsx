@@ -62,7 +62,7 @@ export default function Page({ user_id }: Props) {
             }
         }
         loadData()
-    }, [stateTagList]);
+    }, [user_id]);
 
     return (
         <div className='flex flex-col w-full gap-4 py-4'>

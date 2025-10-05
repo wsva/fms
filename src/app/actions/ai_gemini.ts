@@ -9,7 +9,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-export async function callSTT(audioBlob: Blob, language?: string): Promise<ActionResult<string>> {
+export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
     try {
         const myfile = await ai.files.upload({
             file: audioBlob,
@@ -29,7 +29,7 @@ export async function callSTT(audioBlob: Blob, language?: string): Promise<Actio
     }
 }
 
-export async function callTTS(uuid: string, text: string, language?: string): Promise<ActionResult<string>> {
+export async function callTTS(uuid: string, text: string): Promise<ActionResult<string>> {
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
@@ -44,7 +44,11 @@ export async function callTTS(uuid: string, text: string, language?: string): Pr
             },
         });
 
-        const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data!;
+        const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!data) {
+            return { status: "error", error: "no data in response" }
+        }
+
         const filePath = path.join('/fms_data', "tts", `${uuid}.wav`);
         await saveWaveFile(filePath, Buffer.from(data, 'base64'));
         return { status: "success", data: `/api/data/tts/${uuid}.wav` }

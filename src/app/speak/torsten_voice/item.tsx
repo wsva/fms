@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from '@heroui/react'
-import { MdMoreVert, MdPlayCircle } from 'react-icons/md'
+import { Button } from '@heroui/react'
+import { MdPlayCircle } from 'react-icons/md'
 import { torsten_voice } from '@prisma/client'
 import { ActionResult } from '@/lib/types'
 import { toggleRecording } from '@/lib/recording'
@@ -20,7 +20,7 @@ export const Item = ({ row }: { row: torsten_voice }) => {
         const handleLog = (log: string) => {
             console.log(log)
         }
-        const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
+        const handleResult = (result: ActionResult<string>) => {
             if (result.status === 'success') {
                 setStateResult(result.data)
             } else {

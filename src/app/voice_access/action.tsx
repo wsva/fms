@@ -34,7 +34,7 @@ export default function Page({ action }: Props) {
             }
         }
         loadData()
-    }, [stateCommandList]);
+    }, [action.uuid]);
 
     const handleSave = async () => { }
 

@@ -1,6 +1,6 @@
 import { getChapterAll, removeChapter, saveChapter } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
-import { Button, Input, Select, SelectItem, Spinner } from "@heroui/react";
+import { Button, Input, Select, SelectItem } from "@heroui/react";
 import { read_chapter } from '@prisma/client';
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
@@ -65,8 +65,14 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
     }
 
     useEffect(() => {
+        const loadData = async () => {
+            const result = await getChapterAll(book_uuid)
+            if (result.status === "success") {
+                setStateBookList(result.data)
+            }
+        }
         loadData()
-    }, [book_uuid, stateName]);
+    }, [book_uuid]);
 
     return (
         <div className='flex flex-col gap-1 w-full'>

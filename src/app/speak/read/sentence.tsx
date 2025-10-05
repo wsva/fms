@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
-import { Button, Link, Textarea, Tooltip } from "@heroui/react";
-import { MdArrowDownward, MdArrowUpward, MdDelete, MdDownloadForOffline, MdEdit, MdEditOff, MdMic, MdMicOff, MdOutlineSave, MdPlayCircle } from 'react-icons/md'
+import { Button, Textarea, Tooltip } from "@heroui/react";
+import { MdArrowDownward, MdArrowUpward, MdDelete, MdEdit, MdEditOff, MdMic, MdMicOff, MdOutlineSave, MdPlayCircle } from 'react-icons/md'
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { toggleRecording } from '@/lib/recording';
 import { toast } from 'react-toastify';

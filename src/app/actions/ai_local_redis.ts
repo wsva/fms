@@ -1,9 +1,6 @@
 'use server';
 
-import { ActionResult } from "@/lib/types";
 import { createClient } from "redis";
-import fs from 'fs';
-import path from 'path';
 import { getUUID } from "@/lib/utils";
 
 const REDIS_HOST = process.env.REDIS_HOST
@@ -22,7 +19,7 @@ export async function checkSTTServiceStatus(): Promise<boolean> {
     }
 }
 
-export async function callSTT(audioBlob: Blob, language?: string): Promise<string> {
+export async function callSTT(audioBlob: Blob): Promise<string> {
     const uuid = getUUID();
 
     // 1. 连接 Redis
@@ -35,7 +32,7 @@ export async function callSTT(audioBlob: Blob, language?: string): Promise<strin
     await client.set(`${uuid}:audio`, buffer, { EX: 60 }); // 过期 60s 防止 Redis 爆掉
 
     // 3. 轮询等待结果
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
         const start = Date.now();
 
         const check = async () => {
