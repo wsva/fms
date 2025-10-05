@@ -49,6 +49,9 @@ npm install prisma@6.16.2 --save-dev
 # Generate Prisma Client
 npm exec prisma generate
 npm exec prisma@6.16.2 generate
+
+npm install wav
+npm i --save-dev @types/wav
 `````
 
 # db

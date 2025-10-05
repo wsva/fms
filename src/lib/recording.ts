@@ -1,5 +1,5 @@
 //import { recognizeAudio } from "@/app/actions/ai_local_redis";
-import { recognizeAudio } from "@/app/actions/ai_gemini";
+import { callSTT } from "@/app/actions/ai_gemini";
 import { ActionResult } from "./types";
 
 export const startRecording = async (
@@ -36,19 +36,17 @@ export const startRecording = async (
             recorderRef.current = null;
 
             if (!recognize) {
-                handleResult({ status: "success", data: "" }, audioBlob);
+                handleResult({ status: "success", data: "recognize=false" }, audioBlob);
             } else {
                 handleLog("Sending to STT service, waiting for response...");
                 setStateProcessing(true);
-                try {
-                    //const result = await recognizeAudio(audioBlob, 30000);
-                    const result = await recognizeAudio(audioBlob);
+                const result = await callSTT(audioBlob);
+                if (result.status === "success") {
                     handleLog("STT recognition completed.");
-                    handleResult({ status: "success", data: result }, audioBlob);
-                } catch (err) {
-                    console.error(err);
-                    handleLog(`STT recognition failed: ${(err as Error).message}`);
-                    handleResult({ status: "error", error: (err as Error).message }, audioBlob);
+                    handleResult({ status: "success", data: result.data }, audioBlob);
+                }else{
+                    handleLog(`STT recognition failed: ${result.error}`);
+                    handleResult({ status: "error", error: result.error }, audioBlob);
                 }
                 setStateProcessing(false);
             }

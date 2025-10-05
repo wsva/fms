@@ -27,6 +27,7 @@
     "react-toastify": "^11.0.5",
     "redis": "^5.8.2",
     "uuid": "^13.0.0",
+    "wav": "^1.0.2",
     "wretch": "^2.11.0",
     "zod": "^4.1.8"
   },
@@ -38,6 +39,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
+    "@types/wav": "^1.0.4",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "prisma": "^6.16.2",

@@ -7,12 +7,11 @@ import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react"
 import { Session } from "next-auth"
-import { MdHelpOutline, MdMic, MdMicOff, MdRefresh } from "react-icons/md";
+import { MdHelpOutline, MdMic, MdMicOff } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
 import { toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
-import { checkSTTServiceStatus } from "@/app/actions/ai_local_redis";
 
 const ChevronDown = () => {
     return (
@@ -45,7 +44,6 @@ export default function TopNav({ session }: Props) {
     const [stateRecording, setStateRecording] = React.useState(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSTT, setStateSTT] = React.useState<string>("");
-    const [stateSTTAvailable, setStateSTTAvailable] = React.useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
@@ -53,10 +51,6 @@ export default function TopNav({ session }: Props) {
     const router = useRouter();
 
     const toggleRecordingLocal = () => {
-        if (!stateSTTAvailable) {
-            return
-        }
-
         const handleLog = (log: string) => {
             setStateSTT(log);
         }
@@ -74,17 +68,10 @@ export default function TopNav({ session }: Props) {
             setStateRecording,
             sentenceChunks,
             recorderRef,
-            true,
             setStateProcessing,
             handleLog,
             handleResult,
         );
-    }
-
-    const checkSTT = async () => {
-        setStateSTTAvailable(true)
-        //const available = await checkSTTServiceStatus();
-        //setStateSTTAvailable(available)
     }
 
     useEffect(() => {
@@ -106,15 +93,11 @@ export default function TopNav({ session }: Props) {
             setStateColor("default");
         }
 
-        checkSTT()
-        const sttTimer = setInterval(checkSTT, 30000);
-
         return () => {
             if (blinkTimer) clearInterval(blinkTimer);
-            clearInterval(sttTimer);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [stateRecording, stateSTTAvailable]);
+    }, [stateRecording]);
 
     return (
         <>
@@ -189,11 +172,10 @@ export default function TopNav({ session }: Props) {
 
                 <NavbarContent justify='center'>
                     <Input className="mx-0 w-[60vw] lg:w-[30vw]"
-                        disabled={!stateSTTAvailable}
                         startContent={
                             <Tooltip content="F2" placement="right">
                                 <Button isIconOnly size="sm" color={stateColor} id="button-voice-access"
-                                    disabled={!stateSTTAvailable || stateProcessing}
+                                    disabled={stateProcessing}
                                     onPress={toggleRecordingLocal}
                                 >
                                     {stateRecording ? <MdMic size={24} /> : <MdMicOff size={24} />}
@@ -202,15 +184,12 @@ export default function TopNav({ session }: Props) {
                         }
                         endContent={
                             <div className="flex flex-row items-center gap-0">
-                                <Button isIconOnly size="sm" variant="light" onPress={checkSTT}>
-                                    <MdRefresh size={24} />
-                                </Button>
                                 <Button isIconOnly size="sm" variant="light" onPress={() => router.push("/voice_access")}>
                                     <MdHelpOutline size={24} />
                                 </Button>
                             </div>
                         }
-                        value={stateSTTAvailable ? stateSTT || "Voice Access: F2 to activate" : "service not available"}
+                        value={stateSTT || "Voice Access: F2 to activate"}
                     />
                 </NavbarContent>
 

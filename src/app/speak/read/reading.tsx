@@ -11,7 +11,6 @@ import { getSentenceAll, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
 import { toast } from 'react-toastify';
 import { saveAudio } from '@/app/actions/audio';
-import { checkSTTServiceStatus } from '@/app/actions/ai_local_redis';
 
 type Props = {
     email: string;
@@ -23,7 +22,6 @@ export default function Page({ email }: Props) {
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSentenceList, setStateSentenceList] = useState<read_sentence_browser[]>([]);
-    const [stateSTTAvailable, setStateSTTAvailable] = React.useState<boolean>(false);
     const [stateLoading, setStateLoading] = React.useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
@@ -33,12 +31,13 @@ export default function Page({ email }: Props) {
         setStateLoading(true)
         const result = await getSentenceAll(chapter_uuid)
         if (result.status === "success") {
-            setStateSentenceList(result.data.map((v) => {
+            setStateSentenceList(result.data.map((v, i) => {
                 return {
                     ...toExactType<read_sentence_browser>(v),
+                    order_num: i + 1,
                     in_db: true,
                     on_fs: true,
-                    modified_db: false,
+                    modified_db: v.order_num !== i,
                     modified_fs: false,
                 }
             }))
@@ -46,202 +45,208 @@ export default function Page({ email }: Props) {
         setStateLoading(false)
     }
 
-    const handleUpdate = (new_item: read_sentence_browser) => {
+    const handleUpdate = (new_item: read_sentence_browser, new_pos?: number) => {
+        if (!!new_pos) {
+            if (new_pos < 1) {
+                new_pos = 1
+            }
+            if (new_pos > stateSentenceList.length) {
+                new_pos = stateSentenceList.length
+            }
+            if (new_item.order_num !== new_pos) {
+                const result = [...stateSentenceList];
+                const item = result.splice(new_item.order_num - 1, 1)[0];
+                result.splice(new_pos - 1, 0, item);
+                setStateSentenceList(result.map((item, index) => {
+                    return {
+                        ...item,
+                        order_num: index + 1,
+                        modified_db: item.order_num === index + 1,
+                    }
+                }));
+        }
+    } else {
         setStateSentenceList((prev) => {
             return prev.map((item, index) =>
                 item.uuid === new_item.uuid ? {
                     ...new_item,
-                    order_num: index,
+                    order_num: index + 1,
                     modified_db: new_item.order_num === index,
                 } : {
                     ...item,
-                    order_num: index,
+                    order_num: index + 1,
                     modified_db: item.order_num === index,
                 }
             );
         });
+}
     }
 
-    const handleDelete = (uuid: string) => {
-        setStateSentenceList((prev) => prev.filter((item) => item.uuid !== uuid));
-        setStateSentenceList((prev) => {
-            return prev.map((item, index) => {
-                return {
-                    ...item,
-                    order_num: index,
-                    modified_db: item.order_num === index,
-                }
-            });
+const handleDelete = (uuid: string) => {
+    setStateSentenceList((prev) => prev.filter((item) => item.uuid !== uuid));
+    setStateSentenceList((prev) => {
+        return prev.map((item, index) => {
+            return {
+                ...item,
+                order_num: index,
+                modified_db: item.order_num === index,
+            }
         });
-    }
+    });
+}
 
-    const handleSaveAll = async () => {
-        try {
-            await Promise.all(
-                stateSentenceList.map(async (v, i) => {
-                    if (v.modified_fs && !!v.audioBlob) {
-                        const resultFs = await saveAudio(v.audioBlob, "reading", `${v.uuid}.wav`);
-                        if (resultFs.status === "error") {
-                            throw new Error("save audio failed");
-                        } else {
-                            setStateSentenceList((prev) => {
-                                return prev.map((item) =>
-                                    item.uuid === v.uuid ? {
-                                        ...item,
-                                        on_fs: true,
-                                        modified_fs: false,
-                                    } : item
-                                );
-                            });
-                        }
-                    }
-                    const resultDb = await saveSentence({
-                        ...v,
-                        chapter_uuid: stateChapter,
-                        order_num: i,
-                        audio_path: `/api/data/reading/${v.uuid}.wav`,
-                        created_by: email,
-                        created_at: v.created_at || new Date(),
-                        updated_at: new Date(),
-                    });
-                    if (resultDb.status === "error") {
-                        throw new Error("save sentence failed");
+const handleSaveAll = async () => {
+    try {
+        await Promise.all(
+            stateSentenceList.map(async (v, i) => {
+                if (v.modified_fs && !!v.audioBlob) {
+                    const resultFs = await saveAudio(v.audioBlob, "reading", `${v.uuid}.wav`);
+                    if (resultFs.status === "error") {
+                        throw new Error("save audio failed");
                     } else {
                         setStateSentenceList((prev) => {
                             return prev.map((item) =>
                                 item.uuid === v.uuid ? {
                                     ...item,
-                                    in_db: true,
-                                    modified_db: false,
+                                    on_fs: true,
+                                    modified_fs: false,
                                 } : item
                             );
                         });
                     }
-                    return true; // 表示这一条成功
-                })
-            );
+                }
+                const resultDb = await saveSentence({
+                    ...v,
+                    chapter_uuid: stateChapter,
+                    order_num: i,
+                    audio_path: `/api/data/reading/${v.uuid}.wav`,
+                    created_by: email,
+                    created_at: v.created_at || new Date(),
+                    updated_at: new Date(),
+                });
+                if (resultDb.status === "error") {
+                    throw new Error("save sentence failed");
+                } else {
+                    setStateSentenceList((prev) => {
+                        return prev.map((item) =>
+                            item.uuid === v.uuid ? {
+                                ...item,
+                                in_db: true,
+                                modified_db: false,
+                            } : item
+                        );
+                    });
+                }
+                return true; // 表示这一条成功
+            })
+        );
 
-            // 全部成功
-            toast.success("All sentences saved successfully!");
-        } catch (err: unknown) {
-            // 任意一个失败会进入这里
-            toast.error((err as Error).message || "Failed to save sentences");
+        // 全部成功
+        toast.success("All sentences saved successfully!");
+    } catch (err: unknown) {
+        // 任意一个失败会进入这里
+        toast.error((err as Error).message || "Failed to save sentences");
+    }
+}
+
+const toggleRecordingLocal = () => {
+    const handleLog = (log: string) => {
+        console.log(log)
+    }
+    const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
+        if (result.status === 'success') {
+            setStateSentenceList(prev => [...prev, {
+                uuid: getUUID(),
+                chapter_uuid: "",
+                order_num: stateSentenceList.length,
+                original: result.data,
+                recognized: result.data,
+                audioBlob: audioBlob,
+                in_db: false,
+                on_fs: false,
+                modified_db: true,
+                modified_fs: true,
+            }]);
+        } else {
+            toast.error(result.error as string)
         }
     }
 
-    const toggleRecordingLocal = () => {
-        const handleLog = (log: string) => {
-            console.log(log)
+    toggleRecording(
+        stateRecording,
+        setStateRecording,
+        sentenceChunks,
+        recorderRef,
+        true,
+        setStateProcessing,
+        handleLog,
+        handleResult);
+}
+
+useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.ctrlKey && event.key === "y") {
+            event.preventDefault();
+            const btn = document.getElementById("button-toggel-recording") as HTMLButtonElement | null;
+            btn?.click();
         }
-        const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
-            if (result.status === 'success') {
-                setStateSentenceList(prev => [...prev, {
-                    uuid: getUUID(),
-                    chapter_uuid: "",
-                    order_num: stateSentenceList.length,
-                    original: result.data,
-                    recognized: result.data,
-                    audioBlob: audioBlob,
-                    in_db: false,
-                    on_fs: false,
-                    modified_db: true,
-                    modified_fs: true,
-                }]);
-            } else {
-                toast.error(result.error as string)
-            }
-        }
+    };
+    document.addEventListener('keydown', handleKeyDown);
 
-        toggleRecording(
-            stateRecording,
-            setStateRecording,
-            sentenceChunks,
-            recorderRef,
-            stateSTTAvailable,
-            setStateProcessing,
-            handleLog,
-            handleResult);
-    }
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+    };
+}, [stateRecording, stateProcessing]);
 
-    const checkSTT = async () => {
-        const available = await checkSTTServiceStatus();
-        setStateSTTAvailable(available)
-    }
+return (
+    <div>
+        <div className='flex flex-col md:flex-row gap-4 my-2'>
+            <Book user_id={email} onSelect={async (book_uuid: string) => {
+                setStateBook(book_uuid)
+            }} />
 
-    useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.ctrlKey && event.key === "y") {
-                event.preventDefault();
-                const btn = document.getElementById("button-toggel-recording") as HTMLButtonElement | null;
-                btn?.click();
-            }
-        };
-        document.addEventListener('keydown', handleKeyDown);
-
-        checkSTT()
-        const sttTimer = setInterval(checkSTT, 30000);
-
-        return () => {
-            clearInterval(sttTimer);
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [stateRecording, stateProcessing]);
-
-    return (
-        <div>
-            <div className='flex flex-row gap-4 my-2'>
-                <Button size="sm" variant='solid' color={stateSTTAvailable ? "success" : "danger"} onPress={checkSTT}>
-                    Speech-to-Text service is {stateSTTAvailable ? "available" : "not available"}, click to refresh
-                </Button>
-            </div>
-
-            <div className='flex flex-col md:flex-row gap-4 my-2'>
-                <Book user_id={email} onSelect={async (book_uuid: string) => {
-                    setStateBook(book_uuid)
-                }} />
-
-                <Chapter user_id={email} book_uuid={stateBook} onSelect={async (chapter_uuid: string) => {
-                    setStateChapter(chapter_uuid)
-                    await loadSentence(chapter_uuid)
-                }} />
-            </div>
-
-            <div className='flex flex-row items-center justify-center gap-4 my-2'>
-                <Button variant='solid' color='primary' id='button-toggel-recording'
-                    isDisabled={!stateRecording && stateProcessing}
-                    onPress={() => {
-                        if (!stateBook || !stateChapter) {
-                            alert("select book and chapter first")
-                        } else {
-                            toggleRecordingLocal()
-                        }
-                    }}
-                >
-                    {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
-                </Button>
-                <Button variant='solid' color='primary' onPress={handleSaveAll}>
-                    save all sentences
-                </Button>
-            </div>
-
-            {stateLoading && (
-                <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
-            )}
-
-            {stateSentenceList.length > 0 && (
-                <div className="flex flex-col items-start justify-start w-full gap-2 my-8">
-                    {[...stateSentenceList].reverse().map((v) =>
-                        <Sentence
-                            key={v.uuid}
-                            user_id={email}
-                            item={v}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                        />
-                    )}
-                </div>
-            )}
-
+            <Chapter user_id={email} book_uuid={stateBook} onSelect={async (chapter_uuid: string) => {
+                setStateChapter(chapter_uuid)
+                await loadSentence(chapter_uuid)
+            }} />
         </div>
-    )
+
+        <div className='flex flex-row items-center justify-center gap-4 my-2'>
+            <Button variant='solid' color='primary' id='button-toggel-recording'
+                isDisabled={!stateRecording && stateProcessing}
+                onPress={() => {
+                    if (!stateBook || !stateChapter) {
+                        alert("select book and chapter first")
+                    } else {
+                        toggleRecordingLocal()
+                    }
+                }}
+            >
+                {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
+            </Button>
+            <Button variant='solid' color='primary' onPress={handleSaveAll}>
+                save all sentences
+            </Button>
+        </div>
+
+        {stateLoading && (
+            <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
+        )}
+
+        {stateSentenceList.length > 0 && (
+            <div className="flex flex-col items-start justify-start w-full gap-2 my-8">
+                {[...stateSentenceList].reverse().map((v) =>
+                    <Sentence
+                        key={v.uuid}
+                        user_id={email}
+                        item={v}
+                        onUpdate={handleUpdate}
+                        onDelete={handleDelete}
+                    />
+                )}
+            </div>
+        )}
+
+    </div>
+)
 }

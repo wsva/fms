@@ -117,7 +117,7 @@ export default function BlogForm({ item, email }: Props) {
                             setStateRecording,
                             sentenceChunks,
                             recorderRef,
-                            false, // don't recognize
+                            false,
                             setStateProcessing,
                             handleLog,
                             handleResult);
@@ -137,7 +137,6 @@ export default function BlogForm({ item, email }: Props) {
                     </Button>
                 )}
             </div>
-
 
             <Button variant='solid' color='primary'
                 isDisabled={!stateQuestion || (!stateRecording && stateProcessing)}
@@ -159,7 +158,7 @@ export default function BlogForm({ item, email }: Props) {
                         setStateRecording,
                         sentenceChunks,
                         recorderRef,
-                        false, // don't recognize
+                        false,
                         setStateProcessing,
                         handleLog,
                         handleResult);

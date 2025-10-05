@@ -22,7 +22,7 @@ export async function checkSTTServiceStatus(): Promise<boolean> {
     }
 }
 
-export async function recognizeAudio(audioBlob: Blob, timeoutMs = 30000): Promise<string> {
+export async function callSTT(audioBlob: Blob, language?: string): Promise<string> {
     const uuid = getUUID();
 
     // 1. 连接 Redis
@@ -46,7 +46,8 @@ export async function recognizeAudio(audioBlob: Blob, timeoutMs = 30000): Promis
                 resolve(safeText(result));
                 return;
             }
-            if (Date.now() - start > timeoutMs) {
+            // timeout 30s
+            if (Date.now() - start > 30000) {
                 await client.quit();
                 resolve("Recognition timed out");
                 return;
