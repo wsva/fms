@@ -83,7 +83,11 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
         }
         if (item.modified_db) {
             const result = await saveSentence({
-                ...item,
+                uuid: item.uuid,
+                chapter_uuid: item.chapter_uuid,
+                order_num: item.order_num,
+                original: item.original,
+                recognized: item.recognized,
                 audio_path: `/api/data/reading/${item.uuid}.wav`,
                 created_by: user_id,
                 created_at: item.created_at || new Date(),
