@@ -71,11 +71,11 @@ export default function Page({ email }: Props) {
                     item.uuid === new_item.uuid ? {
                         ...new_item,
                         order_num: index + 1,
-                        modified_db: new_item.order_num === index,
+                        modified_db: new_item.order_num === index + 1,
                     } : {
                         ...item,
                         order_num: index + 1,
-                        modified_db: item.order_num === index,
+                        modified_db: item.order_num === index + 1,
                     }
                 );
             });
@@ -88,8 +88,8 @@ export default function Page({ email }: Props) {
             return prev.map((item, index) => {
                 return {
                     ...item,
-                    order_num: index,
-                    modified_db: item.order_num === index,
+                    order_num: index + 1,
+                    modified_db: item.order_num === index + 1,
                 }
             });
         });
@@ -118,7 +118,7 @@ export default function Page({ email }: Props) {
                     const resultDb = await saveSentence({
                         uuid: v.uuid,
                         chapter_uuid: v.chapter_uuid,
-                        order_num: i,
+                        order_num: v.order_num,
                         original: v.original,
                         recognized: v.recognized,
                         audio_path: `/api/data/reading/${v.uuid}.wav`,
@@ -160,7 +160,7 @@ export default function Page({ email }: Props) {
                 setStateSentenceList(prev => [...prev, {
                     uuid: getUUID(),
                     chapter_uuid: stateChapter,
-                    order_num: stateSentenceList.length,
+                    order_num: stateSentenceList.length + 1,
                     original: result.data,
                     recognized: result.data,
                     audioBlob: audioBlob,
