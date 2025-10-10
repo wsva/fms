@@ -23,6 +23,7 @@ export default function Page({ email }: Props) {
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSentenceList, setStateSentenceList] = useState<read_sentence_browser[]>([]);
     const [stateLoading, setStateLoading] = React.useState<boolean>(false);
+    const [stateSaving, setStateSaving] = React.useState(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
@@ -96,7 +97,7 @@ export default function Page({ email }: Props) {
     }
 
     const handleSaveAll = async () => {
-        setStateProcessing(true)
+        setStateSaving(true)
         try {
             await Promise.all(
                 stateSentenceList.map(async (v, i) => {
@@ -150,7 +151,7 @@ export default function Page({ email }: Props) {
             // 任意一个失败会进入这里
             toast.error((err as Error).message || "Failed to save sentences");
         }
-        setStateProcessing(false)
+        setStateSaving(false)
     }
 
     const toggleRecordingLocal = () => {
@@ -233,10 +234,7 @@ export default function Page({ email }: Props) {
                 >
                     {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
                 </Button>
-                <Button variant='solid' color='primary'
-                    isDisabled={stateRecording || stateProcessing}
-                    onPress={handleSaveAll}
-                >
+                <Button variant='solid' color='primary' isDisabled={stateSaving} onPress={handleSaveAll} >
                     Save (Ctrl+S)
                 </Button>
             </div>
