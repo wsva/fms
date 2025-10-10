@@ -89,7 +89,7 @@ export default function Page({ email }: Props) {
                 return {
                     ...item,
                     order_num: index + 1,
-                    modified_db: item.order_num === index + 1,
+                    modified_db: item.order_num !== index + 1,
                 }
             });
         });
