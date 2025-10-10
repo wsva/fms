@@ -198,7 +198,8 @@ export default function Page({ email }: Props) {
 
             if (event.ctrlKey && event.key === 's') {
                 event.preventDefault();
-                handleSaveAll()
+                const btn = document.getElementById("button-save-all") as HTMLButtonElement | null;
+                btn?.click();
             }
         };
         document.addEventListener('keydown', handleKeyDown);
@@ -234,7 +235,9 @@ export default function Page({ email }: Props) {
                 >
                     {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
                 </Button>
-                <Button variant='solid' color='primary' isDisabled={stateSaving} onPress={handleSaveAll} >
+                <Button variant='solid' color='primary' id="button-save-all"
+                    isDisabled={stateSaving} onPress={handleSaveAll}
+                >
                     Save (Ctrl+S)
                 </Button>
             </div>
