@@ -96,6 +96,7 @@ export default function Page({ email }: Props) {
     }
 
     const handleSaveAll = async () => {
+        setStateProcessing(true)
         try {
             await Promise.all(
                 stateSentenceList.map(async (v, i) => {
@@ -149,6 +150,7 @@ export default function Page({ email }: Props) {
             // 任意一个失败会进入这里
             toast.error((err as Error).message || "Failed to save sentences");
         }
+        setStateProcessing(false)
     }
 
     const toggleRecordingLocal = () => {
@@ -192,6 +194,11 @@ export default function Page({ email }: Props) {
                 const btn = document.getElementById("button-toggel-recording") as HTMLButtonElement | null;
                 btn?.click();
             }
+
+            if (event.ctrlKey && event.key === 's') {
+                event.preventDefault();
+                handleSaveAll()
+            }
         };
         document.addEventListener('keydown', handleKeyDown);
 
@@ -226,8 +233,11 @@ export default function Page({ email }: Props) {
                 >
                     {stateRecording ? '⏹ Stop Recording (Ctrl+Y)' : '🎤 Speak a Sentence (Ctrl+Y)'}
                 </Button>
-                <Button variant='solid' color='primary' onPress={handleSaveAll}>
-                    save all sentences
+                <Button variant='solid' color='primary'
+                    isDisabled={stateRecording || stateProcessing}
+                    onPress={handleSaveAll}
+                >
+                    Save (Ctrl+S)
                 </Button>
             </div>
 
