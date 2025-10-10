@@ -61,7 +61,7 @@ export default function Page({ email }: Props) {
                     return {
                         ...item,
                         order_num: index + 1,
-                        modified_db: item.order_num === index + 1,
+                        modified_db: item.order_num !== index + 1,
                     }
                 }));
             }
@@ -71,11 +71,11 @@ export default function Page({ email }: Props) {
                     item.uuid === new_item.uuid ? {
                         ...new_item,
                         order_num: index + 1,
-                        modified_db: new_item.order_num === index + 1,
+                        modified_db: new_item.order_num !== index + 1,
                     } : {
                         ...item,
                         order_num: index + 1,
-                        modified_db: item.order_num === index + 1,
+                        modified_db: item.order_num !== index + 1,
                     }
                 );
             });
