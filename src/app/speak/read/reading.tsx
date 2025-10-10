@@ -37,7 +37,7 @@ export default function Page({ email }: Props) {
                     order_num: i + 1,
                     in_db: true,
                     on_fs: true,
-                    modified_db: v.order_num !== i,
+                    modified_db: v.order_num !== i + 1,
                     modified_fs: false,
                 }
             }))
