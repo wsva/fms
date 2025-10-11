@@ -1,6 +1,6 @@
 import React from 'react'
 import { auth } from '@/auth'
-import WordStore from './WordStore'
+import Client from './client'
 import Index from './index'
 
 type Props = {
@@ -25,7 +25,7 @@ export default async function Page({ searchParams }: Props) {
                     <Index />
                 )
                 : (
-                    <WordStore email={email} language={language} keyword={keyword} all={all} />
+                    <Client email={email} language={language} keyword={keyword} all={all} />
                 )}
         </>
 

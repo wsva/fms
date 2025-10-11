@@ -8,24 +8,28 @@ generator client {
 }
 
 model topword_de {
-  id          Int   @unique
-  word        String
-  freq        Int
-  examples    Int
+  id        Int    @unique
+  word      String
+  freq      Int
+  examples  Int
+  in_dict   String
+  base_form String
+  article   String
+  level     String
 }
 
 model topword_de_example {
-  id          Int   @unique
-  word_id     Int
-  example     String
+  id      Int    @unique
+  word_id Int
+  example String
 }
 
 model torsten_voice {
-  id          String   @unique
-  subset      String
-  style       String
-  text        String
-  source      String
+  id     String @unique
+  subset String
+  style  String
+  text   String
+  source String
 }
 
 model word_trash {
@@ -141,116 +145,116 @@ model qsa_card_tag {
 }
 
 model qsa_card_review {
-  uuid            String   @unique
-  card_uuid       String
-  user_id         String
-  interval_days   Int
-  ease_factor     Int
-  repetitions     Int
-  familiarity     Int
-  last_review_at  DateTime
-  next_review_at  DateTime
+  uuid           String   @unique
+  card_uuid      String
+  user_id        String
+  interval_days  Int
+  ease_factor    Int
+  repetitions    Int
+  familiarity    Int
+  last_review_at DateTime
+  next_review_at DateTime
 }
 
 model speak_text {
-  uuid        String   @unique
-  text        String
-  note        String
-  created_by  String
-  created_at  DateTime
-  updated_at  DateTime
+  uuid       String   @unique
+  text       String
+  note       String
+  created_by String
+  created_at DateTime
+  updated_at DateTime
 }
 
 model speak_media {
-  uuid        String   @unique
-  text_uuid   String
-  location    String
-  original    String
-  created_by  String
-  created_at  DateTime
-  updated_at  DateTime
+  uuid       String   @unique
+  text_uuid  String
+  location   String
+  original   String
+  created_by String
+  created_at DateTime
+  updated_at DateTime
 }
 
 model speak_review {
-  uuid            String   @unique
-  text_uuid       String
-  user_id         String
-  interval_days   Int
-  ease_factor     Int
-  repetitions     Int
-  familiarity     Int
-  last_review_at  DateTime
-  next_review_at  DateTime
+  uuid           String   @unique
+  text_uuid      String
+  user_id        String
+  interval_days  Int
+  ease_factor    Int
+  repetitions    Int
+  familiarity    Int
+  last_review_at DateTime
+  next_review_at DateTime
 }
 
 model read_book {
-  uuid        String   @unique
-  name        String
-  user_id     String
-  created_by  String
-  created_at  DateTime
-  updated_at  DateTime
+  uuid       String   @unique
+  name       String
+  user_id    String
+  created_by String
+  created_at DateTime
+  updated_at DateTime
 }
 
 model read_chapter {
-  uuid        String   @unique
-  book_uuid   String
-  order_num   Int
-  name        String
-  created_by  String
-  created_at  DateTime
-  updated_at  DateTime
+  uuid       String   @unique
+  book_uuid  String
+  order_num  Int
+  name       String
+  created_by String
+  created_at DateTime
+  updated_at DateTime
 }
 
 model read_sentence {
+  uuid         String   @unique
+  chapter_uuid String
+  order_num    Int
+  original     String
+  recognized   String
+  audio_path   String
+  created_by   String
+  created_at   DateTime
+  updated_at   DateTime
+}
+
+model ask_question {
+  uuid       String   @unique
+  user_id    String
+  audio_path String
+  recognized String
+  created_by String
+  created_at DateTime
+  updated_at DateTime
+}
+
+model ask_answer {
   uuid          String   @unique
-  chapter_uuid  String
-  order_num     Int
-  original      String
-  recognized    String
+  user_id       String
+  question_uuid String
   audio_path    String
+  recognized    String
   created_by    String
   created_at    DateTime
   updated_at    DateTime
 }
 
-model ask_question {
+model voice_access_action {
   uuid        String   @unique
-  user_id     String
-  audio_path  String
-  recognized  String
+  name        String
+  action_type String
+  payload     String
   created_by  String
   created_at  DateTime
   updated_at  DateTime
 }
 
-model ask_answer {
-  uuid           String   @unique
-  user_id        String
-  question_uuid  String
-  audio_path     String
-  recognized     String
-  created_by     String
-  created_at     DateTime
-  updated_at     DateTime
-}
-
-model voice_access_action {
-  uuid           String   @unique
-  name           String
-  action_type    String
-  payload        String
-  created_by     String
-  created_at     DateTime
-  updated_at     DateTime
-}
-
 model voice_access_command {
-  uuid           String   @unique
-  action_uuid    String
-  language       String
-  text           String
-  created_by     String
-  created_at     DateTime
-  updated_at     DateTime
+  uuid        String   @unique
+  action_uuid String
+  language    String
+  text        String
+  created_by  String
+  created_at  DateTime
+  updated_at  DateTime
 }

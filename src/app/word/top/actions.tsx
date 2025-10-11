@@ -7,7 +7,7 @@ import { Button, ButtonGroup, Link, Tooltip, useDisclosure } from "@heroui/react
 import { qsa_tag } from '@prisma/client';
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import CardModal from './CardModal';
+import CardModal from './modal';
 import { card_ext, topword } from '@/lib/types';
 import { BiLinkExternal, BiPlus, BiSolidBolt, BiTrash } from 'react-icons/bi';
 
@@ -17,8 +17,8 @@ type Props = {
     email?: string;
 }
 
-export default function WordActions({ word,language, email }: Props) {
-    const [stateDisabled, setStateDisabled] = useState<boolean>(!email);
+export default function Page({ word, language, email }: Props) {
+    const [stateDisabled, setStateDisabled] = useState<boolean>(!email || word.in_card === "Y");
     const [stateTagList, setStateTagList] = useState<qsa_tag[]>([]);
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
@@ -144,18 +144,6 @@ export default function WordActions({ word,language, email }: Props) {
                         <BiPlus size={20} />
                     </Button>
                 </Tooltip>
-                {/* 
-                <Tooltip color='primary' content="add card">
-                    <Button isIconOnly variant='light' onClick={addCardSimple} >
-                        <BiPlus size={20} />
-                    </Button>
-                </Tooltip>
-                <Tooltip color='primary' closeDelay={0} content='add card +'>
-                    <Button isIconOnly onPress={onOpen} variant='light' >
-                        <BiAddToQueue size={20} />
-                    </Button>
-                </Tooltip>
-                 */}
                 <Tooltip color="primary" content="view examples">
                     <Button isIconOnly variant='light' as={Link} target='_blank'
                         href={`/word/sentence?word_id=${word.id}`}

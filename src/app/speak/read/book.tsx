@@ -1,6 +1,6 @@
 import { getBookAll, removeBook, saveBook } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
-import { Button, Input, Select, SelectItem } from "@heroui/react";
+import { Button, CircularProgress, Input, Select, SelectItem } from "@heroui/react";
 import { read_book } from '@prisma/client';
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
@@ -15,12 +15,15 @@ export default function Page({ user_id, onSelect }: Props) {
     const [stateName, setStateName] = useState<string>("");
     const [stateEdit, setStateEdit] = useState<boolean>(false);
     const [stateDisable, setStateDisable] = useState<boolean>(false);
+    const [stateLoading, setStateLoading] = useState<boolean>(false);
 
     const loadData = async () => {
+        setStateLoading(true)
         const result = await getBookAll(user_id)
         if (result.status === "success") {
             setStateBookList(result.data)
         }
+        setStateLoading(false)
     }
 
     const handleAdd = async () => {
@@ -58,12 +61,6 @@ export default function Page({ user_id, onSelect }: Props) {
     }
 
     useEffect(() => {
-        const loadData = async () => {
-            const result = await getBookAll(user_id)
-            if (result.status === "success") {
-                setStateBookList(result.data)
-            }
-        }
         loadData()
     }, [user_id]);
 
@@ -74,6 +71,7 @@ export default function Page({ user_id, onSelect }: Props) {
                     const book_uuid = e.target.value
                     await onSelect(book_uuid)
                 }}
+                endContent={stateLoading && (<CircularProgress aria-label="Loading..." color="default" />)}
             >
                 {stateData.map((v) => (
                     <SelectItem key={v.uuid} textValue={v.name}>{v.name}</SelectItem>

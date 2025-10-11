@@ -4,7 +4,7 @@ import { getTopword, searchTopword } from '@/app/actions/word'
 import { CircularProgress, Input, Pagination } from "@heroui/react"
 import React, { useEffect, useState } from 'react'
 import { topword } from '@/lib/types'
-import WordTable from '@/components/word/WordTable'
+import Table from './table'
 import { BiSearch } from 'react-icons/bi'
 
 type Props = {
@@ -105,7 +105,7 @@ export default function WordStore({ email, language, keyword, all }: Props) {
                         <CircularProgress label="Loading..." />
                     </div >
                 )
-                : (<WordTable words={stateWords} language={language} email={email} />)
+                : (<Table words={stateWords} language={language} email={email} />)
             }
             <div className='flex flex-row w-full items-center justify-center gap-4'>
                 <div>Page</div>

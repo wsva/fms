@@ -52,6 +52,8 @@ npm exec prisma@6.16.2 generate
 
 npm install wav
 npm i --save-dev @types/wav
+
+npm install use-immer
 `````
 
 # db

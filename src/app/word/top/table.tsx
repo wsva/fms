@@ -2,9 +2,8 @@
 
 import { Chip, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip } from "@heroui/react"
 import React from 'react'
-import WordActions from './WordActions'
+import Actions from './actions'
 import { topword } from '@/lib/types'
-import WordInfo from './WordInfo'
 
 type Props = {
     words?: topword[];
@@ -12,13 +11,12 @@ type Props = {
     email?: string;
 }
 
-export default function WordTable({ words, language, email }: Props) {
+export default function Page({ words, language, email }: Props) {
     return (
         <Table isStriped aria-label='word'>
             <TableHeader>
                 <TableColumn className='border-1'>Word</TableColumn>
                 <TableColumn className='border-1'>Actions</TableColumn>
-                <TableColumn className='border-1'>Info</TableColumn>
             </TableHeader>
             <TableBody items={words}>
                 {(item) => {
@@ -41,16 +39,19 @@ export default function WordTable({ words, language, email }: Props) {
                                         in cards
                                     </Chip>
                                 ) : null}
+                                &emsp;
+                                {!!item.level ? (
+                                    <Chip color='default' size="lg" variant="flat">
+                                        {item.level}
+                                    </Chip>
+                                ) : null}
                             </TableCell>
                             <TableCell className='border-1'>
                                 {email ? (
-                                    <WordActions word={item} language={language} email={email} />
+                                    <Actions word={item} language={language} email={email} />
                                 ) : (
                                     'not logged in'
                                 )}
-                            </TableCell>
-                            <TableCell className='border-1'>
-                                <WordInfo word={item} />
                             </TableCell>
                         </TableRow>
                     )

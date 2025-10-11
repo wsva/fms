@@ -17,6 +17,7 @@ type topword = {
     word: string;
     in_dict: string;
     in_card: string;
+    level: string;
 }
 
 type card_ext = Partial<qsa_card> & {

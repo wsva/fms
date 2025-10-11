@@ -22,7 +22,7 @@ type Props = {
 
 type card_basic = { question: string, suggestion: string, answer: string, familiarity: string, note: string, tag_list_new?: string[] }
 
-export default function WordModal({ word, language, tag_list, isOpen, isDisabled, onOpenChange, onSubmit }: Props) {
+export default function Page({ word, language, tag_list, isOpen, isDisabled, onOpenChange, onSubmit }: Props) {
     const [stateSelectedTags, setStateSelectedTags] = useState<string[]>(
         [`word_${language}_by_system`]
     );

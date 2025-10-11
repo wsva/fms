@@ -2,6 +2,7 @@ const publicRoutes = [
     '/',
     '/listening/dictation',
     '/blog',
+    '/unauthorized'
 ]
 
 const publicRoutesReg = [
@@ -19,9 +20,3 @@ export function isPublicRoute(pathname: string): boolean {
     }
     return false
 }
-
-export const authRoutes = [
-    '/login',
-    '/register'
-]
-

@@ -25,14 +25,12 @@ export async function getTopword(
         select
         id,
         word,
-        case
-            when exists (select 1 from dict_de dd where dd."uuid" = t0.word) 
-            then 'Y' else 'N'
-        end as in_dict,
+        in_dict,
         case 
             when exists (select 1 from qsa_card qc where qc.question = t0.word and qc.user_id = ${email}) 
             then 'Y' else 'N'
-        end as in_card
+        end as in_card,
+        level
         from ${table} t0
         where 1 = 1
     `
@@ -97,10 +95,7 @@ export async function searchTopword(
                 select
                 id,
                 word,
-                case
-                    when exists (select 1 from dict_de dd where dd."uuid" = t0.word) 
-                    then 'Y' else 'N'
-                end as in_dict,
+                in_dict,
                 case 
                     when exists (select 1 from qsa_card qc where qc.question = t0.word and qc.user_id = ${email}) 
                     then 'Y' else 'N'
@@ -113,10 +108,7 @@ export async function searchTopword(
             select
             id,
             word,
-            case
-                when exists (select 1 from dict_de dd where dd."uuid" = t0.word) 
-                then 'Y' else 'N'
-            end as in_dict,
+            in_dict,
             'N' as in_card,
             ${order} as sort_order
             from ${table} t0 where 1 = 1
