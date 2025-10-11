@@ -130,8 +130,8 @@ export default function Page({ email }: Props) {
             }
 
             toast.success("All sentences saved successfully!");
-        } catch (err: any) {
-            toast.error(err.message || "Failed to save sentences");
+        } catch (err: unknown) {
+            toast.error((err as Error).message || "Failed to save sentences");
         }
         setStateSaving(false)
     }
