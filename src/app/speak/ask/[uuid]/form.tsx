@@ -118,6 +118,7 @@ export default function BlogForm({ item, email }: Props) {
                             sentenceChunks,
                             recorderRef,
                             false,
+                            "",
                             setStateProcessing,
                             handleLog,
                             handleResult);
@@ -159,6 +160,7 @@ export default function BlogForm({ item, email }: Props) {
                         sentenceChunks,
                         recorderRef,
                         false,
+                        "",
                         setStateProcessing,
                         handleLog,
                         handleResult);
