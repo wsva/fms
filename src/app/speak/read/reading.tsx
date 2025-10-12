@@ -257,9 +257,10 @@ export default function Page({ email }: Props) {
             </div>
 
             <div className='flex flex-row items-center justify-center gap-4 my-8'>
-                <Select label="Select Engine" size='sm' className='w-sm'
+                <Select className='max-w-sm'
                     selectedKeys={[stateEngine]}
                     onChange={(e) => setStateEngine(e.target.value)}
+                    startContent={<div className="whitespace-nowrap font-bold">AI Engine</div>}
                 >
                     {EngineList.map((v) => (
                         <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
