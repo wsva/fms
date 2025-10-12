@@ -62,7 +62,7 @@ export default function Page({ user_id, onSelect }: Props) {
 
     useEffect(() => {
         loadData()
-    }, [user_id, loadData]);
+    }, [user_id]);
 
     return (
         <div className='flex flex-col gap-1 w-full'>
