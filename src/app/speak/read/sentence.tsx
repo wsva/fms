@@ -13,11 +13,12 @@ import { callTTS } from '@/app/actions/ai_gemini';
 
 type Props = {
     item: read_sentence_browser;
+    engine: string,
     onUpdate: (new_item: read_sentence_browser) => void;
     onDelete: (uuid: string) => void;
 }
 
-export default function Page({ item, onUpdate, onDelete }: Props) {
+export default function Page({ item, engine, onUpdate, onDelete }: Props) {
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState(false);
     const [stateGenerating, setStateGenerating] = useState<boolean>(false);
@@ -51,6 +52,7 @@ export default function Page({ item, onUpdate, onDelete }: Props) {
             sentenceChunks,
             recorderRef,
             true,
+            engine,
             setStateProcessing,
             handleLog,
             handleResult);

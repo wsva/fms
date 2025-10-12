@@ -7,7 +7,7 @@ import { torsten_voice } from '@prisma/client'
 import { ActionResult } from '@/lib/types'
 import { toggleRecording } from '@/lib/recording'
 
-export const Item = ({ row }: { row: torsten_voice }) => {
+export const Item = ({ row, engine }: { row: torsten_voice, engine: string }) => {
     const [stateRecording, setStateRecording] = useState<boolean>(false)
     const [stateResult, setStateResult] = useState<string>('')
     const [stateAnswer, setStateAnswer] = useState<boolean>(false)
@@ -34,6 +34,7 @@ export const Item = ({ row }: { row: torsten_voice }) => {
             sentenceChunks,
             recorderRef,
             true,
+            engine,
             setStateProcessing,
             handleLog,
             handleResult);

@@ -2,9 +2,9 @@
 
 import React, { useRef, useState, useEffect, useMemo } from 'react'
 import { useImmer } from 'use-immer'
-import { Button, Spinner, Textarea } from "@heroui/react";
+import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import Sentence from './sentence';
-import { toggleRecording } from '@/lib/recording';
+import { EngineList, toggleRecording } from '@/lib/recording';
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { getUUID, toExactType } from '@/lib/utils';
 import Book from './book';
@@ -22,6 +22,7 @@ type Props = {
 export default function Page({ email }: Props) {
     const [stateBook, setStateBook] = useState<string>("");
     const [stateChapter, setStateChapter] = useState<string>("");
+    const [stateEngine, setStateEngine] = useState<string>("local");
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
     const [stateCurrent, setStateCurrent] = useState<read_sentence_browser>();
@@ -213,6 +214,7 @@ export default function Page({ email }: Props) {
             sentenceChunks,
             recorderRef,
             true,
+            stateEngine,
             setStateProcessing,
             handleLog,
             handleResult);
@@ -255,6 +257,14 @@ export default function Page({ email }: Props) {
             </div>
 
             <div className='flex flex-row items-center justify-center gap-4 my-8'>
+                <Select label="Select Engine" size='sm' className='w-sm'
+                    selectedKeys={[stateEngine]}
+                    onChange={(e) => setStateEngine(e.target.value)}
+                >
+                    {EngineList.map((v) => (
+                        <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
+                    ))}
+                </Select>
                 <Button variant='solid' color='primary' id='button-toggel-recording'
                     isDisabled={!stateRecording && stateProcessing}
                     onPress={() => {
@@ -325,7 +335,13 @@ export default function Page({ email }: Props) {
             {stateData.length > 0 && (
                 <div className="flex flex-col w-full gap-4">
                     {reversedList.map((v, i) =>
-                        <Sentence key={`${i}-${v.uuid}`} item={v} onUpdate={handleUpdate} onDelete={handleDelete} />
+                        <Sentence
+                            key={`${i}-${v.uuid}`}
+                            item={v}
+                            engine={stateEngine}
+                            onUpdate={handleUpdate}
+                            onDelete={handleDelete}
+                        />
                     )}
                 </div>
             )}

@@ -2,6 +2,8 @@
 
 import { createClient } from "redis";
 import { getUUID } from "@/lib/utils";
+import { safeText } from "./ai_utils";
+import { ActionResult } from "@/lib/types";
 
 const REDIS_HOST = process.env.REDIS_HOST
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD
@@ -19,7 +21,7 @@ export async function checkSTTServiceStatus(): Promise<boolean> {
     }
 }
 
-export async function callSTT(audioBlob: Blob): Promise<string> {
+export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
     const uuid = getUUID();
 
     // 1. 连接 Redis
@@ -40,13 +42,13 @@ export async function callSTT(audioBlob: Blob): Promise<string> {
             if (result) {
                 await client.del(`${uuid}:text`); // 取出后清理
                 await client.quit();
-                resolve(safeText(result));
+                resolve({ status: "success", data: await safeText(result) });
                 return;
             }
             // timeout 30s
             if (Date.now() - start > 30000) {
                 await client.quit();
-                resolve("Recognition timed out");
+                resolve({ status: "error", error: "Recognition timed out" });
                 return;
             }
             setTimeout(check, 500); // 每 500ms 检查一次
@@ -54,11 +56,4 @@ export async function callSTT(audioBlob: Blob): Promise<string> {
 
         check();
     });
-}
-
-function safeText(text: string) {
-    return text
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;');
 }

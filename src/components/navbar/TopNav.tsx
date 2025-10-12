@@ -1,16 +1,16 @@
 'use client';
 
-import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Tooltip } from "@heroui/react"
+import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Tooltip } from "@heroui/react"
 import Link from 'next/link'
 import React, { useEffect, useRef } from 'react'
 import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react"
 import { Session } from "next-auth"
-import { MdHelpOutline, MdMic, MdMicOff } from "react-icons/md";
+import { MdHelpOutline, MdMic, MdMicOff, MdOutlineLightbulb } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
-import { toggleRecording } from "@/lib/recording";
+import { EngineList, toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
 
 const ChevronDown = () => {
@@ -41,6 +41,7 @@ type Props = {
 export default function TopNav({ session }: Props) {
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [stateColor, setStateColor] = React.useState<"default" | "success" | "warning">("default");
+    const [stateEngine, setStateEngine] = React.useState<string>("local");
     const [stateRecording, setStateRecording] = React.useState(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSTT, setStateSTT] = React.useState<string>("");
@@ -69,6 +70,7 @@ export default function TopNav({ session }: Props) {
             sentenceChunks,
             recorderRef,
             true,
+            stateEngine,
             setStateProcessing,
             handleLog,
             handleResult,
@@ -185,6 +187,27 @@ export default function TopNav({ session }: Props) {
                         }
                         endContent={
                             <div className="flex flex-row items-center gap-0">
+                                <ButtonGroup variant="flat">
+                                    <Dropdown placement="bottom-end">
+                                        <DropdownTrigger>
+                                            <Button isIconOnly size="sm" variant="light">
+                                                <MdOutlineLightbulb size={24} />
+                                            </Button>
+                                        </DropdownTrigger>
+                                        <DropdownMenu
+                                            disallowEmptySelection
+                                            aria-label="Merge options"
+                                            className="max-w-[300px]"
+                                            selectedKeys={[stateEngine]}
+                                            selectionMode="single"
+                                            onSelectionChange={(keys) => setStateEngine(keys.currentKey || "local")}
+                                        >
+                                            {EngineList.map((v) => (
+                                                <DropdownItem key={v.key}>{v.value}</DropdownItem>
+                                            ))}
+                                        </DropdownMenu>
+                                    </Dropdown>
+                                </ButtonGroup>
                                 <Button isIconOnly size="sm" variant="light" onPress={() => router.push("/voice_access")}>
                                     <MdHelpOutline size={24} />
                                 </Button>

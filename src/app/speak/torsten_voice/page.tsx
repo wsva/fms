@@ -4,11 +4,13 @@ import React, { useState, useEffect } from 'react'
 import { getTorstenVoice } from '@/app/actions/torsten'
 import { torsten_voice } from '@prisma/client'
 import { Item } from './item'
-import { Pagination } from '@heroui/react'
+import { Pagination, Select, SelectItem } from '@heroui/react'
+import { EngineList } from '@/lib/recording'
 
 export default function Page() {
     const [stateError, setStateError] = useState<string>("")
     const [stateLoading, setStateLoading] = useState<boolean>(false)
+    const [stateEngine, setStateEngine] = useState<string>("local");
     const [stateItems, setStateItems] = useState<torsten_voice[]>([])
     const [stateCurrentPage, setStateCurrentPage] = useState<number>(1);
     const [stateTotalPages, setStateTotalPages] = useState<number>(0);
@@ -35,6 +37,15 @@ export default function Page() {
                 <div>{stateError}</div>
             ) : null}
 
+            <Select label="Select Engine" size='sm' className='w-sm'
+                selectedKeys={[stateEngine]}
+                onChange={(e) => setStateEngine(e.target.value)}
+            >
+                {EngineList.map((v) => (
+                    <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
+                ))}
+            </Select>
+
             <div className='flex flex-row w-full items-center justify-center gap-4'>
                 <div>Page</div>
                 <Pagination showControls loop variant='bordered'
@@ -50,7 +61,7 @@ export default function Page() {
             {!!stateItems ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 my-4">
                     {stateItems.map((row) => (
-                        <Item key={row.id} row={row} />
+                        <Item key={row.id} row={row} engine={stateEngine} />
                     ))}
                 </div>
             ) : null}

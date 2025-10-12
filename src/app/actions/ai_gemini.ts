@@ -2,9 +2,9 @@
 
 import { ActionResult } from '@/lib/types';
 import { GoogleGenAI, createUserContent, createPartFromUri } from '@google/genai';
-import wav from 'wav';
 import fs from 'fs';
 import path from 'path';
+import { saveWaveFile } from './ai_utils';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -60,18 +60,3 @@ export async function callTTS(uuid: string, text: string): Promise<ActionResult<
     }
 }
 
-async function saveWaveFile(filename: string, pcmData: Buffer) {
-    return new Promise((resolve, reject) => {
-        const writer = new wav.FileWriter(filename, {
-            channels: 1,
-            sampleRate: 24000,
-            bitDepth: 16,
-        });
-
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-
-        writer.write(pcmData);
-        writer.end();
-    });
-}

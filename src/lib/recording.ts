@@ -1,6 +1,27 @@
 //import { recognizeAudio } from "@/app/actions/ai_local_redis";
-import { callSTT } from "@/app/actions/ai_gemini";
+//import { callSTT } from "@/app/actions/ai_gemini";
 import { ActionResult } from "./types";
+
+export interface EngineOption {
+    key: string;
+    value: string;
+}
+
+export const EngineList: EngineOption[] = [
+    { key: "gemini", value: "Google Gemini" },
+    //{ key: "whisper", value: "OpenAI Whisper" },
+    { key: "local", value: "Local Whisper" },
+];
+
+export async function getCallSTT(engine: string) {
+    let mod;
+    if (engine === "gemini") {
+        mod = await import("@/app/actions/ai_gemini");
+    } else {
+        mod = await import("@/app/actions/ai_local_redis");
+    }
+    return mod.callSTT;
+}
 
 export const startRecording = async (
     stateRecording: boolean,
@@ -8,6 +29,7 @@ export const startRecording = async (
     sentenceChunks: React.RefObject<BlobPart[]>,
     recorderRef: React.RefObject<MediaRecorder | null>,
     recognize: boolean,
+    sttEngine: string,
     setStateProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     handleLog: (log: string) => void,
     handleResult: (result: ActionResult<string>, audioBlob: Blob) => void
@@ -40,11 +62,12 @@ export const startRecording = async (
             } else {
                 handleLog("Sending to STT service, waiting for response...");
                 setStateProcessing(true);
+                const callSTT = await getCallSTT(sttEngine);
                 const result = await callSTT(audioBlob);
                 if (result.status === "success") {
                     handleLog("STT recognition completed.");
                     handleResult({ status: "success", data: result.data }, audioBlob);
-                }else{
+                } else {
                     handleLog(`STT recognition failed: ${result.error}`);
                     handleResult({ status: "error", error: result.error }, audioBlob);
                 }
@@ -76,6 +99,7 @@ export const toggleRecording = async (
     sentenceChunks: React.RefObject<BlobPart[]>,
     recorderRef: React.RefObject<MediaRecorder | null>,
     recognize: boolean,
+    sttEngine: string,
     setStateProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     handleLog: (log: string) => void,
     handleResult: (result: ActionResult<string>, audioBlob: Blob) => void
@@ -87,6 +111,7 @@ export const toggleRecording = async (
             sentenceChunks,
             recorderRef,
             recognize,
+            sttEngine,
             setStateProcessing,
             handleLog,
             handleResult,
