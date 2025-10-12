@@ -78,7 +78,7 @@ export default function Page({ item, onUpdate, onDelete }: Props) {
     }
 
     return (
-        <div className="flex flex-col items-start justify-start w-full bg-sand-300">
+        <div className="flex flex-col items-start justify-start w-full rounded-lg bg-sand-300">
             <div className="flex flex-row items-start justify-start w-full my-2">
                 {(item.modified_db || item.modified_fs) ? (
                     <Tooltip placement='bottom' content="unsaved">

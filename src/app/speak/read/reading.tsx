@@ -223,7 +223,7 @@ export default function Page({ email }: Props) {
 
             if (event.ctrlKey && event.key === 's') {
                 event.preventDefault();
-                const btn = document.getElementById("button-save-all") as HTMLButtonElement | null;
+                const btn = document.getElementById("button-add-save") as HTMLButtonElement | null;
                 btn?.click();
             }
         };
@@ -292,7 +292,7 @@ export default function Page({ email }: Props) {
                             onChange={(e) => setStateCurrent({ ...stateCurrent, original: e.target.value })}
                         />
                     </div>
-                    <Button variant='solid' color='primary' id="button-save-all"
+                    <Button variant='solid' color='primary' id="button-add-save"
                         isDisabled={stateSaving} onPress={handleAddAndSave}
                     >
                         Add & Save (Ctrl+S)
@@ -317,7 +317,7 @@ export default function Page({ email }: Props) {
             )}
 
             {stateData.length > 0 && (
-                <div className="flex flex-col w-full gap-2">
+                <div className="flex flex-col w-full gap-4">
                     {reversedList.map((v) =>
                         <Sentence key={v.uuid} item={v} onUpdate={handleUpdate} onDelete={handleDelete} />
                     )}
