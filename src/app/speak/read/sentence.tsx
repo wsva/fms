@@ -2,27 +2,26 @@
 
 import React, { useRef, useState } from 'react'
 import { Button, Textarea, Tooltip } from "@heroui/react";
-import { MdArrowDownward, MdArrowUpward, MdDelete, MdEdit, MdEditOff, MdMic, MdMicOff, MdOutlineSave, MdPlayCircle } from 'react-icons/md'
+import { MdArrowDownward, MdArrowUpward, MdDelete, MdMic, MdMicOff, MdOutlineKeyboardDoubleArrowDown, MdOutlineKeyboardDoubleArrowUp, MdPlayCircle } from 'react-icons/md'
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { toggleRecording } from '@/lib/recording';
 import { toast } from 'react-toastify';
 import { highlightDifferences } from './utils';
-import { removeAudio, saveAudio } from '@/app/actions/audio';
-import { removeSentence, saveSentence } from '@/app/actions/reading';
+import { removeAudio } from '@/app/actions/audio';
+import { removeSentence } from '@/app/actions/reading';
 import { callTTS } from '@/app/actions/ai_gemini';
 
 type Props = {
-    user_id: string;
     item: read_sentence_browser;
     onUpdate: (new_item: read_sentence_browser, new_pos?: number) => void;
     onDelete: (uuid: string) => void;
 }
 
-export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
+export default function Page({ item, onUpdate, onDelete }: Props) {
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState(false);
-    const [stateEdit, setStateEdit] = useState<boolean>(false);
     const [stateGenerating, setStateGenerating] = useState<boolean>(false);
+    const [stateOriginal, setStateOriginal] = useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
@@ -56,37 +55,6 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
             handleResult);
     }
 
-    const handleSave = async () => {
-        if (item.modified_fs && !!item.audioBlob) {
-            const result = await saveAudio(item.audioBlob, "reading", `${item.uuid}.wav`);
-            if (result.status === "success") {
-                toast.success("save audio success");
-                onUpdate({ ...item, on_fs: true, modified_fs: false })
-            } else {
-                toast.error("save audio failed");
-            }
-        }
-        if (item.modified_db) {
-            const result = await saveSentence({
-                uuid: item.uuid,
-                chapter_uuid: item.chapter_uuid,
-                order_num: item.order_num,
-                original: item.original,
-                recognized: item.recognized,
-                audio_path: `/api/data/reading/${item.uuid}.wav`,
-                created_by: user_id,
-                created_at: item.created_at || new Date(),
-                updated_at: new Date(),
-            });
-            if (result.status === "success") {
-                toast.success("save sentence success");
-                onUpdate({ ...item, in_db: true, modified_db: false })
-            } else {
-                toast.error("save sentence failed");
-            }
-        }
-    }
-
     const handleDelete = async () => {
         if (item.on_fs) {
             const result = await removeAudio("reading", `${item.uuid}.wav`);
@@ -110,55 +78,95 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
     }
 
     return (
-        <div className="flex flex-row items-start justify-start w-full bg-sand-300">
-            {(item.modified_db || item.modified_fs) ? (
-                <Tooltip placement='bottom' content="unsaved">
-                    <div className='text-red-500'>●</div>
-                </Tooltip>
-            ) : (
-                <div className='text-transparent'>●</div>
-            )}
+        <div className="flex flex-col items-start justify-start w-full bg-sand-300">
+            <div className="flex flex-row items-start justify-start w-full my-2">
+                {(item.modified_db || item.modified_fs) ? (
+                    <Tooltip placement='bottom' content="unsaved">
+                        <div className='text-red-500'>●</div>
+                    </Tooltip>
+                ) : (
+                    <div className='text-transparent'>●</div>
+                )}
 
-            <div className='flex flex-col w-full p-2'>
-                <div className='flex flex-col'>
+                <div className='flex flex-col w-full ps-2'>
                     <div className="flex flex-row items-center justify-start">
-                        <div className="text-md text-gray-400">recognized from audio:</div>
-                        <Tooltip placement='top' content="re-record">
-                            <Button isIconOnly variant='light' className='h-fit'
-                                isDisabled={!stateRecording && stateProcessing}
-                                onPress={toggleRecordingLocal}
-                            >
-                                {stateRecording ? <MdMic size={20} /> : <MdMicOff size={20} />}
+                        <div className="flex flex-row items-center justify-start w-full">
+                            <div className="text-md text-gray-400">recognized from audio:</div>
+                            <Tooltip placement='top' content="re-record">
+                                <Button isIconOnly variant='light' className='h-fit'
+                                    isDisabled={!stateRecording && stateProcessing}
+                                    onPress={toggleRecordingLocal}
+                                >
+                                    {stateRecording ? <MdMic size={20} /> : <MdMicOff size={20} />}
 
-                            </Button>
-                        </Tooltip>
-                        <Tooltip placement='top' content="play audio">
-                            <Button isIconOnly variant='light' className='h-fit'
-                                onPress={() => {
-                                    const audioUrl = !!item.audioBlob ? URL.createObjectURL(item.audioBlob) : item.audio_path
-                                    const audio = new Audio(audioUrl);
-                                    audio.play();
-                                }}
-                            >
-                                <MdPlayCircle size={20} />
-                            </Button>
-                        </Tooltip>
+                                </Button>
+                            </Tooltip>
+                            <Tooltip placement='top' content="play audio">
+                                <Button isIconOnly variant='light' className='h-fit'
+                                    onPress={() => {
+                                        const audioUrl = !!item.audioBlob ? URL.createObjectURL(item.audioBlob) : item.audio_path
+                                        const audio = new Audio(audioUrl);
+                                        audio.play();
+                                    }}
+                                >
+                                    <MdPlayCircle size={20} />
+                                </Button>
+                            </Tooltip>
+                        </div>
+                        <div className="flex flex-row items-center justify-end">
+                            <Tooltip placement='top' content="show/hide original">
+                                <Button isIconOnly variant='light' className='h-fit' onPress={() => setStateOriginal(!stateOriginal)} >
+                                    {stateOriginal ? <MdOutlineKeyboardDoubleArrowUp size={20} /> : <MdOutlineKeyboardDoubleArrowDown size={20} />}
+                                </Button>
+                            </Tooltip>
+
+                            <Tooltip placement='top' content="delete">
+                                <Button isIconOnly variant='light' color='danger' className='w-fit h-fit'
+                                    onPress={() => {
+                                        if (window.confirm("Are you sure to delete?")) {
+                                            handleDelete();
+                                        }
+                                    }}
+                                >
+                                    <MdDelete size={20} />
+                                </Button>
+                            </Tooltip>
+                        </div>
                     </div>
-                    <div className="text-xl">
+                    <div className="text-xl text-balance hyphens-auto">
                         {highlightDifferences(item.original, item.recognized)}
                     </div>
                 </div>
 
-                <div className='flex flex-col'>
-                    <div className="flex flex-row items-center justify-start gap-4">
-                        <div className="text-md text-gray-400">original text:</div>
-                        <Tooltip placement='top' content="edit original">
-                            <Button isIconOnly variant='light' className='h-fit'
-                                onPress={() => setStateEdit(!stateEdit)} >
-                                {stateEdit ? <MdEditOff size={20} /> : <MdEdit size={20} />}
-                            </Button>
-                        </Tooltip>
-                        <Tooltip placement='top' content="play audio">
+                <div className="flex flex-col items-center justify-center w-fit gap-1">
+                    <Tooltip placement='left' content="move upward">
+                        <Button isIconOnly variant='light' className='h-fit'
+                            onPress={() => onUpdate(item, item.order_num + 1)} >
+                            <MdArrowUpward size={20} />
+                        </Button>
+                    </Tooltip>
+                    <div>{item.order_num}</div>
+                    <Tooltip placement='left' content="move downward">
+                        <Button isIconOnly variant='light' className='h-fit'
+                            onPress={() => onUpdate(item, item.order_num - 1)} >
+                            <MdArrowDownward size={20} />
+                        </Button>
+                    </Tooltip>
+                </div>
+            </div>
+
+            {stateOriginal && (
+                <div className="flex flex-row items-center justify-start w-full px-2 pb-1">
+                    <Textarea size='lg' className='w-full'
+                        classNames={{
+                            inputWrapper: "bg-sand-200",
+                            input: "text-xl",
+                        }}
+                        defaultValue={item.original}
+                        onChange={(e) => {
+                            onUpdate({ ...item, original: e.target.value, modified_db: true })
+                        }}
+                        endContent={
                             <Button isIconOnly variant='light' className='h-fit'
                                 isDisabled={stateGenerating}
                                 onPress={async () => {
@@ -184,51 +192,10 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
                             >
                                 <MdPlayCircle size={20} />
                             </Button>
-                        </Tooltip>
-                    </div>
-                    {stateEdit ? (
-                        <Textarea size='lg' className='w-full'
-                            classNames={{
-                                inputWrapper: "bg-sand-200",
-                                input: "text-xl",
-                            }}
-                            defaultValue={item.original}
-                            onChange={(e) => {
-                                onUpdate({ ...item, original: e.target.value, modified_db: true })
-                            }}
-                        />
-                    ) : (
-                        <div className="text-xl">{item.original}</div>
-                    )
-                    }
+                        }
+                    />
                 </div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center w-fit gap-1 py-2">
-                <Tooltip placement='left' content="move upward">
-                    <Button isIconOnly variant='light' className='h-fit'
-                        onPress={() => onUpdate(item, item.order_num + 1)} >
-                        <MdArrowUpward size={20} />
-                    </Button>
-                </Tooltip>
-                <div>{item.order_num}</div>
-                <Tooltip placement='left' content="move downward">
-                    <Button isIconOnly variant='light' className='h-fit'
-                        onPress={() => onUpdate(item, item.order_num - 1)} >
-                        <MdArrowDownward size={20} />
-                    </Button>
-                </Tooltip>
-                <Tooltip placement='left' content="save">
-                    <Button isIconOnly variant='light' className='h-fit' onPress={handleSave} >
-                        <MdOutlineSave size={20} />
-                    </Button>
-                </Tooltip>
-                <Tooltip placement='left' content="delete">
-                    <Button isIconOnly variant='light' color='danger' className='h-fit' onPress={handleDelete} >
-                        <MdDelete size={20} />
-                    </Button>
-                </Tooltip>
-            </div>
-        </div>
+            )}
+        </div >
     )
 }

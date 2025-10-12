@@ -22,24 +22,18 @@ type Props = {
 export default function Page({ email }: Props) {
     const [stateBook, setStateBook] = useState<string>("");
     const [stateChapter, setStateChapter] = useState<string>("");
-
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
     const [stateCurrent, setStateCurrent] = useState<read_sentence_browser>();
-
     const [stateData, updateStateData] = useImmer<read_sentence_browser[]>([]);
     const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
-
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
 
-    const reversedList = useMemo(
-        () => stateData.slice().reverse(),
-        [stateData]
-    );
+    const reversedList = useMemo(() => stateData.slice().reverse(), [stateData]);
 
     const loadSentence = async (chapter_uuid: string) => {
         setStateLoading(true)
@@ -109,6 +103,7 @@ export default function Page({ email }: Props) {
             const resultFs = await saveAudio(stateCurrent.audioBlob, "reading", `${stateCurrent.uuid}.wav`);
             if (resultFs.status === "error") {
                 toast.error("save audio failed");
+                setStateSaving(false)
                 return
             }
         }
@@ -125,10 +120,11 @@ export default function Page({ email }: Props) {
         });
         if (resultDb.status === "error") {
             toast.error("save db failed");
+            setStateSaving(false)
             return
         }
 
-        updateStateData(draft => draft.push(stateCurrent));
+        updateStateData(draft => { draft.push(stateCurrent) });
         setStateCurrent(undefined);
 
         toast.success("added and saved successfully!");
@@ -247,6 +243,7 @@ export default function Page({ email }: Props) {
 
                 <Chapter user_id={email} book_uuid={stateBook} onSelect={async (chapter_uuid: string) => {
                     setStateChapter(chapter_uuid)
+                    setStateCurrent(undefined)
                     await loadSentence(chapter_uuid)
                 }} />
             </div>
@@ -266,42 +263,42 @@ export default function Page({ email }: Props) {
                         ? '⏹ Stop Recording (Ctrl+A)'
                         : stateProcessing ? "Processing" : '🎤 Read a Sentence (Ctrl+A)'}
                 </Button>
-                {stateCurrent && (
-                    <div className='flex flex-col items-center justify-center gap-2'>
-                        <div className='flex flex-col bg-sand-300'>
-                            <div className="flex flex-row items-center justify-start">
-                                <div className="text-md text-gray-400">recognized from audio:</div>
-                                <Button isIconOnly variant='light' className='h-fit'
-                                    onPress={() => {
-                                        const audioUrl = !!stateCurrent.audioBlob ? URL.createObjectURL(stateCurrent.audioBlob) : stateCurrent.audio_path
-                                        const audio = new Audio(audioUrl);
-                                        audio.play();
-                                    }}
-                                >
-                                    <MdPlayCircle size={20} />
-                                </Button>
-                            </div>
-                            <div className="text-xl">
-                                {highlightDifferences(stateCurrent.original, stateCurrent.recognized)}
-                            </div>
-                            <div className="text-md text-gray-400">original text:</div>
-                            <Textarea size='lg' className='w-full'
-                                classNames={{
-                                    inputWrapper: "bg-sand-200",
-                                    input: "text-xl",
-                                }}
-                                defaultValue={stateCurrent.original}
-                                onChange={(e) => setStateCurrent({ ...stateCurrent, original: e.target.value })}
-                            />
-                        </div>
-                        <Button variant='solid' color='primary' id="button-save-all"
-                            isDisabled={stateSaving} onPress={handleAddAndSave}
-                        >
-                            Add & Save (Ctrl+S)
-                        </Button>
-                    </div>
-                )}
             </div>
+
+            {stateCurrent && (
+                <div className='flex flex-col items-center justify-center w-full gap-2'>
+                    <div className='flex flex-col w-full p-2 bg-sand-300'>
+                        <div className="flex flex-row items-center justify-start">
+                            <div className="text-md text-gray-400">recognized from audio:</div>
+                            <Button isIconOnly variant='light' className='h-fit'
+                                onPress={() => {
+                                    const audioUrl = !!stateCurrent.audioBlob ? URL.createObjectURL(stateCurrent.audioBlob) : stateCurrent.audio_path
+                                    const audio = new Audio(audioUrl);
+                                    audio.play();
+                                }}
+                            >
+                                <MdPlayCircle size={20} />
+                            </Button>
+                        </div>
+                        <div className="text-xl">
+                            {highlightDifferences(stateCurrent.original, stateCurrent.recognized)}
+                        </div>
+                        <Textarea size='lg' className='w-full' label="original text"
+                            classNames={{
+                                inputWrapper: "bg-sand-200",
+                                input: "text-xl",
+                            }}
+                            defaultValue={stateCurrent.original}
+                            onChange={(e) => setStateCurrent({ ...stateCurrent, original: e.target.value })}
+                        />
+                    </div>
+                    <Button variant='solid' color='primary' id="button-save-all"
+                        isDisabled={stateSaving} onPress={handleAddAndSave}
+                    >
+                        Add & Save (Ctrl+S)
+                    </Button>
+                </div>
+            )}
 
             {stateLoading && (
                 <div className='flex flex-row w-full items-center justify-center gap-4'>
@@ -322,13 +319,7 @@ export default function Page({ email }: Props) {
             {stateData.length > 0 && (
                 <div className="flex flex-col w-full gap-2">
                     {reversedList.map((v) =>
-                        <Sentence
-                            key={v.uuid}
-                            user_id={email}
-                            item={v}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                        />
+                        <Sentence key={v.uuid} item={v} onUpdate={handleUpdate} onDelete={handleDelete} />
                     )}
                 </div>
             )}
