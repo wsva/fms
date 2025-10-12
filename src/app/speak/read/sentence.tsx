@@ -13,7 +13,7 @@ import { callTTS } from '@/app/actions/ai_gemini';
 
 type Props = {
     item: read_sentence_browser;
-    onUpdate: (new_item: read_sentence_browser, new_pos?: number) => void;
+    onUpdate: (new_item: read_sentence_browser) => void;
     onDelete: (uuid: string) => void;
 }
 
@@ -32,13 +32,14 @@ export default function Page({ item, onUpdate, onDelete }: Props) {
         }
         const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
             if (result.status === 'success') {
-                onUpdate({
+                const new_item = {
                     ...item,
                     recognized: result.data,
                     audioBlob: audioBlob,
                     modified_db: true,
                     modified_fs: true,
-                })
+                };
+                onUpdate(new_item);
             } else {
                 toast.error(result.error as string)
             }
@@ -104,7 +105,7 @@ export default function Page({ item, onUpdate, onDelete }: Props) {
                             <Tooltip placement='top' content="play audio">
                                 <Button isIconOnly variant='light' className='h-fit'
                                     onPress={() => {
-                                        const audioUrl = !!item.audioBlob ? URL.createObjectURL(item.audioBlob) : item.audio_path
+                                        const audioUrl = !!item.audioBlob ? URL.createObjectURL(item.audioBlob) : item.audio_path;
                                         const audio = new Audio(audioUrl);
                                         audio.play();
                                     }}
@@ -141,14 +142,28 @@ export default function Page({ item, onUpdate, onDelete }: Props) {
                 <div className="flex flex-col items-center justify-center w-fit gap-1">
                     <Tooltip placement='left' content="move upward">
                         <Button isIconOnly variant='light' className='h-fit'
-                            onPress={() => onUpdate(item, item.order_num + 1)} >
+                            onPress={() => {
+                                const new_item = {
+                                    ...item,
+                                    order_num: item.order_num + 1,
+                                    modified_db: true,
+                                };
+                                onUpdate(new_item)
+                            }} >
                             <MdArrowUpward size={20} />
                         </Button>
                     </Tooltip>
                     <div>{item.order_num}</div>
                     <Tooltip placement='left' content="move downward">
                         <Button isIconOnly variant='light' className='h-fit'
-                            onPress={() => onUpdate(item, item.order_num - 1)} >
+                            onPress={() => {
+                                const new_item = {
+                                    ...item,
+                                    order_num: item.order_num - 1,
+                                    modified_db: true,
+                                };
+                                onUpdate(new_item)
+                            }} >
                             <MdArrowDownward size={20} />
                         </Button>
                     </Tooltip>
@@ -164,7 +179,8 @@ export default function Page({ item, onUpdate, onDelete }: Props) {
                         }}
                         defaultValue={item.original}
                         onChange={(e) => {
-                            onUpdate({ ...item, original: e.target.value, modified_db: true })
+                            const new_item = { ...item, original: e.target.value, modified_db: true };
+                            onUpdate(new_item)
                         }}
                         endContent={
                             <Button isIconOnly variant='light' className='h-fit'

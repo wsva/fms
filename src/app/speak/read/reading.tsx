@@ -62,22 +62,24 @@ export default function Page({ email }: Props) {
         setStateLoading(false)
     }
 
-    const handleUpdate = (new_item: read_sentence_browser, new_pos?: number) => {
+    const handleUpdate = (new_item: read_sentence_browser) => {
         updateStateData(draft => {
             const index = draft.findIndex(i => i.uuid === new_item.uuid);
             if (index === -1) return;
 
-            if (new_pos) {
-                const item = draft.splice(index, 1)[0];
-                const newIndex = Math.max(0, Math.min(draft.length, new_pos - 1));
-                draft.splice(newIndex, 0, item);
+            if (draft[index].order_num !== new_item.order_num) {
+                draft.splice(index, 1); // remove old item
+                const newIndex = Math.max(0, Math.min(draft.length, new_item.order_num - 1));
+                draft.splice(newIndex, 0, { ...new_item }); // insert new item
             } else {
-                draft[index] = { ...draft[index], ...new_item };
+                draft[index] = { ...new_item };
             }
 
             draft.forEach((item, i) => {
+                if (!item.modified_db && item.order_num !== i + 1) {
+                    item.modified_db = item.order_num !== i + 1;
+                }
                 item.order_num = i + 1;
-                item.modified_db = item.order_num !== i + 1;
             });
         });
         setStateNeedSave(true);
@@ -88,8 +90,11 @@ export default function Page({ email }: Props) {
             const index = draft.findIndex(i => i.uuid === uuid);
             if (index !== -1) draft.splice(index, 1);
             draft.forEach((item, i) => {
+                if (!item.modified_db && item.order_num !== i + 1) {
+                    item.modified_db = item.order_num !== i + 1;
+                }
                 item.order_num = i + 1;
-                item.modified_db = item.order_num !== i + 1;
+                item.order_num = i + 1;
             });
         });
         setStateNeedSave(true);
@@ -244,6 +249,7 @@ export default function Page({ email }: Props) {
                 <Chapter user_id={email} book_uuid={stateBook} onSelect={async (chapter_uuid: string) => {
                     setStateChapter(chapter_uuid)
                     setStateCurrent(undefined)
+                    setStateNeedSave(false)
                     await loadSentence(chapter_uuid)
                 }} />
             </div>
@@ -318,8 +324,8 @@ export default function Page({ email }: Props) {
 
             {stateData.length > 0 && (
                 <div className="flex flex-col w-full gap-4">
-                    {reversedList.map((v) =>
-                        <Sentence key={v.uuid} item={v} onUpdate={handleUpdate} onDelete={handleDelete} />
+                    {reversedList.map((v, i) =>
+                        <Sentence key={`${i}-${v.uuid}`} item={v} onUpdate={handleUpdate} onDelete={handleDelete} />
                     )}
                 </div>
             )}
