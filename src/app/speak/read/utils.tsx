@@ -1,4 +1,4 @@
-export function tokenize(s: string): string[] {
+function tokenize(s: string): string[] {
     s = s.replace(/\s+/g, ' ').trim();
     if (!s) return [];
     const tokens = s
@@ -8,7 +8,7 @@ export function tokenize(s: string): string[] {
 }
 
 // Longest Common Subsequence
-export function lcs(a: string[], b: string[]) {
+function lcs(a: string[], b: string[]) {
     const n = a.length,
         m = b.length;
     const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
@@ -32,9 +32,24 @@ export function lcs(a: string[], b: string[]) {
     return { matchesB };
 }
 
-export function escapeHtml(str: string): string {
+function escapeHtml(str: string): string {
     return str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+export const highlightDifferences = (original: string, recognized: string) => {
+    const originalTokens = tokenize(original);
+    const recognizedTokens = tokenize(recognized);
+    const { matchesB } = lcs(originalTokens, recognizedTokens);
+    const matchSetB = new Set(matchesB);
+
+    return recognizedTokens.map((t, idx) => {
+        if (matchSetB.has(idx)) {
+            return <span key={idx}>{escapeHtml(t)}</span>;
+        } else {
+            return <span key={idx} style={{ "background": "#ffeb3b" }}>{escapeHtml(t)}</span>;
+        }
+    });
 }

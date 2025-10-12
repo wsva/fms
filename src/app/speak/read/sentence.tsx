@@ -6,7 +6,7 @@ import { MdArrowDownward, MdArrowUpward, MdDelete, MdEdit, MdEditOff, MdMic, MdM
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { toggleRecording } from '@/lib/recording';
 import { toast } from 'react-toastify';
-import { escapeHtml, lcs, tokenize } from './utils';
+import { highlightDifferences } from './utils';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
 import { removeSentence, saveSentence } from '@/app/actions/reading';
 import { callTTS } from '@/app/actions/ai_gemini';
@@ -54,21 +54,6 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
             setStateProcessing,
             handleLog,
             handleResult);
-    }
-
-    const highlightDifferences = (original: string, recognized: string) => {
-        const originalTokens = tokenize(original);
-        const recognizedTokens = tokenize(recognized);
-        const { matchesB } = lcs(originalTokens, recognizedTokens);
-        const matchSetB = new Set(matchesB);
-
-        return recognizedTokens.map((t, idx) => {
-            if (matchSetB.has(idx)) {
-                return <span key={idx}>{escapeHtml(t)}</span>;
-            } else {
-                return <span key={idx} style={{ "background": "#ffeb3b" }}>{escapeHtml(t)}</span>;
-            }
-        });
     }
 
     const handleSave = async () => {
@@ -150,7 +135,7 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
                         <Tooltip placement='top' content="play audio">
                             <Button isIconOnly variant='light' className='h-fit'
                                 onPress={() => {
-                                    const audioUrl = !!item.audioBlob ? URL.createObjectURL(item.audioBlob!) : item.audio_path
+                                    const audioUrl = !!item.audioBlob ? URL.createObjectURL(item.audioBlob) : item.audio_path
                                     const audio = new Audio(audioUrl);
                                     audio.play();
                                 }}
@@ -217,16 +202,17 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
                     )
                     }
                 </div>
-            </div >
+            </div>
+
             <div className="flex flex-col items-center justify-center w-fit gap-1 py-2">
-                <Tooltip placement='left' content="save">
+                <Tooltip placement='left' content="move upward">
                     <Button isIconOnly variant='light' className='h-fit'
                         onPress={() => onUpdate(item, item.order_num + 1)} >
                         <MdArrowUpward size={20} />
                     </Button>
                 </Tooltip>
                 <div>{item.order_num}</div>
-                <Tooltip placement='left' content="save">
+                <Tooltip placement='left' content="move downward">
                     <Button isIconOnly variant='light' className='h-fit'
                         onPress={() => onUpdate(item, item.order_num - 1)} >
                         <MdArrowDownward size={20} />
@@ -238,7 +224,7 @@ export default function Page({ user_id, item, onUpdate, onDelete }: Props) {
                     </Button>
                 </Tooltip>
                 <Tooltip placement='left' content="delete">
-                    <Button isIconOnly variant='light' className='h-fit' onPress={handleDelete} >
+                    <Button isIconOnly variant='light' color='danger' className='h-fit' onPress={handleDelete} >
                         <MdDelete size={20} />
                     </Button>
                 </Tooltip>

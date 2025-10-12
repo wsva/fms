@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useMemo } from 'react'
 import { useImmer } from 'use-immer'
-import { Button, Spinner } from "@heroui/react";
+import { Button, Spinner, Textarea } from "@heroui/react";
 import Sentence from './sentence';
 import { toggleRecording } from '@/lib/recording';
 import { ActionResult, read_sentence_browser } from '@/lib/types';
@@ -12,6 +12,8 @@ import { getSentenceAll, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
 import { toast } from 'react-toastify';
 import { saveAudio } from '@/app/actions/audio';
+import { MdPlayCircle } from 'react-icons/md';
+import { highlightDifferences } from './utils';
 
 type Props = {
     email: string;
@@ -20,18 +22,23 @@ type Props = {
 export default function Page({ email }: Props) {
     const [stateBook, setStateBook] = useState<string>("");
     const [stateChapter, setStateChapter] = useState<string>("");
+
     const [stateRecording, setStateRecording] = useState<boolean>(false);
-    const [stateProcessing, setStateProcessing] = React.useState(false);
-    const [stateSentenceList, updateStateSentenceList] = useImmer<read_sentence_browser[]>([])
-    const [stateLoading, setStateLoading] = React.useState<boolean>(false);
-    const [stateSaving, setStateSaving] = React.useState(false);
+    const [stateProcessing, setStateProcessing] = useState<boolean>(false);
+    const [stateCurrent, setStateCurrent] = useState<read_sentence_browser>();
+
+    const [stateData, updateStateData] = useImmer<read_sentence_browser[]>([]);
+    const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
+
+    const [stateLoading, setStateLoading] = useState<boolean>(false);
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
 
     const reversedList = useMemo(
-        () => stateSentenceList.slice().reverse(),
-        [stateSentenceList]
+        () => stateData.slice().reverse(),
+        [stateData]
     );
 
     const loadSentence = async (chapter_uuid: string) => {
@@ -39,6 +46,9 @@ export default function Page({ email }: Props) {
         const result = await getSentenceAll(chapter_uuid)
         if (result.status === "success") {
             const newList = result.data.map((v, i) => {
+                if (v.order_num !== i + 1) {
+                    setStateNeedSave(true);
+                }
                 return {
                     ...toExactType<read_sentence_browser>(v),
                     order_num: i + 1,
@@ -48,7 +58,7 @@ export default function Page({ email }: Props) {
                     modified_fs: false,
                 }
             });
-            updateStateSentenceList((draft) => {
+            updateStateData((draft) => {
                 draft.length = 0;
                 for (const item of newList) {
                     draft.push(item);
@@ -59,7 +69,7 @@ export default function Page({ email }: Props) {
     }
 
     const handleUpdate = (new_item: read_sentence_browser, new_pos?: number) => {
-        updateStateSentenceList(draft => {
+        updateStateData(draft => {
             const index = draft.findIndex(i => i.uuid === new_item.uuid);
             if (index === -1) return;
 
@@ -76,10 +86,11 @@ export default function Page({ email }: Props) {
                 item.modified_db = item.order_num !== i + 1;
             });
         });
+        setStateNeedSave(true);
     }
 
     const handleDelete = (uuid: string) => {
-        updateStateSentenceList(draft => {
+        updateStateData(draft => {
             const index = draft.findIndex(i => i.uuid === uuid);
             if (index !== -1) draft.splice(index, 1);
             draft.forEach((item, i) => {
@@ -87,17 +98,52 @@ export default function Page({ email }: Props) {
                 item.modified_db = item.order_num !== i + 1;
             });
         });
+        setStateNeedSave(true);
+    }
+
+    const handleAddAndSave = async () => {
+        if (!stateCurrent) return
+
+        setStateSaving(true)
+        if (stateCurrent.audioBlob) {
+            const resultFs = await saveAudio(stateCurrent.audioBlob, "reading", `${stateCurrent.uuid}.wav`);
+            if (resultFs.status === "error") {
+                toast.error("save audio failed");
+                return
+            }
+        }
+        const resultDb = await saveSentence({
+            uuid: stateCurrent.uuid,
+            chapter_uuid: stateCurrent.chapter_uuid,
+            order_num: stateCurrent.order_num,
+            original: stateCurrent.original,
+            recognized: stateCurrent.recognized,
+            audio_path: `/api/data/reading/${stateCurrent.uuid}.wav`,
+            created_by: email,
+            created_at: stateCurrent.created_at || new Date(),
+            updated_at: new Date(),
+        });
+        if (resultDb.status === "error") {
+            toast.error("save db failed");
+            return
+        }
+
+        updateStateData(draft => draft.push(stateCurrent));
+        setStateCurrent(undefined);
+
+        toast.success("added and saved successfully!");
+        setStateSaving(false)
     }
 
     const handleSaveAll = async () => {
         setStateSaving(true)
         try {
-            for (const v of stateSentenceList) {
+            for (const v of stateData) {
                 if (v.modified_fs && v.audioBlob) {
                     const resultFs = await saveAudio(v.audioBlob, "reading", `${v.uuid}.wav`);
                     if (resultFs.status === "error") throw new Error("save audio failed");
 
-                    updateStateSentenceList(draft => {
+                    updateStateData(draft => {
                         const item = draft.find(i => i.uuid === v.uuid);
                         if (item) {
                             item.audioBlob = undefined;
@@ -120,7 +166,7 @@ export default function Page({ email }: Props) {
                 });
                 if (resultDb.status === "error") throw new Error("save sentence failed");
 
-                updateStateSentenceList(draft => {
+                updateStateData(draft => {
                     const item = draft.find(i => i.uuid === v.uuid);
                     if (item) {
                         item.in_db = true;
@@ -129,6 +175,7 @@ export default function Page({ email }: Props) {
                 });
             }
 
+            setStateNeedSave(false);
             toast.success("All sentences saved successfully!");
         } catch (err: unknown) {
             toast.error((err as Error).message || "Failed to save sentences");
@@ -142,20 +189,18 @@ export default function Page({ email }: Props) {
         }
         const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
             if (result.status === 'success') {
-                updateStateSentenceList(draft => {
-                    draft.push({
-                        uuid: getUUID(),
-                        chapter_uuid: stateChapter,
-                        order_num: draft.length + 1,
-                        original: result.data,
-                        recognized: result.data,
-                        audioBlob: audioBlob,
-                        in_db: false,
-                        on_fs: false,
-                        modified_db: true,
-                        modified_fs: true,
-                    });
-                });
+                setStateCurrent({
+                    uuid: getUUID(),
+                    chapter_uuid: stateChapter,
+                    order_num: stateData.length + 1,
+                    original: result.data,
+                    recognized: result.data,
+                    audioBlob: audioBlob,
+                    in_db: true,
+                    on_fs: true,
+                    modified_db: false,
+                    modified_fs: false,
+                })
             } else {
                 toast.error(result.error as string)
             }
@@ -206,7 +251,7 @@ export default function Page({ email }: Props) {
                 }} />
             </div>
 
-            <div className='flex flex-row items-center justify-center gap-4 my-2'>
+            <div className='flex flex-row items-center justify-center gap-4 my-8'>
                 <Button variant='solid' color='primary' id='button-toggel-recording'
                     isDisabled={!stateRecording && stateProcessing}
                     onPress={() => {
@@ -221,19 +266,61 @@ export default function Page({ email }: Props) {
                         ? '⏹ Stop Recording (Ctrl+A)'
                         : stateProcessing ? "Processing" : '🎤 Read a Sentence (Ctrl+A)'}
                 </Button>
-                <Button variant='solid' color='primary' id="button-save-all"
-                    isDisabled={stateSaving} onPress={handleSaveAll}
-                >
-                    Save (Ctrl+S)
-                </Button>
+                {stateCurrent && (
+                    <div className='flex flex-col items-center justify-center gap-2'>
+                        <div className='flex flex-col bg-sand-300'>
+                            <div className="flex flex-row items-center justify-start">
+                                <div className="text-md text-gray-400">recognized from audio:</div>
+                                <Button isIconOnly variant='light' className='h-fit'
+                                    onPress={() => {
+                                        const audioUrl = !!stateCurrent.audioBlob ? URL.createObjectURL(stateCurrent.audioBlob) : stateCurrent.audio_path
+                                        const audio = new Audio(audioUrl);
+                                        audio.play();
+                                    }}
+                                >
+                                    <MdPlayCircle size={20} />
+                                </Button>
+                            </div>
+                            <div className="text-xl">
+                                {highlightDifferences(stateCurrent.original, stateCurrent.recognized)}
+                            </div>
+                            <div className="text-md text-gray-400">original text:</div>
+                            <Textarea size='lg' className='w-full'
+                                classNames={{
+                                    inputWrapper: "bg-sand-200",
+                                    input: "text-xl",
+                                }}
+                                defaultValue={stateCurrent.original}
+                                onChange={(e) => setStateCurrent({ ...stateCurrent, original: e.target.value })}
+                            />
+                        </div>
+                        <Button variant='solid' color='primary' id="button-save-all"
+                            isDisabled={stateSaving} onPress={handleAddAndSave}
+                        >
+                            Add & Save (Ctrl+S)
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {stateLoading && (
-                <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
+                <div className='flex flex-row w-full items-center justify-center gap-4'>
+                    <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
+                </div>
             )}
 
-            {stateSentenceList.length > 0 && (
-                <div className="flex flex-col items-start justify-start w-full gap-2 my-8">
+            {stateNeedSave && (
+                <div className='flex flex-row items-center justify-end my-1'>
+                    <Button variant='solid' color='primary'
+                        isDisabled={stateSaving} onPress={handleSaveAll}
+                    >
+                        Save
+                    </Button>
+                </div>
+            )}
+
+            {stateData.length > 0 && (
+                <div className="flex flex-col w-full gap-2">
                     {reversedList.map((v) =>
                         <Sentence
                             key={v.uuid}
@@ -245,7 +332,6 @@ export default function Page({ email }: Props) {
                     )}
                 </div>
             )}
-
         </div>
     )
 }
