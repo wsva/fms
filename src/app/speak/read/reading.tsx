@@ -272,7 +272,7 @@ export default function Page({ email }: Props) {
                         if (!stateBook || !stateChapter) {
                             alert("select book and chapter first")
                         } else {
-                            if (!stateCurrent) {
+                            if (stateCurrent) {
                                 setStateCurrent(undefined)
                             }
                             toggleRecordingLocal()
