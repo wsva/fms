@@ -99,11 +99,11 @@ export default function BlogForm({ item, email }: Props) {
             <div className='flex flex-row my-1 items-start justify-start gap-4'>
                 <Button variant='solid' color='primary'
                     isDisabled={!stateRecording && stateProcessing}
-                    onPress={() => {
+                    onPress={async () => {
                         const handleLog = (log: string) => {
                             console.log(log)
                         }
-                        const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
+                        const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
                             setStateQuestion({
                                 url: URL.createObjectURL(audioBlob),
                                 created_by: email,
@@ -112,7 +112,7 @@ export default function BlogForm({ item, email }: Props) {
                             })
                         }
 
-                        toggleRecording(
+                        await toggleRecording(
                             stateRecording,
                             setStateRecording,
                             sentenceChunks,
@@ -141,11 +141,11 @@ export default function BlogForm({ item, email }: Props) {
 
             <Button variant='solid' color='primary'
                 isDisabled={!stateQuestion || (!stateRecording && stateProcessing)}
-                onPress={() => {
+                onPress={async () => {
                     const handleLog = (log: string) => {
                         console.log(log)
                     }
-                    const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
+                    const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
                         setStateAnswerList(prev => [...prev, {
                             url: URL.createObjectURL(audioBlob),
                             created_by: email,
@@ -154,7 +154,7 @@ export default function BlogForm({ item, email }: Props) {
                         }]);
                     }
 
-                    toggleRecording(
+                    await toggleRecording(
                         stateRecording,
                         setStateRecording,
                         sentenceChunks,
