@@ -243,7 +243,7 @@ export default function Page({ email }: Props) {
 
     return (
         <div>
-            <div className='flex flex-col md:flex-row gap-4 my-2'>
+            <div className='flex flex-col md:flex-row gap-4 my-4'>
                 <Book user_id={email} onSelect={async (book_uuid: string) => {
                     setStateBook(book_uuid)
                 }} />
@@ -256,7 +256,7 @@ export default function Page({ email }: Props) {
                 }} />
             </div>
 
-            <div className='flex flex-row items-center justify-center gap-4 my-8'>
+            <div className='flex flex-row items-center justify-center gap-4 my-4'>
                 <Select className='max-w-sm'
                     selectedKeys={[stateEngine]}
                     onChange={(e) => setStateEngine(e.target.value)}
@@ -283,8 +283,8 @@ export default function Page({ email }: Props) {
             </div>
 
             {stateCurrent && (
-                <div className='flex flex-col items-center justify-center w-full gap-2'>
-                    <div className='flex flex-col w-full p-2 bg-sand-300'>
+                <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
+                    <div className='flex flex-col w-full p-2 rounded-lg bg-sand-300'>
                         <div className="flex flex-row items-center justify-start">
                             <div className="text-md text-gray-400">recognized from audio:</div>
                             <Button isIconOnly variant='light' className='h-fit'
@@ -318,13 +318,13 @@ export default function Page({ email }: Props) {
             )}
 
             {stateLoading && (
-                <div className='flex flex-row w-full items-center justify-center gap-4'>
+                <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
                     <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
                 </div>
             )}
 
             {stateNeedSave && (
-                <div className='flex flex-row items-center justify-end my-1'>
+                <div className='flex flex-row items-center justify-end my-4 mb-0'>
                     <Button variant='solid' color='primary'
                         isDisabled={stateSaving} onPress={handleSaveAll}
                     >
@@ -334,7 +334,7 @@ export default function Page({ email }: Props) {
             )}
 
             {stateData.length > 0 && (
-                <div className="flex flex-col w-full gap-4">
+                <div className="flex flex-col w-full gap-4 my-4">
                     {reversedList.map((v, i) =>
                         <Sentence
                             key={`${i}-${v.uuid}`}
