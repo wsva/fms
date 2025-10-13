@@ -32,7 +32,7 @@ export const startRecording = async (
     sttEngine: string,
     setStateProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     handleLog: (log: string) => void,
-    handleResult: (result: ActionResult<string>, audioBlob: Blob) => void
+    handleResult: (result: ActionResult<string>, audioBlob: Blob) => Promise<void>,
 ) => {
     if (stateRecording) {
         return
@@ -66,10 +66,10 @@ export const startRecording = async (
                 const result = await callSTT(audioBlob);
                 if (result.status === "success") {
                     handleLog("STT recognition completed.");
-                    handleResult({ status: "success", data: result.data }, audioBlob);
+                    await handleResult({ status: "success", data: result.data }, audioBlob);
                 } else {
                     handleLog(`STT recognition failed: ${result.error}`);
-                    handleResult({ status: "error", error: result.error }, audioBlob);
+                    await handleResult({ status: "error", error: result.error }, audioBlob);
                 }
                 setStateProcessing(false);
             }
@@ -102,7 +102,7 @@ export const toggleRecording = async (
     sttEngine: string,
     setStateProcessing: React.Dispatch<React.SetStateAction<boolean>>,
     handleLog: (log: string) => void,
-    handleResult: (result: ActionResult<string>, audioBlob: Blob) => void
+    handleResult: (result: ActionResult<string>, audioBlob: Blob) => Promise<void>,
 ) => {
     if (!stateRecording) {
         await startRecording(

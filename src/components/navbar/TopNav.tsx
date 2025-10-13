@@ -51,11 +51,11 @@ export default function TopNav({ session }: Props) {
 
     const router = useRouter();
 
-    const toggleRecordingLocal = () => {
+    const toggleRecordingLocal = async () => {
         const handleLog = (log: string) => {
             setStateSTT(log);
         }
-        const handleResult = (result: ActionResult<string>) => {
+        const handleResult = async (result: ActionResult<string>) => {
             if (result.status === 'success') {
                 setStateSTT(result.data);
                 handleSTTResult(result.data);
@@ -64,7 +64,7 @@ export default function TopNav({ session }: Props) {
             }
         }
 
-        toggleRecording(
+        await toggleRecording(
             stateRecording,
             setStateRecording,
             sentenceChunks,

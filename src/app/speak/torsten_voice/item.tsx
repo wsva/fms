@@ -16,11 +16,11 @@ export const Item = ({ row, engine }: { row: torsten_voice, engine: string }) =>
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
 
-    const toggleRecordingLocal = () => {
+    const toggleRecordingLocal = async () => {
         const handleLog = (log: string) => {
             console.log(log)
         }
-        const handleResult = (result: ActionResult<string>) => {
+        const handleResult = async (result: ActionResult<string>) => {
             if (result.status === 'success') {
                 setStateResult(result.data)
             } else {
@@ -28,7 +28,7 @@ export const Item = ({ row, engine }: { row: torsten_voice, engine: string }) =>
             }
         }
 
-        toggleRecording(
+        await toggleRecording(
             stateRecording,
             setStateRecording,
             sentenceChunks,

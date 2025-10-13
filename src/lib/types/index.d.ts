@@ -37,8 +37,7 @@ type read_sentence_browser = {
     order_num: number;
     original: string;
     recognized: string;
-    audioBlob?: Blob;
-    audio_path?: string;
+    audio_path: string;
     created_at?: Date;
     in_db: boolean;
     on_fs: boolean;

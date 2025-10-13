@@ -10,6 +10,8 @@ import { highlightDifferences } from './utils';
 import { removeAudio } from '@/app/actions/audio';
 import { removeSentence } from '@/app/actions/reading';
 import { callTTS } from '@/app/actions/ai_gemini';
+import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "./idb-blob-store";
+import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "./weak-cache";
 
 type Props = {
     item: read_sentence_browser;
@@ -27,16 +29,17 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
 
-    const toggleRecordingLocal = () => {
+    const toggleRecordingLocal = async () => {
         const handleLog = (log: string) => {
             console.log(log)
         }
-        const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
+        const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
             if (result.status === 'success') {
+                await saveBlobToIndexedDB(item.uuid, audioBlob);
+                cacheBlobInMemory(item.uuid, audioBlob);
                 const new_item = {
                     ...item,
                     recognized: result.data,
-                    audioBlob: audioBlob,
                     modified_db: true,
                     modified_fs: true,
                 };
@@ -46,7 +49,12 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
             }
         }
 
-        toggleRecording(
+        if (item.modified_fs) {
+            await deleteBlobFromIndexedDB(item.uuid);
+            dropWeakCache(item.uuid);
+        }
+
+        await toggleRecording(
             stateRecording,
             setStateRecording,
             sentenceChunks,
@@ -59,6 +67,10 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
     }
 
     const handleDelete = async () => {
+        if (item.modified_fs) {
+            await deleteBlobFromIndexedDB(item.uuid);
+            dropWeakCache(item.uuid);
+        }
         if (item.on_fs) {
             const result = await removeAudio("reading", `${item.uuid}.wav`);
             if (result.status === "success") {
@@ -106,10 +118,29 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
                             </Tooltip>
                             <Tooltip placement='top' content="play audio">
                                 <Button isIconOnly variant='light' className='h-fit'
-                                    onPress={() => {
-                                        const audioUrl = !!item.audioBlob ? URL.createObjectURL(item.audioBlob) : item.audio_path;
-                                        const audio = new Audio(audioUrl);
-                                        audio.play();
+                                    onPress={async () => {
+                                        if (item.modified_fs) {
+                                            let audioBlob = getBlobFromWeakCache(item.uuid);
+                                            if (!audioBlob) {
+                                                audioBlob = await getBlobFromIndexedDB(item.uuid);
+                                                if (audioBlob) {
+                                                    cacheBlobInMemory(item.uuid, audioBlob);
+                                                } else {
+                                                    toast.error(`Blob of audio not found`);
+                                                }
+                                            }
+                                            if (audioBlob) {
+                                                const audioUrl = URL.createObjectURL(audioBlob);
+                                                const audio = new Audio(audioUrl);
+                                                audio.play();
+                                                audio.onended = () => {
+                                                    URL.revokeObjectURL(audioUrl);
+                                                };
+                                            }
+                                        } else {
+                                            const audio = new Audio(item.audio_path);
+                                            audio.play();
+                                        }
                                     }}
                                 >
                                     <MdPlayCircle size={20} />

@@ -13,6 +13,8 @@ import Chapter from './chapter';
 import { toast } from 'react-toastify';
 import { saveAudio } from '@/app/actions/audio';
 import { MdPlayCircle } from 'react-icons/md';
+import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "./idb-blob-store";
+import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "./weak-cache";
 import { highlightDifferences } from './utils';
 
 type Props = {
@@ -105,14 +107,26 @@ export default function Page({ email }: Props) {
         if (!stateCurrent) return
 
         setStateSaving(true)
-        if (stateCurrent.audioBlob) {
-            const resultFs = await saveAudio(stateCurrent.audioBlob, "reading", `${stateCurrent.uuid}.wav`);
-            if (resultFs.status === "error") {
-                toast.error("save audio failed");
-                setStateSaving(false)
-                return
-            }
+
+        let audioBlob = getBlobFromWeakCache(stateCurrent.uuid);
+        if (!audioBlob) {
+            audioBlob = await getBlobFromIndexedDB(stateCurrent.uuid);
         }
+        if (!audioBlob) {
+            toast.error(`Blob of audio not found`);
+            setStateSaving(false)
+            return
+        }
+        const resultFs = await saveAudio(audioBlob, "reading", `${stateCurrent.uuid}.wav`);
+        if (resultFs.status === "success") {
+            await deleteBlobFromIndexedDB(stateCurrent.uuid);
+            dropWeakCache(stateCurrent.uuid);
+        } else {
+            toast.error("save audio failed");
+            setStateSaving(false)
+            return
+        }
+
         const resultDb = await saveSentence({
             uuid: stateCurrent.uuid,
             chapter_uuid: stateCurrent.chapter_uuid,
@@ -130,7 +144,15 @@ export default function Page({ email }: Props) {
             return
         }
 
-        updateStateData(draft => { draft.push(stateCurrent) });
+        updateStateData(draft => {
+            draft.push({
+                ...stateCurrent,
+                in_db: true,
+                on_fs: true,
+                modified_db: false,
+                modified_fs: false,
+            });
+        });
         setStateCurrent(undefined);
 
         toast.success("added and saved successfully!");
@@ -141,18 +163,28 @@ export default function Page({ email }: Props) {
         setStateSaving(true)
         try {
             for (const v of stateData) {
-                if (v.modified_fs && v.audioBlob) {
-                    const resultFs = await saveAudio(v.audioBlob, "reading", `${v.uuid}.wav`);
-                    if (resultFs.status === "error") throw new Error("save audio failed");
-
-                    updateStateData(draft => {
-                        const item = draft.find(i => i.uuid === v.uuid);
-                        if (item) {
-                            item.audioBlob = undefined;
-                            item.on_fs = true;
-                            item.modified_fs = false;
-                        }
-                    });
+                if (v.modified_fs) {
+                    let audioBlob = getBlobFromWeakCache(v.uuid);
+                    if (!audioBlob) {
+                        audioBlob = await getBlobFromIndexedDB(v.uuid);
+                    }
+                    if (!audioBlob) {
+                        throw new Error(`${v.order_num}: Blob of audio not found`);
+                    }
+                    const resultFs = await saveAudio(audioBlob, "reading", `${v.uuid}.wav`);
+                    if (resultFs.status === "success") {
+                        await deleteBlobFromIndexedDB(v.uuid);
+                        dropWeakCache(v.uuid);
+                        updateStateData(draft => {
+                            const item = draft.find(i => i.uuid === v.uuid);
+                            if (item) {
+                                item.on_fs = true;
+                                item.modified_fs = false;
+                            }
+                        });
+                    } else {
+                        throw new Error(`${v.order_num}: save audio failed`);
+                    }
                 }
 
                 const resultDb = await saveSentence({
@@ -161,7 +193,7 @@ export default function Page({ email }: Props) {
                     order_num: v.order_num,
                     original: v.original,
                     recognized: v.recognized,
-                    audio_path: `/api/data/reading/${v.uuid}.wav`,
+                    audio_path: v.audio_path,
                     created_by: email,
                     created_at: v.created_at || new Date(),
                     updated_at: new Date(),
@@ -189,19 +221,22 @@ export default function Page({ email }: Props) {
         const handleLog = (log: string) => {
             console.log(log)
         }
-        const handleResult = (result: ActionResult<string>, audioBlob: Blob) => {
+        const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
             if (result.status === 'success') {
+                const uuid = getUUID();
+                await saveBlobToIndexedDB(uuid, audioBlob);
+                cacheBlobInMemory(uuid, audioBlob);
                 setStateCurrent({
-                    uuid: getUUID(),
+                    uuid: uuid,
                     chapter_uuid: stateChapter,
                     order_num: stateData.length + 1,
                     original: result.data,
                     recognized: result.data,
-                    audioBlob: audioBlob,
-                    in_db: true,
-                    on_fs: true,
-                    modified_db: false,
-                    modified_fs: false,
+                    audio_path: `/api/data/reading/${uuid}.wav`,
+                    in_db: false,
+                    on_fs: false,
+                    modified_db: true,
+                    modified_fs: true,
                 })
             } else {
                 toast.error(result.error as string)
@@ -291,10 +326,24 @@ export default function Page({ email }: Props) {
                         <div className="flex flex-row items-center justify-start">
                             <div className="text-md text-gray-400">recognized from audio:</div>
                             <Button isIconOnly variant='light' className='h-fit'
-                                onPress={() => {
-                                    const audioUrl = !!stateCurrent.audioBlob ? URL.createObjectURL(stateCurrent.audioBlob) : stateCurrent.audio_path
-                                    const audio = new Audio(audioUrl);
-                                    audio.play();
+                                onPress={async () => {
+                                    let audioBlob = getBlobFromWeakCache(stateCurrent.uuid);
+                                    if (!audioBlob) {
+                                        audioBlob = await getBlobFromIndexedDB(stateCurrent.uuid);
+                                        if (audioBlob) {
+                                            cacheBlobInMemory(stateCurrent.uuid, audioBlob);
+                                        } else {
+                                            toast.error(`Blob of audio not found`);
+                                        }
+                                    }
+                                    if (audioBlob) {
+                                        const audioUrl = URL.createObjectURL(audioBlob);
+                                        const audio = new Audio(audioUrl);
+                                        audio.play();
+                                        audio.onended = () => {
+                                            URL.revokeObjectURL(audioUrl);
+                                        };
+                                    }
                                 }}
                             >
                                 <MdPlayCircle size={20} />
