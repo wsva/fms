@@ -8,19 +8,6 @@ import { ActionResult } from "@/lib/types";
 const REDIS_HOST = process.env.REDIS_HOST
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD
 
-export async function checkSTTServiceStatus(): Promise<boolean> {
-    try {
-        const client = createClient({ url: `redis://default:${REDIS_PASSWORD}@${REDIS_HOST}:6379` });
-        client.on('error', err => console.log('Redis Client Error', err));
-        await client.connect();
-        const result = await client.get("stt_service:status");
-        await client.quit();
-        return result === "ready"
-    } catch {
-        return false
-    }
-}
-
 export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
     const uuid = getUUID();
 
@@ -28,6 +15,13 @@ export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
     const client = createClient({ url: `redis://default:${REDIS_PASSWORD}@${REDIS_HOST}:6379` });
     client.on('error', err => console.log('Redis Client Error', err));
     await client.connect();
+
+    // check service status
+    const status = await client.get("stt_service:status");
+    if (status !== "ready") {
+        await client.quit();
+        return { status: "error", error: "service not available" }
+    }
 
     // 2. 存音频
     const buffer = Buffer.from(await audioBlob.arrayBuffer());
