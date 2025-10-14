@@ -291,7 +291,7 @@ export default function Page({ email }: Props) {
                 }} />
             </div>
 
-            <div className='flex flex-row items-center justify-center gap-4 my-4'>
+            <div className='flex flex-col md:flex-row items-center justify-center gap-4 my-4'>
                 <Select className='max-w-sm'
                     selectedKeys={[stateEngine]}
                     onChange={(e) => setStateEngine(e.target.value)}
