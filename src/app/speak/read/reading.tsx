@@ -217,7 +217,7 @@ export default function Page({ email }: Props) {
         setStateSaving(false)
     }
 
-    const toggleRecordingLocal = () => {
+    const toggleRecordingLocal = async () => {
         const handleLog = (log: string) => {
             console.log(log)
         }
@@ -243,7 +243,7 @@ export default function Page({ email }: Props) {
             }
         }
 
-        toggleRecording(
+        await toggleRecording(
             stateRecording,
             setStateRecording,
             sentenceChunks,
@@ -303,14 +303,14 @@ export default function Page({ email }: Props) {
                 </Select>
                 <Button variant='solid' color='primary' id='button-toggel-recording'
                     isDisabled={!stateRecording && stateProcessing}
-                    onPress={() => {
+                    onPress={async () => {
                         if (!stateBook || !stateChapter) {
                             alert("select book and chapter first")
                         } else {
                             if (stateCurrent) {
                                 setStateCurrent(undefined)
                             }
-                            toggleRecordingLocal()
+                            await toggleRecordingLocal()
                         }
                     }}
                 >
