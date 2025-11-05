@@ -318,7 +318,6 @@ export async function getCardTest(email: string, tag_uuid: string): Promise<Acti
     }
 }
 
-
 export async function saveCardReview(item: qsa_card_review): Promise<boolean> {
     try {
         await prisma.qsa_card_review.upsert({
