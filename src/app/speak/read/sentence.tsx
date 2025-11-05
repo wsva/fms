@@ -6,12 +6,12 @@ import { MdArrowDownward, MdArrowUpward, MdDelete, MdMic, MdMicOff, MdOutlineKey
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { toggleRecording } from '@/lib/recording';
 import { toast } from 'react-toastify';
-import { highlightDifferences } from './utils';
 import { removeAudio } from '@/app/actions/audio';
 import { removeSentence } from '@/app/actions/reading';
 import { callTTS } from '@/app/actions/ai_gemini';
-import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "./idb-blob-store";
-import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "./weak-cache";
+import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store";
+import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache";
+import { highlightDifferences } from '@/app/speak/lcs';
 
 type Props = {
     item: read_sentence_browser;

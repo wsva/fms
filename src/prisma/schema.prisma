@@ -258,3 +258,23 @@ model voice_access_command {
   created_at  DateTime
   updated_at  DateTime
 }
+
+model practice_text {
+  uuid       String   @unique
+  user_id    String
+  text       String
+  created_by String
+  created_at DateTime
+  updated_at DateTime
+}
+
+model practice_audio {
+  uuid          String   @unique
+  user_id       String
+  text_uuid     String
+  audio_path    String
+  recognized    String
+  created_by    String
+  created_at    DateTime
+  updated_at    DateTime
+}

@@ -327,7 +327,7 @@ export async function saveCardReview(item: qsa_card_review): Promise<boolean> {
             update: item,
         })
         await prisma.qsa_card.update({
-            where: { uuid: item.uuid },
+            where: { uuid: item.card_uuid },
             data: { familiarity: item.familiarity }
         })
         return true

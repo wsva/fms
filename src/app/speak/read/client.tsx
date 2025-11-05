@@ -13,9 +13,9 @@ import Chapter from './chapter';
 import { toast } from 'react-toastify';
 import { saveAudio } from '@/app/actions/audio';
 import { MdPlayCircle } from 'react-icons/md';
-import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "./idb-blob-store";
-import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "./weak-cache";
-import { highlightDifferences } from './utils';
+import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store";
+import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache";
+import { highlightDifferences } from '@/app/speak/lcs';
 
 type Props = {
     email: string;
