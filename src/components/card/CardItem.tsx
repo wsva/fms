@@ -33,7 +33,7 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
     }
 
     return (
-        (<div className={`flex flex-col w-full items-start rounded-md p-1 ${getColor(stateFamiliarity)}`}>
+        <div className={`flex flex-col w-full items-start rounded-md p-1 ${getColor(stateFamiliarity)}`}>
             <div className='flex flex-row w-full items-center justify-start gap-2'>
                 {/* {email === card.user_id && (
                     <Tooltip content={`${getDescription(stateFamiliarity)}`}>
@@ -129,6 +129,6 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
                     </Popover>
                 )}
             </div>
-        </div >)
+        </div >
     );
 }

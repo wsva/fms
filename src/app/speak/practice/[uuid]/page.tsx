@@ -15,6 +15,6 @@ export default async function ExamplePage({ params }: Props) {
   const uuid = (typeof p.uuid === 'string' && p.uuid !== 'add') ? p.uuid : ""
 
   return (
-    <Item uuid={uuid} email={email} />
+    <Item uuid={uuid} user_id={email} />
   )
 }

@@ -82,7 +82,7 @@ export async function removeText(uuid: string): Promise<ActionResult<practice_te
  * audio
  */
 
-export async function getAudio(uuid: string): Promise<ActionResult<practice_audio>> {
+export async function getAudioDB(uuid: string): Promise<ActionResult<practice_audio>> {
     try {
         const result = await prisma.practice_audio.findUnique({
             where: { uuid }
@@ -97,7 +97,7 @@ export async function getAudio(uuid: string): Promise<ActionResult<practice_audi
     }
 }
 
-export async function getAudioAll(text_uuid: string): Promise<ActionResult<practice_audio[]>> {
+export async function getAudioDBAll(text_uuid: string): Promise<ActionResult<practice_audio[]>> {
     try {
         const result = await prisma.practice_audio.findMany({
             where: { text_uuid },
@@ -124,7 +124,7 @@ export async function saveAudioDB(item: practice_audio): Promise<ActionResult<pr
     }
 }
 
-export async function createAudio(item: practice_audio): Promise<ActionResult<practice_audio>> {
+export async function createAudioDB(item: practice_audio): Promise<ActionResult<practice_audio>> {
     try {
         const result = await prisma.practice_audio.create({
             data: item,
@@ -136,7 +136,7 @@ export async function createAudio(item: practice_audio): Promise<ActionResult<pr
     }
 }
 
-export async function removeAudio(uuid: string): Promise<ActionResult<practice_audio>> {
+export async function removeAudioDB(uuid: string): Promise<ActionResult<practice_audio>> {
     try {
         const result = await prisma.practice_audio.delete({
             where: { uuid }

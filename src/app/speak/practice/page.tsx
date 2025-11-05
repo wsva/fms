@@ -7,6 +7,6 @@ export default async function Page() {
     const email = session?.user?.email || '';
 
     return (
-        <Client email={email} />
+        <Client user_id={email} />
     )
 }

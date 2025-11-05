@@ -10,12 +10,13 @@ import { toast } from 'react-toastify';
 import { getTextAll, saveText } from '@/app/actions/practice';
 
 type Props = {
-    email: string;
+    user_id: string;
 }
 
-export default function Page({ email }: Props) {
+export default function Page({ user_id }: Props) {
     const [stateNew, setStateNew] = useState<string>();
     const [stateData, updateStateData] = useImmer<practice_text_browser[]>([]);
+    const [stateOnlyMy, setStateOnlyMy] = useState<boolean>(false);
     const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
@@ -40,16 +41,6 @@ export default function Page({ email }: Props) {
         setStateLoading(false)
     }
 
-    const handleUpdate = (new_item: practice_text_browser) => {
-        updateStateData(draft => {
-            const index = draft.findIndex(i => i.uuid === new_item.uuid);
-            if (index !== -1) {
-                draft[index] = { ...new_item };
-            }
-        });
-        setStateNeedSave(true);
-    }
-
     const handleDelete = (uuid: string) => {
         updateStateData(draft => {
             const index = draft.findIndex(i => i.uuid === uuid);
@@ -59,16 +50,16 @@ export default function Page({ email }: Props) {
         });
     }
 
-    const handleAddAndSave = async () => {
+    const handleAdd = async () => {
         if (!stateNew) return
 
         setStateSaving(true)
 
         const new_item = {
             uuid: getUUID(),
-            user_id: email,
+            user_id: user_id,
             text: stateNew,
-            created_by: email,
+            created_by: user_id,
             created_at: new Date(),
             updated_at: new Date(),
         }
@@ -88,7 +79,7 @@ export default function Page({ email }: Props) {
         });
         setStateNew("");
 
-        toast.success("added and saved successfully!");
+        toast.success("added text successfully!");
         setStateSaving(false)
     }
 
@@ -100,7 +91,7 @@ export default function Page({ email }: Props) {
                     uuid: v.uuid,
                     user_id: v.user_id,
                     text: v.text,
-                    created_by: email,
+                    created_by: user_id,
                     created_at: v.created_at || new Date(),
                     updated_at: new Date(),
                 });
@@ -125,41 +116,27 @@ export default function Page({ email }: Props) {
 
     useEffect(() => {
         loadData();
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.ctrlKey && event.key === 's') {
-                event.preventDefault();
-                const btn = document.getElementById("button-add-save") as HTMLButtonElement | null;
-                btn?.click();
-            }
-        };
-        document.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
     }, []);
 
     return (
         <div>
-            {!!email && (
-                <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
-                    <div className='flex flex-col w-full p-2 rounded-lg bg-sand-300'>
-                        <Textarea size='lg' className='w-full' label="original text"
-                            classNames={{
-                                inputWrapper: "bg-sand-200",
-                                input: "text-xl",
-                            }}
-                            onChange={(e) => setStateNew(e.target.value)}
-                        />
-                    </div>
-                    <Button variant='solid' color='primary' id="button-add-save"
-                        isDisabled={stateSaving} onPress={handleAddAndSave}
+            <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300'>
+                <div className='flex flex-row w-full items-end justify-end'>
+                    <Button variant='solid' size="sm" color='primary'
+                        isDisabled={stateSaving} onPress={handleAdd}
                     >
-                        Add & Save (Ctrl+S)
+                        Add
                     </Button>
                 </div>
-            )}
+                <Textarea size='lg' className='w-full'
+                    classNames={{
+                        inputWrapper: "bg-sand-200",
+                        input: "text-xl",
+                    }}
+                    placeholder='Add a new sentence to practice'
+                    onChange={(e) => setStateNew(e.target.value)}
+                />
+            </div>
 
             {stateLoading && (
                 <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
@@ -167,11 +144,11 @@ export default function Page({ email }: Props) {
                 </div>
             )}
 
-            <div className='flex flex-row items-center justify-end my-4 mb-0'>
+            <div className='flex flex-row items-center justify-end gap-4 my-4 mb-0'>
                 <Button variant='solid' color='primary'
-                    isDisabled={!email} onPress={handleSaveAll}
+                    isDisabled={!user_id} onPress={() => setStateOnlyMy(!stateOnlyMy)}
                 >
-                    Only My Texts
+                    {stateOnlyMy ? "All Texts" : "Only My Texts"}
                 </Button>
                 <Button variant='solid' color='primary'
                     isDisabled={!stateNeedSave || stateSaving} onPress={handleSaveAll}
@@ -180,18 +157,16 @@ export default function Page({ email }: Props) {
                 </Button>
             </div>
 
-            {stateData.length > 0 && (
-                <div className="flex flex-col w-full gap-4 my-4">
-                    {stateData.map((v, i) =>
-                        <Text
-                            key={`${i}-${v.uuid}`}
-                            item={v}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                        />
-                    )}
-                </div>
-            )}
+            <div className="flex flex-col w-full gap-4 my-4">
+                {stateData.filter((v) => !stateOnlyMy || v.user_id === user_id).map((v, i) =>
+                    <Text
+                        key={`${i}-${v.uuid}`}
+                        user_id={user_id}
+                        item={v}
+                        onDelete={handleDelete}
+                    />
+                )}
+            </div>
         </div>
     )
 }
