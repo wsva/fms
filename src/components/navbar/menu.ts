@@ -27,6 +27,7 @@ export const menuList: MenuGroup[] = [
     {
         name: "Speak",
         items: [
+            { key: "speak_practice", name: "practice", description: "practice", href: "/speak/practice" },
             { key: "speak_read", name: "reading", description: "read a book", href: "/speak/read" },
             { key: "speak_ask", name: "asking", description: "ask or answer a question", href: "/speak/ask" },
             { key: "speak_torsten_voice", name: "Torsten Voice", description: "Torsten Voice", href: "/speak/torsten_voice" },
