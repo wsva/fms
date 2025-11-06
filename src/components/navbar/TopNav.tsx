@@ -1,17 +1,18 @@
 'use client';
 
-import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Tooltip } from "@heroui/react"
+import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
 import Link from 'next/link'
 import React, { useEffect, useRef } from 'react'
 import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react"
 import { Session } from "next-auth"
-import { MdHelpOutline, MdMic, MdMicOff, MdOutlineLightbulb } from "react-icons/md";
+import { MdHelpOutline, MdMic, MdMicOff, MdOutlineSettings } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
 import { EngineList, toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
+import { initCmdHelpMap } from "@/app/actions/voice_access";
 
 const ChevronDown = () => {
     return (
@@ -45,6 +46,8 @@ export default function TopNav({ session }: Props) {
     const [stateRecording, setStateRecording] = React.useState(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSTT, setStateSTT] = React.useState<string>("");
+    const [stateCmdOpen, setStateCmdOpen] = React.useState<boolean>(false);
+    const [stateCmdMap, setStateCmdMap] = React.useState<Map<string, string[]>>(new Map());
 
     const sentenceChunks = useRef<BlobPart[]>([]);
     const recorderRef = useRef<MediaRecorder | null>(null);
@@ -78,6 +81,14 @@ export default function TopNav({ session }: Props) {
     }
 
     useEffect(() => {
+        const loadCmdMap = async () => {
+            const cmdMap = await initCmdHelpMap();
+            setStateCmdMap(cmdMap);
+        }
+        if (stateCmdOpen) {
+            loadCmdMap();
+        }
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.code === 'F2') {
                 e.preventDefault();
@@ -100,7 +111,7 @@ export default function TopNav({ session }: Props) {
             if (blinkTimer) clearInterval(blinkTimer);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [stateRecording]);
+    }, [stateCmdOpen, stateRecording]);
 
     return (
         <>
@@ -187,30 +198,63 @@ export default function TopNav({ session }: Props) {
                         }
                         endContent={
                             <div className="flex flex-row items-center gap-0">
-                                <ButtonGroup variant="flat">
-                                    <Dropdown placement="bottom-end">
-                                        <DropdownTrigger>
-                                            <Button isIconOnly size="sm" variant="light">
-                                                <MdOutlineLightbulb size={24} />
-                                            </Button>
-                                        </DropdownTrigger>
-                                        <DropdownMenu
-                                            disallowEmptySelection
-                                            aria-label="Merge options"
-                                            className="max-w-[300px]"
-                                            selectedKeys={[stateEngine]}
-                                            selectionMode="single"
-                                            onSelectionChange={(keys) => setStateEngine(keys.currentKey || "local")}
-                                        >
-                                            {EngineList.map((v) => (
-                                                <DropdownItem key={v.key}>{v.value}</DropdownItem>
-                                            ))}
-                                        </DropdownMenu>
-                                    </Dropdown>
-                                </ButtonGroup>
-                                <Button isIconOnly size="sm" variant="light" onPress={() => router.push("/voice_access")}>
-                                    <MdHelpOutline size={24} />
-                                </Button>
+                                <Dropdown placement="bottom-end" className="bg-sand-200"
+                                    onOpenChange={() => setStateCmdOpen(!stateCmdOpen)}
+                                >
+                                    <DropdownTrigger>
+                                        <Button isIconOnly size="sm" variant="light">
+                                            <MdHelpOutline size={24} />
+                                        </Button>
+                                    </DropdownTrigger>
+                                    <DropdownMenu
+                                        disallowEmptySelection
+                                        className="max-w-[300px]"
+                                    >
+                                        {Array.from(stateCmdMap.entries()).map(([action, cmds]) => (
+                                            <DropdownSection key={action} showDivider title={action}>
+                                                {cmds.map((cmd) => (
+                                                    <DropdownItem isReadOnly key={cmd}>{cmd}</DropdownItem>
+                                                ))}
+                                            </DropdownSection>
+                                        ))}
+                                    </DropdownMenu>
+                                </Dropdown>
+                                <Dropdown placement="bottom-end" className="bg-sand-200">
+                                    <DropdownTrigger>
+                                        <Button isIconOnly size="sm" variant="light">
+                                            <MdOutlineSettings size={24} />
+                                        </Button>
+                                    </DropdownTrigger>
+                                    <DropdownMenu
+                                        disallowEmptySelection
+                                        aria-label="Merge options"
+                                        className="max-w-[300px]"
+                                    >
+                                        <DropdownSection showDivider title="Select AI engine">
+                                            <DropdownItem
+                                                key="theme"
+                                                isReadOnly
+                                                className="cursor-default"
+                                                startContent={
+                                                    <Select className="max-w-xs" variant="underlined"
+                                                        selectedKeys={[stateEngine]}
+                                                        selectionMode="single"
+                                                        onSelectionChange={(keys) => setStateEngine(keys.currentKey || "local")}
+                                                    >
+                                                        {EngineList.map((v) => <SelectItem key={v.key}>{v.value}</SelectItem>)}
+                                                    </Select>
+                                                }
+                                            >
+                                            </DropdownItem>
+                                        </DropdownSection>
+
+                                        <DropdownSection title="Commands">
+                                            <DropdownItem key="edit" onPress={() => router.push("/voice_access")}>
+                                                Edit
+                                            </DropdownItem>
+                                        </DropdownSection>
+                                    </DropdownMenu>
+                                </Dropdown>
                             </div>
                         }
                         value={stateSTT || "Voice Access: F2 to activate"}

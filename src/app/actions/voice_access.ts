@@ -16,6 +16,21 @@ export async function getActionAll(): Promise<ActionResult<voice_access_action[]
     }
 }
 
+export async function getCommandAll(): Promise<ActionResult<Map<string, voice_access_command[]>>> {
+    try {
+        const result = await prisma.voice_access_command.findMany()
+        const cmdMap = new Map<string, voice_access_command[]>();
+        for (const v of result) {
+            const cmds = cmdMap.get(v.action_uuid);
+            cmdMap.set(v.action_uuid, !cmds ? [v] : [...cmds, v])
+        }
+        return { status: "success", data: cmdMap }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
+
 export async function getCommandByAction(action_uuid: string): Promise<ActionResult<voice_access_command[]>> {
     try {
         const result = await prisma.voice_access_command.findMany({
@@ -96,6 +111,31 @@ export async function initCmdMap(): Promise<Map<string, Action>> {
             cmdMap.set(v.text.toLowerCase(), { action_type: "invalid", info: `uuid: ${v.uuid}, no action found` });
         } else {
             cmdMap.set(v.text.toLowerCase(), action);
+        }
+    }
+
+    return cmdMap;
+}
+
+export async function initCmdHelpMap(): Promise<Map<string, string[]>> {
+    const resultA = await prisma.voice_access_action.findMany()
+    const actionMap: Map<string, string> = new Map();
+    const cmdMap: Map<string, string[]> = new Map();
+    for (const v of resultA) {
+        const action = parseAction(v);
+        if (action.action_type !== "invalid") {
+            actionMap.set(v.uuid, v.name);
+            cmdMap.set(v.name, []);
+        }
+    }
+
+    const resultC = await prisma.voice_access_command.findMany()
+    for (const v of resultC) {
+        const action_name = actionMap.get(v.action_uuid);
+        if (!!action_name) {
+            const cmds = cmdMap.get(action_name)
+            const cmd = `[${v.language}] ${v.text}`;
+            cmdMap.set(action_name, !!cmds ? [...cmds, cmd] : [cmd]);
         }
     }
 
