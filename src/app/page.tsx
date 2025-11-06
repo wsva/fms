@@ -11,11 +11,14 @@ export default async function Home() {
       />
       <div className="m-4 col-span-full"></div>
 
+      <IndexItem href='/speak/practice' label='Practice'
+        description='Practice a sentence and share with others.'
+      />
       <IndexItem href='/speak/read' label='Reading'
         description='Read a book sentence by sentence.'
       />
       <IndexItem href='/speak/ask' label='Asking'
-        description='Ask or answer a question'
+        description='Ask and answer a question'
       />
       <div className="m-4 col-span-full"></div>
 
@@ -32,13 +35,13 @@ export default async function Home() {
         description='Learn cards through tests and set familiarity.'
       />
       <div className="m-4 col-span-full"></div>
-      
+
       <IndexItem href='/blog' label='Blog List'
         description='View all blogs.'
       />
       <IndexItem href='/blog/add' label='New Blog'
         description='Blog is for writings.'
       />
-      </div>
+    </div>
   );
 }
