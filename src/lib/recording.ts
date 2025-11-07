@@ -23,6 +23,22 @@ export async function getCallSTT(engine: string) {
     return mod.callSTT;
 }
 
+function playBeep() {
+    const audioCtx = new AudioContext();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.type = 'sine'; // 波形：正弦波
+    oscillator.frequency.value = 1000; // 频率：1000Hz
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // 音量
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.5); // 持续0.5秒
+}
+
 export const startRecording = async (
     stateRecording: boolean,
     setStateRecording: React.Dispatch<React.SetStateAction<boolean>>,
@@ -44,6 +60,11 @@ export const startRecording = async (
 
         sentenceChunks.current = [];
         recorder.ondataavailable = e => sentenceChunks.current.push(e.data);
+
+        recorder.onstart = () => {
+            playBeep();
+            console.log('start recording');
+        };
 
         recorder.onstop = async () => {
             setStateRecording(false);
