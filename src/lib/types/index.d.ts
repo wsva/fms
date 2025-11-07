@@ -1,4 +1,4 @@
-import { qsa_card, qsa_card_review } from "@prisma/client";
+import { qsa_tag, qsa_card, qsa_card_review } from "@prisma/client";
 import { ZodIssue } from "zod";
 
 type ActionResult<T> = {

@@ -129,7 +129,6 @@ model qsa_tag {
   tag         String
   description String
   user_id     String
-  parent      String?
   created_at  DateTime
   updated_at  DateTime
 }

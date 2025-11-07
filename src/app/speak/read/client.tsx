@@ -8,10 +8,10 @@ import { EngineList, toggleRecording } from '@/lib/recording';
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { getUUID, toExactType } from '@/lib/utils';
 import Book from './book';
-import { getSentenceAll, saveSentence } from '@/app/actions/reading';
+import { getSentenceAll, removeSentence, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
 import { toast } from 'react-toastify';
-import { saveAudio } from '@/app/actions/audio';
+import { removeAudio, saveAudio } from '@/app/actions/audio';
 import { MdPlayCircle } from 'react-icons/md';
 import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store";
 import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache";
@@ -88,9 +88,28 @@ export default function Page({ email }: Props) {
         setStateNeedSave(true);
     }
 
-    const handleDelete = (uuid: string) => {
+    const handleDelete = async (item: read_sentence_browser) => {
+        if (item.modified_fs) {
+            await deleteBlobFromIndexedDB(item.uuid);
+            dropWeakCache(item.uuid);
+        }
+        if (item.on_fs) {
+            const result = await removeAudio("reading", `${item.uuid}.wav`);
+            if (result.status !== "success") {
+                toast.error("delete audio failed");
+                return
+            }
+        }
+        if (item.in_db) {
+            const result = await removeSentence(item.uuid);
+            if (result.status !== "success") {
+                toast.error("delete sentence failed");
+                return
+            }
+        }
+
         updateStateData(draft => {
-            const index = draft.findIndex(i => i.uuid === uuid);
+            const index = draft.findIndex(i => i.uuid === item.uuid);
             if (index !== -1) draft.splice(index, 1);
             draft.forEach((item, i) => {
                 if (!item.modified_db && item.order_num !== i + 1) {
@@ -101,6 +120,8 @@ export default function Page({ email }: Props) {
             });
         });
         setStateNeedSave(true);
+
+        toast.error("delete sentence success");
     }
 
     const handleAddAndSave = async () => {
@@ -392,8 +413,8 @@ export default function Page({ email }: Props) {
                             key={`${i}-${v.uuid}`}
                             item={v}
                             engine={stateEngine}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
+                            handleUpdate={handleUpdate}
+                            handleDelete={handleDelete}
                         />
                     )}
                 </div>

@@ -35,13 +35,6 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
     return (
         <div className={`flex flex-col w-full items-start rounded-md p-1 ${getColor(stateFamiliarity)}`}>
             <div className='flex flex-row w-full items-center justify-start gap-2'>
-                {/* {email === card.user_id && (
-                    <Tooltip content={`${getDescription(stateFamiliarity)}`}>
-                        <div className={`text-2xl px-2 rounded-lg bg-slate-200`}>
-                            {stateFamiliarity}
-                        </div>
-                    </Tooltip>
-                )} */}
                 <Link target='_blank'
                     href={`/card/${card.uuid}${!!edit_view ? '?edit=y' : ''}`}
                     className='text-2xl text-blue-600 hover:underline'

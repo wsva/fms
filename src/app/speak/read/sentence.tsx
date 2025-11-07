@@ -16,11 +16,11 @@ import { highlightDifferences } from '@/app/speak/lcs';
 type Props = {
     item: read_sentence_browser;
     engine: string,
-    onUpdate: (new_item: read_sentence_browser) => void;
-    onDelete: (uuid: string) => void;
+    handleUpdate: (new_item: read_sentence_browser) => void;
+    handleDelete: (item: read_sentence_browser) => Promise<void>;
 }
 
-export default function Page({ item, engine, onUpdate, onDelete }: Props) {
+export default function Page({ item, engine, handleUpdate, handleDelete }: Props) {
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState(false);
     const [stateGenerating, setStateGenerating] = useState<boolean>(false);
@@ -43,7 +43,7 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
                     modified_db: true,
                     modified_fs: true,
                 };
-                onUpdate(new_item);
+                handleUpdate(new_item);
             } else {
                 toast.error(result.error as string)
             }
@@ -64,32 +64,6 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
             setStateProcessing,
             handleLog,
             handleResult);
-    }
-
-    const handleDelete = async () => {
-        if (item.modified_fs) {
-            await deleteBlobFromIndexedDB(item.uuid);
-            dropWeakCache(item.uuid);
-        }
-        if (item.on_fs) {
-            const result = await removeAudio("reading", `${item.uuid}.wav`);
-            if (result.status === "success") {
-                toast.success("delete audio success");
-            } else {
-                toast.error("delete audio failed");
-                return
-            }
-        }
-        if (item.in_db) {
-            const result = await removeSentence(item.uuid);
-            if (result.status === "success") {
-                toast.success("delete sentence success");
-            } else {
-                toast.error("delete sentence failed");
-                return
-            }
-        }
-        onDelete(item.uuid)
     }
 
     return (
@@ -158,7 +132,7 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
                                 <Button isIconOnly variant='light' color='danger' className='w-fit h-fit'
                                     onPress={() => {
                                         if (window.confirm("Are you sure to delete?")) {
-                                            handleDelete();
+                                            handleDelete(item);
                                         }
                                     }}
                                 >
@@ -181,7 +155,7 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
                                     order_num: item.order_num + 1,
                                     modified_db: true,
                                 };
-                                onUpdate(new_item)
+                                handleDelete(new_item)
                             }} >
                             <MdArrowUpward size={20} />
                         </Button>
@@ -195,7 +169,7 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
                                     order_num: item.order_num - 1,
                                     modified_db: true,
                                 };
-                                onUpdate(new_item)
+                                handleDelete(new_item)
                             }} >
                             <MdArrowDownward size={20} />
                         </Button>
@@ -213,7 +187,7 @@ export default function Page({ item, engine, onUpdate, onDelete }: Props) {
                         defaultValue={item.original}
                         onChange={(e) => {
                             const new_item = { ...item, original: e.target.value, modified_db: true };
-                            onUpdate(new_item)
+                            handleDelete(new_item)
                         }}
                         endContent={
                             <Button isIconOnly variant='light' className='h-fit'
