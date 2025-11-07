@@ -6,11 +6,12 @@ import { getHTML } from '@/lib/utils';
 import { BiCaretDown } from 'react-icons/bi';
 import { card_review } from '@/lib/types';
 import SentenceList from '@/components/SentenceList';
-import { getCardTest, getCardTestByUUID, saveCardReview } from '@/app/actions/card';
+import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import '@/lib/Markdown.css';
 import { toast } from 'react-toastify';
 import { getExampleByWord } from "@/app/actions/word";
+import { qsa_tag } from "@prisma/client";
 
 type Props = {
     user_id: string;
@@ -19,6 +20,7 @@ type Props = {
 }
 
 export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
+    const [stateTag, setStateTag] = useState<qsa_tag>()
     const [stateCard, setStateCard] = useState<card_review>()
     const [stateSuggestion, setStateSuggestion] = useState<boolean>(false)
     const [stateAnswer, setStateAnswer] = useState<boolean>(false)
@@ -26,6 +28,10 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
+            const result = await getTag(tag_uuid)
+            if (result.status === "success") {
+                setStateTag(result.data)
+            }
             if (!!card_uuid) {
                 const result = await getCardTestByUUID(card_uuid)
                 if (result.status === "success") {
@@ -106,7 +112,8 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                 <div>no test available</div>
             ) : (
                 <div className="flex flex-col my-5 mx-5">
-                    <div className="flex flex-row gap-4 items-end justify-end">
+                    <div className="flex flex-row gap-4 items-center justify-center">
+                        <div>Tag: {stateTag?.tag}</div>
                         <Button as={Link} target='_blank' color='secondary' href={`/card/${stateCard.uuid}/?edit=y`}>
                             EDIT
                         </Button>
@@ -114,7 +121,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                             NEXT
                         </Button>
                     </div>
-                    <div className="flex flex-row items-center justify-center">
+                    <div className={`flex flex-row w-full items-center justify-center ${getColor(stateCard.familiarity)}`}>
                         {stateCard.card.question.length < 30
                             ? (<div className='my-5 font-bold text-2xl md:text-4xl lg:text-6xl xl:text-8xl'>
                                 <pre className='font-roboto leading-none'>

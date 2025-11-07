@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import React from 'react'
-import TestForm from './form';
+import Client from './client';
 import Index from './index';
 
 type Props = {
@@ -19,7 +19,7 @@ export default async function CardTestPage({ searchParams }: Props) {
     return (
         <>
             {(!!card_uuid || !!tag_uuid) ? (
-                <TestForm user_id={email} tag_uuid={tag_uuid} card_uuid={card_uuid} />
+                <Client user_id={email} tag_uuid={tag_uuid} card_uuid={card_uuid} />
             ) : (
                 <Index user_id={email} />
             )}
