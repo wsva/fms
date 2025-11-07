@@ -120,23 +120,18 @@ export default function Page({ user_id }: Props) {
 
     return (
         <div>
-            <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300'>
-                <div className='flex flex-row w-full items-end justify-end'>
-                    <Button variant='solid' size="sm" color='primary'
-                        isDisabled={stateSaving} onPress={handleAdd}
-                    >
-                        Add
-                    </Button>
-                </div>
-                <Textarea size='lg' className='w-full'
-                    classNames={{
-                        inputWrapper: "bg-sand-200",
-                        input: "text-xl",
-                    }}
-                    placeholder='Add a new sentence to practice'
-                    onChange={(e) => setStateNew(e.target.value)}
-                />
-            </div>
+            <Textarea size='lg' className='w-full my-4'
+                classNames={{
+                    input: "text-xl",
+                }}
+                placeholder='Add a new sentence to practice'
+                onChange={(e) => setStateNew(e.target.value)}
+                endContent={<Button variant='solid' size="sm" color='primary'
+                    isDisabled={stateSaving} onPress={handleAdd}
+                >
+                    Add
+                </Button>}
+            />
 
             {stateLoading && (
                 <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
