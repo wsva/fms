@@ -33,13 +33,13 @@ export default function Sentence({ word_id, keyword }: Props) {
 
     return (
         <div className='flex flex-col gap-4 my-10'>
-            <Input isClearable radius="md" size='sm' placeholder="search question"
+            <Input isClearable radius="md" size='sm' placeholder="search sentence with keyword"
                 startContent={
                     <BiSearch className="mb-0.5 dark:text-white/90 text-slate-400 pointer-events-none flex-shrink-0" />
                 }
                 value={stateKeyword}
                 onClear={() => setStateKeyword("")}
-                onChange={(e) => setStateKeyword(e.target.value)}
+                onChange={(e) => setStateKeyword(e.target.value.trim())}
                 onKeyDown={async (e) => {
                     if (e.key == 'Enter' && !!stateKeyword) {
                         setStateLoading(true)

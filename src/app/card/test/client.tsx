@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress } from "@heroui/react";
+import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress, Input } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { getHTML } from '@/lib/utils';
 import { BiCaretDown } from 'react-icons/bi';
@@ -24,6 +24,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
     const [stateCard, setStateCard] = useState<card_review>()
     const [stateSuggestion, setStateSuggestion] = useState<boolean>(false)
     const [stateAnswer, setStateAnswer] = useState<boolean>(false)
+    const [stateKeyword, setStateKeyword] = useState<string>("")
     const [stateExamples, setStateExamples] = useState<string[]>([])
     const [stateLoading, setStateLoading] = useState<boolean>(false)
 
@@ -186,18 +187,25 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                                 </DropdownMenu>
                             </Dropdown>
                         </ButtonGroup>
-                        <Button color='primary' isDisabled={stateLoading}
-                            onPress={async () => {
-                                setStateLoading(true)
-                                const result = await searchExample(stateCard.card.question)
-                                if (result.status === "success") {
-                                    setStateExamples(result.data)
-                                }
-                                setStateLoading(false)
-                            }}
-                        >
-                            View Examples
-                        </Button>
+                        <Input className="max-w-sm"
+                            placeholder="custom keyword"
+                            value={stateKeyword}
+                            onChange={(e) => setStateKeyword(e.target.value.trim())}
+                            startContent={
+                                <Button color='primary' isDisabled={stateLoading}
+                                    onPress={async () => {
+                                        setStateLoading(true)
+                                        const result = await searchExample(!!stateKeyword ? stateKeyword : stateCard.card.question)
+                                        if (result.status === "success") {
+                                            setStateExamples(result.data)
+                                        }
+                                        setStateLoading(false)
+                                    }}
+                                >
+                                    View Examples
+                                </Button>
+                            }
+                        />
                     </div>
                     {stateLoading && (
                         <div className='flex flex-row w-full items-center justify-center gap-4'>

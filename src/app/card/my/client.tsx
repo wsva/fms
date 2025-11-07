@@ -104,7 +104,7 @@ export default function CardFilter({ email, tag_list }: Props) {
           }
           value={stateKeyword}
           onClear={() => setStateKeyword("")}
-          onChange={(e) => setStateKeyword(e.target.value)}
+          onChange={(e) => setStateKeyword(e.target.value.trim())}
           onKeyDown={(e) => {
             if (e.key == 'Enter' && !!stateKeyword) {
               setStateCurrentPage(1)
