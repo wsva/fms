@@ -1,5 +1,5 @@
 import React from 'react'
-import BlogForm from './BlogForm';
+import Client from './client';
 import { auth } from '@/auth';
 import { getBlog } from '@/app/actions/blog';
 
@@ -20,9 +20,9 @@ export default async function ExamplePage({ params }: Props) {
   return (
     <>
       {(!!result && result.status === 'success') ? (
-        <BlogForm item={result.data} email={email} edit_view={false} />
+        <Client item={result.data} email={email} edit_view={false} />
       ) : (
-        <BlogForm email={email} edit_view={true} />
+        <Client email={email} edit_view={true} />
       )}
     </>
   )

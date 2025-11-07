@@ -84,20 +84,18 @@ export default function BlogForm({ item, email, edit_view }: Props) {
                 {stateEdit ? (
                     <>
                         <Input label='title'
-                            classNames={{ input: 'text-xl leading-tight font-roboto' }}
+                            classNames={{ input: 'text-2xl leading-tight font-roboto' }}
                             defaultValue={getDefault('title') as string | ''}
                             {...register('title')}
                         />
                         <Textarea label='description'
-                            classNames={{ input: 'text-xl leading-tight font-roboto' }}
+                            classNames={{ input: 'text-2xl leading-tight font-roboto' }}
                             defaultValue={getDefault('description') as string | ''}
                             {...register('description')}
                         />
                         <Textarea
                             label='content'
-                            classNames={{
-                                input: 'text-xl leading-tight font-roboto'
-                            }}
+                            classNames={{ input: 'text-2xl leading-tight font-roboto' }}
                             defaultValue={getDefault('content') as string | ''}
                             minRows={10}
                             maxRows={999}

@@ -113,12 +113,12 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
             ) : (
                 <div className="flex flex-col my-5 mx-5">
                     <div className="flex flex-row gap-4 items-center justify-center">
-                        <div>Tag: {stateTag?.tag}</div>
-                        <Button as={Link} target='_blank' color='secondary' href={`/card/${stateCard.uuid}/?edit=y`}>
-                            EDIT
+                        <div className="w-full">Tag: {stateTag?.tag}</div>
+                        <Button as={Link} size="sm" target='_blank' color='secondary' href={`/card/${stateCard.uuid}/?edit=y`}>
+                            Edit
                         </Button>
-                        <Button color='secondary' onPress={() => window.location.reload()}>
-                            NEXT
+                        <Button size="sm" color='secondary' onPress={() => window.location.reload()}>
+                            Next
                         </Button>
                     </div>
                     <div className={`flex flex-row w-full items-center justify-center ${getColor(stateCard.familiarity)}`}>

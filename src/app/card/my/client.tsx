@@ -46,7 +46,7 @@ export default function CardFilter({ email, tag_list }: Props) {
 
   const getChipType = (value: FilterType, description: string) => {
     return (
-      <Tooltip key={value} placement='top-end' className='bg-slate-300'
+      <Tooltip key={value} placement='bottom' className='bg-slate-300'
         content={<div className='p-1'>{description}</div>}
       >
         <Chip color={stateFilterType === value ? "success" : "default"}
@@ -98,7 +98,6 @@ export default function CardFilter({ email, tag_list }: Props) {
       <Divider />
 
       <div className="flex flex-row w-full items-center justify-start gap-1">
-        <div className='w-16'>Cards</div>
         <Input isClearable radius="md" size='sm' placeholder="search question"
           startContent={
             <BiSearch className="mb-0.5 dark:text-white/90 text-slate-400 pointer-events-none flex-shrink-0" />

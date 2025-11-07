@@ -102,7 +102,7 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
                     </Tooltip>)
                 )}
                 {isOwner && (
-                    <Popover placement='top-end' classNames={{ content: 'bg-slate-200' }}>
+                    <Popover placement='left' classNames={{ content: 'bg-slate-200' }}>
                         <PopoverTrigger>
                             <Link as='button' isBlock className='text-xl'>edit tag</Link>
                         </PopoverTrigger>
