@@ -187,9 +187,10 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                                 </DropdownMenu>
                             </Dropdown>
                         </ButtonGroup>
-                        <Input className="max-w-sm"
+                        <Input isClearable className="max-w-sm"
                             placeholder="custom keyword"
                             value={stateKeyword}
+                            onClear={() => setStateKeyword("")}
                             onChange={(e) => setStateKeyword(e.target.value.trim())}
                             startContent={
                                 <Button color='primary' isDisabled={stateLoading}
