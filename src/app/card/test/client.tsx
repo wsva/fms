@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link } from "@heroui/react";
+import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { getHTML } from '@/lib/utils';
 import { BiCaretDown } from 'react-icons/bi';
@@ -25,6 +25,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
     const [stateSuggestion, setStateSuggestion] = useState<boolean>(false)
     const [stateAnswer, setStateAnswer] = useState<boolean>(false)
     const [stateExamples, setStateExamples] = useState<string[]>([])
+    const [stateLoading, setStateLoading] = useState<boolean>(false)
 
     useEffect(() => {
         const loadData = async () => {
@@ -124,12 +125,12 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                     <div className={`flex flex-row w-full items-center justify-center ${getColor(stateCard.familiarity)}`}>
                         {stateCard.card.question.length < 30
                             ? (<div className='my-5 font-bold text-2xl md:text-4xl lg:text-6xl xl:text-8xl'>
-                                <pre className='font-roboto leading-none'>
+                                <pre className='font-roboto leading-none whitespace-pre-wrap break-words max-w-full'>
                                     {stateCard.card.question}
                                 </pre>
                             </div>)
                             : (<div className='my-5 font-bold text-base md:text-xl lg:text-2xl xl:text-4xl'>
-                                <pre className='font-roboto leading-none'>
+                                <pre className='font-roboto leading-none whitespace-pre-wrap break-words max-w-full'>
                                     {stateCard.card.question}
                                 </pre>
                             </div>)
@@ -185,17 +186,24 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                                 </DropdownMenu>
                             </Dropdown>
                         </ButtonGroup>
-                        <Button color='primary'
+                        <Button color='primary' isDisabled={stateLoading}
                             onPress={async () => {
+                                setStateLoading(true)
                                 const result = await searchExample(stateCard.card.question)
                                 if (result.status === "success") {
                                     setStateExamples(result.data)
                                 }
+                                setStateLoading(false)
                             }}
                         >
                             View Examples
                         </Button>
                     </div>
+                    {stateLoading && (
+                        <div className='flex flex-row w-full items-center justify-center gap-4'>
+                            <CircularProgress label="Loading..." />
+                        </div >
+                    )}
                     {stateSuggestion ? (
                         <Textarea isDisabled
                             classNames={{ input: 'text-2xl leading-tight font-roboto' }}
