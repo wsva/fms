@@ -43,7 +43,7 @@ export default function Item({ uuid, user_id }: Props) {
 
         const resultAudio = await getAudioDBAll(uuid)
         if (resultAudio.status === "success") {
-            const newList = resultAudio.data.map((v, i) => {
+            const newList = resultAudio.data.map((v) => {
                 return {
                     ...toExactType<practice_audio_browser>(v),
                     in_db: true,

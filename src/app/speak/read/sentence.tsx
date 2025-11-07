@@ -6,8 +6,6 @@ import { MdArrowDownward, MdArrowUpward, MdDelete, MdMic, MdMicOff, MdOutlineKey
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { toggleRecording } from '@/lib/recording';
 import { toast } from 'react-toastify';
-import { removeAudio } from '@/app/actions/audio';
-import { removeSentence } from '@/app/actions/reading';
 import { callTTS } from '@/app/actions/ai_gemini';
 import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store";
 import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache";

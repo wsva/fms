@@ -48,7 +48,6 @@ export default function Page({ word, language, email }: Props) {
             tag: `word_${language}`,
             description: "created by system",
             user_id: "public",
-            parent: "",
             created_at: new Date(),
             updated_at: new Date(),
         })
@@ -91,7 +90,6 @@ export default function Page({ word, language, email }: Props) {
             tag: `word_${language}`,
             description: "created by system",
             user_id: "public",
-            parent: "",
             created_at: new Date(),
             updated_at: new Date(),
         })

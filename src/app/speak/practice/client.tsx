@@ -25,7 +25,7 @@ export default function Page({ user_id }: Props) {
         setStateLoading(true)
         const result = await getTextAll()
         if (result.status === "success") {
-            const newList = result.data.map((v, i) => {
+            const newList = result.data.map((v) => {
                 return {
                     ...toExactType<practice_text_browser>(v),
                     modified: false,
