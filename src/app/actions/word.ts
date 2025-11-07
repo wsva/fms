@@ -199,20 +199,19 @@ export async function getExample(topword_id: number): Promise<ActionResult<strin
     }
 }
 
-export async function getExampleByWord(word: string): Promise<ActionResult<string[]>> {
+export async function searchExample(keyword: string): Promise<ActionResult<string[]>> {
     try {
-        const resultWord = await prisma.topword_de.findMany({
-            where: { word: word }
-        })
-        if (!resultWord) {
-            return { status: 'error', error: "no word found" }
-        }
         const result = await prisma.topword_de_example.findMany({
             where: {
-                word_id: {
-                    in: resultWord.map((v) => v.id),
-                }
-            }
+                example: {
+                    contains: keyword,
+                },
+            },
+            distinct: ['example'], // 去重字段
+            take: 100, // limit 100
+            select: {
+                example: true,
+            },
         })
         return { status: "success", data: result.map((v) => v.example) }
     } catch (error) {

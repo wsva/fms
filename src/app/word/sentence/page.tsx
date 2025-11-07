@@ -1,5 +1,5 @@
 import React from 'react'
-import Sentence from './Sentence';
+import Client from './client';
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -13,6 +13,6 @@ export default async function Page({ searchParams }: Props) {
   const word_id_int = parseInt(word_id_str)
 
   return (
-    <Sentence word_id={word_id_int} />
+    <Client word_id={word_id_int} />
   )
 }

@@ -166,3 +166,17 @@ CREATE TABLE practice_audio (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 `````
+
+# clean data
+`````
+UPDATE topword_de_example
+SET example = regexp_replace(
+    example,
+    '\s+([,.!?])',
+    '\1',
+    'g'
+)
+WHERE example ~ '\s+[,.!?]';
+
+
+`````

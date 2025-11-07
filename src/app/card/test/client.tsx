@@ -10,7 +10,7 @@ import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/ac
 import { FamiliarityList } from '@/lib/card';
 import '@/lib/Markdown.css';
 import { toast } from 'react-toastify';
-import { getExampleByWord } from "@/app/actions/word";
+import { searchExample } from "@/app/actions/word";
 import { qsa_tag } from "@prisma/client";
 
 type Props = {
@@ -185,6 +185,16 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                                 </DropdownMenu>
                             </Dropdown>
                         </ButtonGroup>
+                        <Button color='primary'
+                            onPress={async () => {
+                                const result = await searchExample(stateCard.card.question)
+                                if (result.status === "success") {
+                                    setStateExamples(result.data)
+                                }
+                            }}
+                        >
+                            View Examples
+                        </Button>
                     </div>
                     {stateSuggestion ? (
                         <Textarea isDisabled
@@ -206,24 +216,6 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                             defaultValue={stateCard.card.note}
                         />
                     ) : null}
-                    {stateCard.card.note.indexOf(`"lemma":"`) >= 0 && (
-                        <div className="flex flex-row gap-4 items-center justify-center">
-                            <Button color='primary'
-                                onPress={async () => {
-                                    const m = stateCard.card.note.match(/"lemma":"([^"]+)"/)
-                                    if (m) {
-                                        const word = m[1].trim()
-                                        const result = await getExampleByWord(word)
-                                        if (result.status === "success") {
-                                            setStateExamples(result.data)
-                                        }
-                                    }
-                                }}
-                            >
-                                View Examples
-                            </Button>
-                        </div>
-                    )}
                     {stateExamples.length > 0 && (
                         <SentenceList list={stateExamples} />
                     )}
