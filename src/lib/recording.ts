@@ -67,6 +67,7 @@ export const startRecording = async (
         };
 
         recorder.onstop = async () => {
+            stream.getTracks().forEach(track => track.stop());
             setStateRecording(false);
             handleLog("Recording stopped.");
 
