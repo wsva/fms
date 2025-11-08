@@ -97,7 +97,7 @@ export default function BlogForm({ item, email }: Props) {
                 <Button variant='solid' color='primary'
                     isDisabled={!stateRecording}
                     onPress={async () => {
-                        const handleResult = async (result: ActionResult<string>, videoBlob: Blob, audioBlob: Blob) => {
+                        const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
                             setStateQuestion({
                                 url: URL.createObjectURL(audioBlob),
                                 created_by: email,
@@ -113,7 +113,7 @@ export default function BlogForm({ item, email }: Props) {
                             stateRecording,
                             setStateRecording,
                             recognize: false,
-                            handleResult,
+                            handleAudio,
                         });
                     }}
                 >
@@ -135,7 +135,7 @@ export default function BlogForm({ item, email }: Props) {
             <Button variant='solid' color='primary'
                 isDisabled={!stateQuestion || (!stateRecording)}
                 onPress={async () => {
-                    const handleResult = async (result: ActionResult<string>, videoBlob: Blob, audioBlob: Blob) => {
+                    const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
                         setStateAnswerList(prev => [...prev, {
                             url: URL.createObjectURL(audioBlob),
                             created_by: email,
@@ -151,7 +151,7 @@ export default function BlogForm({ item, email }: Props) {
                         stateRecording,
                         setStateRecording,
                         recognize: false,
-                        handleResult,
+                        handleAudio,
                     });
                 }}
             >
