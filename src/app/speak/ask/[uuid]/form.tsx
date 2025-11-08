@@ -19,11 +19,8 @@ export default function BlogForm({ item, email }: Props) {
     const [stateUUID, setStateUUID] = useState<string>("");
     const [stateQuestion, setStateQuestion] = useState<audio>();
     const [stateAnswerList, setStateAnswerList] = useState<audio[]>([]);
+    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
-    const [stateProcessing, setStateProcessing] = React.useState(false);
-
-    const sentenceChunks = useRef<BlobPart[]>([]);
-    const recorderRef = useRef<MediaRecorder | null>(null);
 
     // 空依赖数组意味着仅在组件挂载时执行一次
     useEffect(() => {
@@ -98,12 +95,9 @@ export default function BlogForm({ item, email }: Props) {
 
             <div className='flex flex-row my-1 items-start justify-start gap-4'>
                 <Button variant='solid' color='primary'
-                    isDisabled={!stateRecording && stateProcessing}
+                    isDisabled={!stateRecording}
                     onPress={async () => {
-                        const handleLog = (log: string) => {
-                            console.log(log)
-                        }
-                        const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
+                        const handleResult = async (result: ActionResult<string>, videoBlob: Blob, audioBlob: Blob) => {
                             setStateQuestion({
                                 url: URL.createObjectURL(audioBlob),
                                 created_by: email,
@@ -112,16 +106,15 @@ export default function BlogForm({ item, email }: Props) {
                             })
                         }
 
-                        await toggleRecording(
+                        await toggleRecording({
+                            mode: "audio",
+                            stateRecorder,
+                            setStateRecorder,
                             stateRecording,
                             setStateRecording,
-                            sentenceChunks,
-                            recorderRef,
-                            false,
-                            "",
-                            setStateProcessing,
-                            handleLog,
-                            handleResult);
+                            recognize: false,
+                            handleResult,
+                        });
                     }}
                 >
                     {stateRecording ? '⏹ Stop Recording' : '🎤 Add Question'}
@@ -140,12 +133,9 @@ export default function BlogForm({ item, email }: Props) {
             </div>
 
             <Button variant='solid' color='primary'
-                isDisabled={!stateQuestion || (!stateRecording && stateProcessing)}
+                isDisabled={!stateQuestion || (!stateRecording)}
                 onPress={async () => {
-                    const handleLog = (log: string) => {
-                        console.log(log)
-                    }
-                    const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
+                    const handleResult = async (result: ActionResult<string>, videoBlob: Blob, audioBlob: Blob) => {
                         setStateAnswerList(prev => [...prev, {
                             url: URL.createObjectURL(audioBlob),
                             created_by: email,
@@ -154,16 +144,15 @@ export default function BlogForm({ item, email }: Props) {
                         }]);
                     }
 
-                    await toggleRecording(
+                    await toggleRecording({
+                        mode: "audio",
+                        stateRecorder,
+                        setStateRecorder,
                         stateRecording,
                         setStateRecording,
-                        sentenceChunks,
-                        recorderRef,
-                        false,
-                        "",
-                        setStateProcessing,
-                        handleLog,
-                        handleResult);
+                        recognize: false,
+                        handleResult,
+                    });
                 }}
             >
                 {stateRecording ? '⏹ Stop Recording' : '🎤 Add Answer'}

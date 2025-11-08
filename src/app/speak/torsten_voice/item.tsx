@@ -8,19 +8,14 @@ import { ActionResult } from '@/lib/types'
 import { toggleRecording } from '@/lib/recording'
 
 export const Item = ({ row, engine }: { row: torsten_voice, engine: string }) => {
+    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false)
     const [stateResult, setStateResult] = useState<string>('')
     const [stateAnswer, setStateAnswer] = useState<boolean>(false)
     const [stateProcessing, setStateProcessing] = React.useState(false);
 
-    const sentenceChunks = useRef<BlobPart[]>([]);
-    const recorderRef = useRef<MediaRecorder | null>(null);
-
     const toggleRecordingLocal = async () => {
-        const handleLog = (log: string) => {
-            console.log(log)
-        }
-        const handleResult = async (result: ActionResult<string>) => {
+        const handleAudio = async (result: ActionResult<string>) => {
             if (result.status === 'success') {
                 setStateResult(result.data)
             } else {
@@ -28,16 +23,17 @@ export const Item = ({ row, engine }: { row: torsten_voice, engine: string }) =>
             }
         }
 
-        await toggleRecording(
+        await toggleRecording({
+            mode: "audio",
+            stateRecorder,
+            setStateRecorder,
             stateRecording,
             setStateRecording,
-            sentenceChunks,
-            recorderRef,
-            true,
-            engine,
+            recognize: true,
+            sttEngine: engine,
             setStateProcessing,
-            handleLog,
-            handleResult);
+            handleAudio,
+        });
     }
 
     return (

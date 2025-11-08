@@ -39,106 +39,154 @@ function playBeep() {
     oscillator.stop(audioCtx.currentTime + 0.5); // 持续0.5秒
 }
 
-export const startRecording = async (
+type RecordingProps = {
+    mode: "audio" | "video",
+
+    // live video: videoRef.current.srcObject = stream
+    setStateStream?: React.Dispatch<React.SetStateAction<MediaStream | undefined>>,
+
+    stateRecorder: MediaRecorder[],
+    setStateRecorder: React.Dispatch<React.SetStateAction<MediaRecorder[]>>,
+
     stateRecording: boolean,
     setStateRecording: React.Dispatch<React.SetStateAction<boolean>>,
-    sentenceChunks: React.RefObject<BlobPart[]>,
-    recorderRef: React.RefObject<MediaRecorder | null>,
+
+    // recognize text from audio
     recognize: boolean,
-    sttEngine: string,
-    setStateProcessing: React.Dispatch<React.SetStateAction<boolean>>,
-    handleLog: (log: string) => void,
-    handleResult: (result: ActionResult<string>, audioBlob: Blob) => Promise<void>,
-) => {
-    if (stateRecording) {
+    sttEngine?: string,
+    setStateProcessing?: React.Dispatch<React.SetStateAction<boolean>>,
+
+    handleLog?: (log: string) => void,
+    handleVideo?: (videoBlob: Blob) => Promise<void>,
+    handleAudio: (result: ActionResult<string>, audioBlob: Blob) => Promise<void>,
+};
+
+// https://web.dabbling.in/p/browser-apis-mediadevices
+export const startRecording = async (props: RecordingProps) => {
+    if (props.stateRecording) {
         return
     }
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const recorder = new MediaRecorder(stream);
-        recorderRef.current = recorder;
-
-        sentenceChunks.current = [];
-        recorder.ondataavailable = e => sentenceChunks.current.push(e.data);
-
-        recorder.onstart = () => {
-            playBeep();
-            console.log('start recording');
-        };
-
-        recorder.onstop = async () => {
-            stream.getTracks().forEach(track => track.stop());
-            setStateRecording(false);
-            handleLog("Recording stopped.");
-
-            const audioBlob = new Blob(sentenceChunks.current, { type: 'audio/wav' });
-            if (!audioBlob || audioBlob.size === 0) {
-                handleLog("Empty audio blob — skipping transcription.");
-                return;
-            }
-            sentenceChunks.current = [];
-            recorderRef.current = null;
-
-            if (!recognize) {
-                handleResult({ status: "success", data: "recognize=false" }, audioBlob);
+        const handleAudio = async (audioBlob: Blob) => {
+            if (!props.recognize) {
+                props.handleAudio({ status: "success", data: "recognize=false" }, audioBlob);
             } else {
-                handleLog("Sending to STT service, waiting for response...");
-                setStateProcessing(true);
-                const callSTT = await getCallSTT(sttEngine);
+                props.handleLog?.("Sending to STT service, waiting for response...");
+                props.setStateProcessing?.(true);
+                const callSTT = await getCallSTT(props.sttEngine || "local");
                 const result = await callSTT(audioBlob);
                 if (result.status === "success") {
-                    handleLog("STT recognition completed.");
-                    await handleResult({ status: "success", data: result.data }, audioBlob);
+                    props.handleLog?.("STT recognition completed.");
+                    await props.handleAudio({ status: "success", data: result.data }, audioBlob);
                 } else {
-                    handleLog(`STT recognition failed: ${result.error}`);
-                    await handleResult({ status: "error", error: result.error }, audioBlob);
+                    props.handleLog?.(`STT recognition failed: ${result.error}`);
+                    await props.handleAudio({ status: "error", error: result.error }, audioBlob);
                 }
-                setStateProcessing(false);
+                props.setStateProcessing?.(false);
             }
-        };
+        }
 
-        recorder.start();
-        setStateRecording(true);
-        handleLog("Recording...");
+
+        if (props.mode === "video") {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+            props.setStateStream?.(stream);
+            // used to record audio seperately for STT
+            const audioStream = new MediaStream(stream.getAudioTracks());
+
+            const videoRecorder = new MediaRecorder(stream);
+            const audioRecorder = new MediaRecorder(audioStream);
+            props.setStateRecorder([videoRecorder, audioRecorder]);
+
+            const videoChunks: BlobPart[] = [];
+            const audioChunks: BlobPart[] = [];
+
+            videoRecorder.ondataavailable = e => videoChunks.push(e.data);
+            audioRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+            videoRecorder.onstart = () => {
+                props.handleLog?.("Recording video started.");
+            }
+            audioRecorder.onstart = () => {
+                props.handleLog?.("Recording audio started.");
+            }
+
+            videoRecorder.onstop = async () => {
+                // releaseStream
+                stream.getTracks().forEach(track => track.stop());
+                props.setStateRecording(false);
+                props.handleLog?.("Recording video stopped.");
+
+                const videoBlob = new Blob(videoChunks, { type: 'video/mp4' });
+                videoChunks.splice(0);
+
+                props.handleVideo?.(videoBlob);
+            };
+            audioRecorder.onstop = async () => {
+                // releaseStream
+                audioStream.getTracks().forEach(track => track.stop());
+                props.setStateRecording(false);
+                props.handleLog?.("Recording audio stopped.");
+
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                audioChunks.splice(0);
+
+                await handleAudio(audioBlob);
+            };
+
+            videoRecorder.start();
+            audioRecorder.start();
+            props.setStateRecording(true);
+            props.handleLog?.("Recording...");
+        } else {
+            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const audioRecorder = new MediaRecorder(audioStream);
+            props.setStateRecorder([audioRecorder]);
+
+            const audioChunks: BlobPart[] = [];
+
+            audioRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+            audioRecorder.onstart = () => {
+                props.handleLog?.("Recording audio started.");
+            }
+
+            audioRecorder.onstop = async () => {
+                // releaseStream
+                audioStream.getTracks().forEach(track => track.stop());
+                props.setStateRecording(false);
+                props.handleLog?.("Recording audio stopped.");
+
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                audioChunks.splice(0);
+
+                await handleAudio(audioBlob);
+            };
+
+            audioRecorder.start();
+            if (props.mode === "audio") {
+                playBeep();
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            props.setStateRecording(true);
+            props.handleLog?.("Recording...");
+        }
     } catch (err) {
         console.error(err);
-        handleLog("Failed to access microphone.");
+        props.handleLog?.("Failed to access microphone.");
     }
 };
 
-export const stopRecording = (
-    stateRecording: boolean,
-    recorderRef: React.RefObject<MediaRecorder | null>,
-) => {
-    if (stateRecording && recorderRef.current) {
-        recorderRef.current.stop();
+export const stopRecording = (props: RecordingProps) => {
+    if (!!props.stateRecorder) {
+        props.stateRecorder.forEach(v => v.stop())
     }
 };
 
-export const toggleRecording = async (
-    stateRecording: boolean,
-    setStateRecording: React.Dispatch<React.SetStateAction<boolean>>,
-    sentenceChunks: React.RefObject<BlobPart[]>,
-    recorderRef: React.RefObject<MediaRecorder | null>,
-    recognize: boolean,
-    sttEngine: string,
-    setStateProcessing: React.Dispatch<React.SetStateAction<boolean>>,
-    handleLog: (log: string) => void,
-    handleResult: (result: ActionResult<string>, audioBlob: Blob) => Promise<void>,
-) => {
-    if (!stateRecording) {
-        await startRecording(
-            stateRecording,
-            setStateRecording,
-            sentenceChunks,
-            recorderRef,
-            recognize,
-            sttEngine,
-            setStateProcessing,
-            handleLog,
-            handleResult,
-        )
+export const toggleRecording = async (props: RecordingProps) => {
+    if (!props.stateRecording) {
+        await startRecording(props)
     } else {
-        stopRecording(stateRecording, recorderRef)
+        stopRecording(props)
     }
 };

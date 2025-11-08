@@ -27,12 +27,10 @@ export default function Item({ uuid, user_id }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateEngine, setStateEngine] = useState<string>("local");
+    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
     const [stateCurrent, setStateCurrent] = useState<practice_audio_browser>();
-
-    const sentenceChunks = useRef<BlobPart[]>([]);
-    const recorderRef = useRef<MediaRecorder | null>(null);
 
     const loadData = async (uuid: string) => {
         setStateLoading(true)
@@ -159,40 +157,37 @@ export default function Item({ uuid, user_id }: Props) {
     }
 
     const toggleRecordingLocal = async () => {
-        const handleLog = (log: string) => {
-            console.log(log)
-        }
-        const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
-            if (result.status === 'success') {
-                const audio_uuid = getUUID();
-                await saveBlobToIndexedDB(audio_uuid, audioBlob);
-                cacheBlobInMemory(audio_uuid, audioBlob);
-                setStateCurrent({
-                    uuid: audio_uuid,
-                    user_id: user_id,
-                    text_uuid: uuid,
-                    recognized: result.data,
-                    audio_path: `/api/data/practice/${audio_uuid}.wav`,
-                    in_db: false,
-                    on_fs: false,
-                    modified_db: true,
-                    modified_fs: true,
-                })
-            } else {
+        const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
+            const audio_uuid = getUUID();
+            await saveBlobToIndexedDB(audio_uuid, audioBlob);
+            cacheBlobInMemory(audio_uuid, audioBlob);
+            setStateCurrent({
+                uuid: audio_uuid,
+                user_id: user_id,
+                text_uuid: uuid,
+                recognized: result.status === 'success' ? result.data : "",
+                audio_path: `/api/data/practice/${audio_uuid}.wav`,
+                in_db: false,
+                on_fs: false,
+                modified_db: true,
+                modified_fs: true,
+            })
+            if (result.status === 'error') {
                 toast.error(result.error as string)
             }
         }
 
-        await toggleRecording(
+        await toggleRecording({
+            mode: "audio",
+            stateRecorder,
+            setStateRecorder,
             stateRecording,
             setStateRecording,
-            sentenceChunks,
-            recorderRef,
-            true,
-            stateEngine,
+            recognize: true,
+            sttEngine: stateEngine,
             setStateProcessing,
-            handleLog,
-            handleResult);
+            handleAudio,
+        });
     }
 
     useEffect(() => {

@@ -43,14 +43,12 @@ export default function TopNav({ session }: Props) {
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [stateColor, setStateColor] = React.useState<"default" | "success" | "warning">("default");
     const [stateEngine, setStateEngine] = React.useState<string>("local");
+    const [stateRecorder, setStateRecorder] = React.useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = React.useState(false);
     const [stateProcessing, setStateProcessing] = React.useState(false);
     const [stateSTT, setStateSTT] = React.useState<string>("");
     const [stateCmdOpen, setStateCmdOpen] = React.useState<boolean>(false);
     const [stateCmdMap, setStateCmdMap] = React.useState<Map<string, string[]>>(new Map());
-
-    const sentenceChunks = useRef<BlobPart[]>([]);
-    const recorderRef = useRef<MediaRecorder | null>(null);
 
     const router = useRouter();
 
@@ -58,7 +56,7 @@ export default function TopNav({ session }: Props) {
         const handleLog = (log: string) => {
             setStateSTT(log);
         }
-        const handleResult = async (result: ActionResult<string>) => {
+        const handleAudio = async (result: ActionResult<string>) => {
             if (result.status === 'success') {
                 setStateSTT(result.data);
                 handleSTTResult(result.data);
@@ -67,17 +65,18 @@ export default function TopNav({ session }: Props) {
             }
         }
 
-        await toggleRecording(
+        await toggleRecording({
+            mode: "audio",
+            stateRecorder,
+            setStateRecorder,
             stateRecording,
             setStateRecording,
-            sentenceChunks,
-            recorderRef,
-            true,
-            stateEngine,
+            recognize: true,
+            sttEngine: stateEngine,
             setStateProcessing,
             handleLog,
-            handleResult,
-        );
+            handleAudio,
+        });
     }
 
     useEffect(() => {

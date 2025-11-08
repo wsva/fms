@@ -25,6 +25,7 @@ export default function Page({ email }: Props) {
     const [stateBook, setStateBook] = useState<string>("");
     const [stateChapter, setStateChapter] = useState<string>("");
     const [stateEngine, setStateEngine] = useState<string>("local");
+    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
     const [stateCurrent, setStateCurrent] = useState<read_sentence_browser>();
@@ -32,9 +33,6 @@ export default function Page({ email }: Props) {
     const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
-
-    const sentenceChunks = useRef<BlobPart[]>([]);
-    const recorderRef = useRef<MediaRecorder | null>(null);
 
     const reversedList = useMemo(() => stateData.slice().reverse(), [stateData]);
 
@@ -239,41 +237,38 @@ export default function Page({ email }: Props) {
     }
 
     const toggleRecordingLocal = async () => {
-        const handleLog = (log: string) => {
-            console.log(log)
-        }
-        const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
-            if (result.status === 'success') {
-                const uuid = getUUID();
-                await saveBlobToIndexedDB(uuid, audioBlob);
-                cacheBlobInMemory(uuid, audioBlob);
-                setStateCurrent({
-                    uuid: uuid,
-                    chapter_uuid: stateChapter,
-                    order_num: stateData.length + 1,
-                    original: result.data,
-                    recognized: result.data,
-                    audio_path: `/api/data/reading/${uuid}.wav`,
-                    in_db: false,
-                    on_fs: false,
-                    modified_db: true,
-                    modified_fs: true,
-                })
-            } else {
+        const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
+            const uuid = getUUID();
+            await saveBlobToIndexedDB(uuid, audioBlob);
+            cacheBlobInMemory(uuid, audioBlob);
+            setStateCurrent({
+                uuid: uuid,
+                chapter_uuid: stateChapter,
+                order_num: stateData.length + 1,
+                original: result.status === 'success' ? result.data : "",
+                recognized: result.status === 'success' ? result.data : "",
+                audio_path: `/api/data/reading/${uuid}.wav`,
+                in_db: false,
+                on_fs: false,
+                modified_db: true,
+                modified_fs: true,
+            })
+            if (result.status === 'error') {
                 toast.error(result.error as string)
             }
         }
 
-        await toggleRecording(
+        await toggleRecording({
+            mode: "audio",
+            stateRecorder,
+            setStateRecorder,
             stateRecording,
             setStateRecording,
-            sentenceChunks,
-            recorderRef,
-            true,
-            stateEngine,
+            recognize: true,
+            sttEngine: stateEngine,
             setStateProcessing,
-            handleLog,
-            handleResult);
+            handleAudio,
+        });
     }
 
     useEffect(() => {
@@ -313,7 +308,7 @@ export default function Page({ email }: Props) {
             </div>
 
             <div className='flex flex-col md:flex-row items-center justify-center gap-4 my-4'>
-                <Select className='max-w-sm'
+                <Select aria-label='stt engine' className='max-w-sm'
                     selectedKeys={[stateEngine]}
                     onChange={(e) => setStateEngine(e.target.value)}
                     startContent={<div className="whitespace-nowrap font-bold">AI Engine</div>}
