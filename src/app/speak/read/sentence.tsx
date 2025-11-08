@@ -19,6 +19,7 @@ type Props = {
 }
 
 export default function Page({ item, engine, handleUpdate, handleDelete }: Props) {
+    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState(false);
     const [stateGenerating, setStateGenerating] = useState<boolean>(false);
@@ -28,10 +29,7 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
     const recorderRef = useRef<MediaRecorder | null>(null);
 
     const toggleRecordingLocal = async () => {
-        const handleLog = (log: string) => {
-            console.log(log)
-        }
-        const handleResult = async (result: ActionResult<string>, audioBlob: Blob) => {
+        const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
             if (result.status === 'success') {
                 await saveBlobToIndexedDB(item.uuid, audioBlob);
                 cacheBlobInMemory(item.uuid, audioBlob);
@@ -52,16 +50,17 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
             dropWeakCache(item.uuid);
         }
 
-        await toggleRecording(
+        await toggleRecording({
+            mode: "audio",
+            stateRecorder,
+            setStateRecorder,
             stateRecording,
             setStateRecording,
-            sentenceChunks,
-            recorderRef,
-            true,
-            engine,
+            recognize: true,
+            sttEngine: engine,
             setStateProcessing,
-            handleLog,
-            handleResult);
+            handleAudio,
+        });
     }
 
     return (
