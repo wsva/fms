@@ -1,8 +1,7 @@
 'use client';
 
-import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
-import Link from 'next/link'
-import React, { useEffect, useRef } from 'react'
+import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
+import React, { useEffect } from 'react'
 import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react"
@@ -128,6 +127,7 @@ export default function TopNav({ session }: Props) {
                         'data-[active=true]:font-bold'
                     ]
                 }}
+                isMenuOpen={isMenuOpen}
                 onMenuOpenChange={setIsMenuOpen}
             >
                 <NavbarContent className='flex-grow-0 mr-1 sm:mr-4 data-[justify=start]:flex-grow-0' justify="start">
@@ -177,7 +177,6 @@ export default function TopNav({ session }: Props) {
                                 ))}
                             </DropdownMenu>
                         </Dropdown>
-
                     ))}
                     {/* <NavLink href='/card/test' label='Test' /> */}
                 </NavbarContent>
@@ -276,8 +275,10 @@ export default function TopNav({ session }: Props) {
                 <NavbarMenu>
                     {menuList.map((group) => (
                         group.items.map((item) => (
-                            <NavbarMenuItem key={item.key}>
-                                <Link className="w-full" href={item.href}>
+                            <NavbarMenuItem key={item.key} className="my-1">
+                                <Link className="w-full text-blue-600 underline" href={item.href}
+                                    onPress={() => setIsMenuOpen(!isMenuOpen)}
+                                >
                                     {item.name}
                                 </Link>
                             </NavbarMenuItem>
