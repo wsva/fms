@@ -10,7 +10,7 @@ import { getUUID, getWeightedRandom } from "@/lib/utils";
 import { qsa_card, Prisma, qsa_tag, qsa_card_tag, qsa_card_review } from '@prisma/client'
 import { FilterType, TagAll, TagUnspecified, TagNo } from "@/lib/card";
 
-export async function getCardsOfMy(
+export async function getCardAll(
     email: string,
     filter_type: FilterType,
     tag_uuid: string,
@@ -107,56 +107,6 @@ export async function getCardsOfMy(
         const result = await prisma.$queryRaw<qsa_card[]>(sql)
 
         const sql_count = Prisma.join([sql_start_count, sql_body], " ")
-        const result_count = await prisma.$queryRaw<{ total: bigint }[]>(sql_count)
-        const total = Number(result_count[0]?.total || 0)
-
-        return {
-            status: "success",
-            data: result,
-            total_records: total,
-            page: page,
-            total_pages: Math.ceil(total / limit),
-        }
-    } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
-    }
-}
-
-export async function getCardsOfOthers(
-    email: string,
-    user_id: string,
-    page: number,
-    limit: number
-): Promise<ActionResult<qsa_card[]>> {
-    const skip = (page - 1) * limit
-    const take = limit
-
-    const sql_start = Prisma.sql`
-        select * from qsa_card t0 where t0.user_id != ${email}
-    `
-    const sql_start_count = Prisma.sql`
-        select count(1) as total from qsa_card t0 where t0.user_id != ${email}
-    `
-    const sql_body_card = Prisma.sql`
-        and length(t0.question) > 0
-        and length(t0.answer) > 0
-    `
-    const sql_body_user_id = !!user_id
-        ? Prisma.sql`and t0.user_id = ${user_id}`
-        : Prisma.sql``
-    const sql_end_order_by = Prisma.sql`
-        order by created_at desc
-    `
-    const sql_end_limit = Prisma.sql`
-        limit ${take} offset ${skip}
-    `
-
-    try {
-        const sql = Prisma.join([sql_start, sql_body_card, sql_body_user_id, sql_end_order_by, sql_end_limit], " ")
-        const result = await prisma.$queryRaw<qsa_card[]>(sql)
-
-        const sql_count = Prisma.join([sql_start_count, sql_body_card, sql_body_user_id], " ")
         const result_count = await prisma.$queryRaw<{ total: bigint }[]>(sql_count)
         const total = Number(result_count[0]?.total || 0)
 

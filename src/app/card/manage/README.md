@@ -6,11 +6,13 @@ source_uuid = old uuid
 如果不保留复制标记，则无法清除
 清除数据时只能清除带有复制标记的数据，可以指定清除复制字哪个用户的数据
 
-clear 我的所有数据
+查看某个用户的所有 card，按tag
 
-clone 另一个用户的所有数据
+clear 某个tag下的所有数据
 
-export 导出自己的所有数据
+clone 另一个用户的某个tag A下的所有数据到我的 tag B
+
+export 导出自己m某tag下的所有数据
 
 statistic 统计每个用户的数据量
 按 tag 统计数据量

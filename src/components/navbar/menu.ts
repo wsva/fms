@@ -27,9 +27,9 @@ export const menuList: MenuGroup[] = [
     {
         name: "Speak",
         items: [
-            { key: "speak_practice", name: "practice", description: "practice", href: "/speak/practice" },
-            { key: "speak_read", name: "reading", description: "read a book", href: "/speak/read" },
-            { key: "speak_ask", name: "asking", description: "ask or answer a question", href: "/speak/ask" },
+            { key: "speak_practice", name: "Practice", description: "practice", href: "/speak/practice" },
+            { key: "speak_read", name: "Reading", description: "read a book", href: "/speak/read" },
+            { key: "speak_ask", name: "Asking", description: "ask or answer a question", href: "/speak/ask" },
             { key: "speak_torsten_voice", name: "Torsten Voice", description: "Torsten Voice", href: "/speak/torsten_voice" },
         ],
     },
@@ -47,7 +47,8 @@ export const menuList: MenuGroup[] = [
             { key: "card_tag", name: "Manage Tags", description: "manage tags", href: "/card/tag" },
             { key: "card_add", name: "Add Card", description: "add new card", href: "/card/add?edit=y" },
             { key: "card_my", name: "My Cards", description: "my cards", href: "/card/my" },
-            { key: "card_market", name: "Card Market", description: "cards by others", href: "/card/market" },
+            { key: "card_read", name: "Reading", description: "notes by reading", href: "/card/read" },
+            { key: "card_manage", name: "Manage", description: "manage cards", href: "/card/manage" },
             { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test" },
         ],
     },

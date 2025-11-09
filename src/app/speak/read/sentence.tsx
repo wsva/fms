@@ -152,7 +152,7 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
                                     order_num: item.order_num + 1,
                                     modified_db: true,
                                 };
-                                handleDelete(new_item)
+                                handleUpdate(new_item)
                             }} >
                             <MdArrowUpward size={20} />
                         </Button>
@@ -166,7 +166,7 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
                                     order_num: item.order_num - 1,
                                     modified_db: true,
                                 };
-                                handleDelete(new_item)
+                                handleUpdate(new_item)
                             }} >
                             <MdArrowDownward size={20} />
                         </Button>
@@ -184,7 +184,7 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
                         defaultValue={item.original}
                         onChange={(e) => {
                             const new_item = { ...item, original: e.target.value, modified_db: true };
-                            handleDelete(new_item)
+                            handleUpdate(new_item)
                         }}
                         endContent={
                             <Button isIconOnly variant='light' className='h-fit'

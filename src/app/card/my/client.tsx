@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { Chip, CircularProgress, Divider, Input, Pagination, Tooltip } from "@heroui/react"
 import { qsa_card, qsa_tag } from '@prisma/client';
 import CardList from '@/components/card/CardList';
-import { getCardsOfMy } from '@/app/actions/card';
+import { getCardAll } from '@/app/actions/card';
 import { FilterType, FilterTypeList, TagAll, TagUnspecified, TagNo } from "@/lib/card";
 import { BiSearch } from 'react-icons/bi';
 
@@ -30,7 +30,7 @@ export default function CardFilter({ email, tag_list }: Props) {
         const session = await getSession()
         const email = session?.user?.email 
       } */
-      const result = await getCardsOfMy(
+      const result = await getCardAll(
         email, stateFilterType, stateTagUUID, stateKeyword, stateCurrentPage, 20)
       if (result.status === 'success') {
         setStateCards(result.data)
