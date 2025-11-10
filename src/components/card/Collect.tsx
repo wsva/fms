@@ -9,11 +9,11 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 
 type Props = {
-    email: string;
+    user_id: string;
     card: qsa_card;
 }
 
-export default function Collect({ email, card }: Props) {
+export default function Collect({ user_id, card }: Props) {
     const [stateTagList, setStateTagList] = useState<qsa_tag[]>([]);
     const [stateSelected, setStateSelected] = useState<string[]>([]);
     const { handleSubmit } = useForm();
@@ -21,21 +21,21 @@ export default function Collect({ email, card }: Props) {
     // 空依赖数组意味着仅在组件挂载时执行一次
     useEffect(() => {
         const loadData = async () => {
-            const tag_list_result = await getTagAll(email);
+            const tag_list_result = await getTagAll(user_id);
             if (tag_list_result.status !== "success") {
                 return
             }
             setStateTagList(tag_list_result.data)
         };
         loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user_id]);
 
     const onSubmit = async () => {
         const new_card: qsa_card = {
             ...card,
             uuid: getUUID(),
-            user_id: email,
+            user_id: user_id,
             familiarity: 0,
             note: (!!card.note ? card.note + "\n" : "")
                 + `{"collect_from":${JSON.stringify(card.user_id)}, "source_uuid":${JSON.stringify(card.uuid)}}`,

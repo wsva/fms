@@ -82,7 +82,7 @@ export default function CardMarket({ user_id_my }: Props) {
                         <CircularProgress label="Loading..." />
                     </div >
                 )
-                : (<CardList email={user_id_my} card_list={stateCards} edit_view={false} />)
+                : (<CardList user_id={user_id_my} card_list={stateCards} />)
             }
             {!stateLoading && stateTotalPages > 1 && (
                 <div className='flex flex-row items-center justify-center gap-4'>

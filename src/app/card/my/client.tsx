@@ -119,7 +119,7 @@ export default function CardFilter({ user_id, tag_list }: Props) {
                         <CircularProgress label="Loading..." />
                     </div >
                 )
-                : (<CardList email={user_id} card_list={stateCards} edit_view={stateFilterType == FilterType.Uncomplete} />)
+                : (<CardList user_id={user_id} card_list={stateCards} />)
             }
             {!stateLoading && (
                 <div className='flex flex-row items-center justify-center gap-4'>

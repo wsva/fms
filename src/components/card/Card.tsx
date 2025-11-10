@@ -1,26 +1,24 @@
 'use client'
 
-import { ButtonGroup, Link, Popover, PopoverContent, PopoverTrigger, Tooltip } from "@heroui/react"
-import { Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger } from "@heroui/react"
 import { qsa_card, qsa_tag } from '@prisma/client';
 import React, { useState } from 'react';
-import SetTag from './SetTag';
 import { FamiliarityList } from '@/lib/card';
+import { ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Link, Popover, PopoverContent, PopoverTrigger, Tooltip } from '@heroui/react';
+import Collect from './Collect';
+import SetTag from './SetTag';
 import { setCardFamiliarity } from '@/app/actions/card';
 import { toast } from 'react-toastify';
-import Collect from './Collect';
 
 type Props = {
-    email: string
+    user_id: string
     card: qsa_card
-    edit_view: boolean
-    tag_list?: qsa_tag[]
+    tag_list: qsa_tag[]
 }
 
-export default function CardItem({ email, card, edit_view, tag_list }: Props) {
+export default function Card({ user_id, card, tag_list }: Props) {
     const [stateFamiliarity, setStateFamiliarity] = useState<number>(card.familiarity);
 
-    const isOwner = card.user_id === email
+    const isOwner = card.user_id === user_id
 
     const getColor = (familiarity: number) => {
         if (!isOwner) {
@@ -36,7 +34,7 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
         <div className={`flex flex-col w-full items-start rounded-md p-1 ${getColor(stateFamiliarity)}`}>
             <div className='flex flex-row w-full items-center justify-start gap-2'>
                 <Link target='_blank' className='text-2xl text-blue-600 hover:underline'
-                    href={`/card/${card.uuid}${!!edit_view ? '?edit=y' : ''}`}
+                    href={`/card/${card.uuid}`}
                 >
                     <pre className='font-roboto leading-none text-wrap'>{card.question}</pre>
                 </Link>
@@ -99,7 +97,7 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
                             <Link as='button' isBlock className='text-xl'>edit tag</Link>
                         </PopoverTrigger>
                         <PopoverContent>
-                            <SetTag email={email} card={card} tag_list={tag_list || []} />
+                            <SetTag user_id={user_id} card={card} tag_list={tag_list} />
                         </PopoverContent>
                     </Popover>
                 )}
@@ -109,7 +107,7 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
                             <Link as='button' isBlock className='text-xl'>collect</Link>
                         </PopoverTrigger>
                         <PopoverContent>
-                            <Collect email={email} card={card} />
+                            <Collect user_id={user_id} card={card} />
                         </PopoverContent>
                     </Popover>
                 )}
