@@ -1,13 +1,11 @@
 'use client'
 
-import React, { useRef, useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useImmer } from 'use-immer'
-import { Button, CircularProgress, Pagination, Select, SelectItem, Spinner, Textarea, Tooltip } from "@heroui/react";
-import { ActionResult, read_sentence_browser } from '@/lib/types';
-import { getUUID, toExactType } from '@/lib/utils';
+import { Button, CircularProgress, Pagination, Spinner, Textarea, Tooltip } from "@heroui/react";
+import { getUUID } from '@/lib/utils';
 import Book from '@/app/speak/read/book';
 import Chapter from '@/app/speak/read/chapter';
-import { getSentenceAll, removeSentence, saveSentence } from '@/app/actions/reading';
 import { toast } from 'react-toastify';
 import { qsa_card } from '@prisma/client';
 import { MdDelete } from 'react-icons/md';

@@ -35,7 +35,6 @@ export default function CardMarket({ user_id_my }: Props) {
         setStateLoading(true)
         const result = await getCardAll(user_id_my, FilterType.Normal, stateMyTagUUID, "", stateCurrentPage, 20)
         if (result.status === 'success') {
-            console.log(result.total_records)
             setStateCards(result.data)
             setStateTotalPages(result.total_pages || 0)
         } else {
@@ -51,7 +50,7 @@ export default function CardMarket({ user_id_my }: Props) {
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
-            <Select label="Select tag"
+            <Select label="Tag" labelPlacement='outside-left'
                 onChange={(e) => setStateMyTagUUID(e.target.value)}
                 endContent={stateLoading && (<CircularProgress aria-label="Loading..." color="default" />)}
             >
@@ -60,24 +59,22 @@ export default function CardMarket({ user_id_my }: Props) {
                 ))}
             </Select>
 
-            <div className='flex flex-col items-center justify-start gap-4'>
-                <div>delete all card under this tag</div>
-                <div className='flex flex-row items-center justify-center gap-4'>
-                    <Button variant='solid' color='primary' id='button-toggel-recording'
-                        isDisabled={!stateMyTagUUID}
-                    >
-                        Clear data
-                    </Button>
-                </div>
-            </div>
-
-
             <div className='flex flex-row items-center justify-center gap-4'>
-                <div>Page</div>
-                <Pagination showControls loop variant='bordered'
-                    total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                />
+                <Button variant='solid' color='primary' id='button-toggel-recording'
+                    isDisabled={!stateMyTagUUID}
+                >
+                    delete all cards under this tag
+                </Button>
             </div>
+
+            {!stateLoading && stateTotalPages > 1 && (
+                <div className='flex flex-row items-center justify-center gap-4'>
+                    <div>Page</div>
+                    <Pagination showControls loop variant='bordered'
+                        total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
+                    />
+                </div>
+            )}
             {stateLoading
                 ? (
                     <div className='flex flex-row w-full items-center justify-center gap-4'>
@@ -86,12 +83,14 @@ export default function CardMarket({ user_id_my }: Props) {
                 )
                 : (<CardList email={user_id_my} card_list={stateCards} edit_view={false} />)
             }
-            <div className='flex flex-row items-center justify-center gap-4'>
-                <div>Page</div>
-                <Pagination showControls loop variant='bordered'
-                    total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                />
-            </div>
+            {!stateLoading && stateTotalPages > 1 && (
+                <div className='flex flex-row items-center justify-center gap-4'>
+                    <div>Page</div>
+                    <Pagination showControls loop variant='bordered'
+                        total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
+                    />
+                </div>
+            )}
         </div>
     )
 }

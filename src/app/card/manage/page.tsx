@@ -12,7 +12,7 @@ export default async function Page({ searchParams }: Props) {
     const email = session?.user?.email || '';
 
     const sp = await searchParams;
-    const user_id = typeof sp.user_id === 'string' ? decodeURIComponent(sp.user_id) : ''
+    const user_id = typeof sp.user_id === 'string' ? decodeURIComponent(sp.user_id) : email;
 
     return (
         <div>
