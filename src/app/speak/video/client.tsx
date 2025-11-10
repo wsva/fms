@@ -1,18 +1,14 @@
 'use client'
 
-import { getUUID, toExactType } from '@/lib/utils';
-import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { getUUID } from '@/lib/utils';
+import { Button, Select, SelectItem } from "@heroui/react";
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify';
-import { practice_text } from '@prisma/client';
-import { getAudioDBAll, getText, removeAudioDB, saveAudioDB, saveText } from '@/app/actions/practice';
+import { saveAudioDB } from '@/app/actions/practice';
 import { ActionResult, practice_audio_browser } from '@/lib/types';
-import { useImmer } from 'use-immer';
-import { highlightDifferences } from '../lcs';
-import { MdDelete, MdPlayCircle } from 'react-icons/md';
 import { cacheBlobInMemory, dropWeakCache, getBlobFromWeakCache } from '../weak-cache';
 import { deleteBlobFromIndexedDB, getBlobFromIndexedDB, saveBlobToIndexedDB } from '../idb-blob-store';
-import { removeAudio, saveAudio } from '@/app/actions/audio';
+import { saveAudio } from '@/app/actions/audio';
 import { EngineList, toggleRecording } from '@/lib/recording';
 
 type Props = {
@@ -165,7 +161,7 @@ export default function Item({ uuid, user_id }: Props) {
                 </div>
             )}
             <div className="mt-4 text-sm text-gray-700">
-                {stateProcessing && "正在识别语音…"}
+                {stateProcessing && "recognizing the audio ..."}
                 {stateCurrent?.recognized && (
                     <div className="p-2 border rounded-md bg-gray-50 mt-2">{stateCurrent.recognized}</div>
                 )}

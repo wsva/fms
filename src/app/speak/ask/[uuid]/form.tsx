@@ -2,7 +2,7 @@
 
 import { formatDate, getUUID } from '@/lib/utils';
 import { Button, } from "@heroui/react";
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
 import { ask_question } from '@prisma/client';
 import { getAnswerAll, saveAnswer, saveQuestion } from '@/app/actions/ask';

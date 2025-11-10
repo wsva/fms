@@ -76,7 +76,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                         onChange={(e) => setStateMyTagUUID(e.target.value)}
                         endContent={stateLoading && (<CircularProgress aria-label="Loading..." color="default" />)}
                     >
-                        {stateTagsOfAnother.map((v) => (
+                        {stateMyTags.map((v) => (
                             <SelectItem key={v.uuid} textValue={v.tag}>{v.tag}</SelectItem>
                         ))}
                     </Select>

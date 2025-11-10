@@ -47,7 +47,7 @@ export const menuList: MenuGroup[] = [
             { key: "card_tag", name: "Manage Tags", description: "manage tags", href: "/card/tag" },
             { key: "card_add", name: "Add Card", description: "add new card", href: "/card/add?edit=y" },
             { key: "card_my", name: "My Cards", description: "my cards", href: "/card/my" },
-            { key: "card_read", name: "Reading", description: "notes by reading", href: "/card/read" },
+            { key: "card_read", name: "Notes by reading", description: "orgnize notes with cards", href: "/card/read" },
             { key: "card_manage", name: "Manage Cards", description: "manage cards", href: "/card/manage" },
             { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test" },
         ],

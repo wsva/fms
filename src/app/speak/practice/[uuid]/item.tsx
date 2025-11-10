@@ -2,7 +2,7 @@
 
 import { getUUID, toExactType } from '@/lib/utils';
 import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
 import { practice_text } from '@prisma/client';
 import { getAudioDBAll, getText, removeAudioDB, saveAudioDB, saveText } from '@/app/actions/practice';

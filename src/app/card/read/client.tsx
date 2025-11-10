@@ -80,7 +80,6 @@ export default function Page({ user_id }: Props) {
     const [stateChapter, setStateChapter] = useState<string>("");
     const [stateCurrent, setStateCurrent] = useState<Partial<qsa_card>>();
     const [stateData, updateStateData] = useImmer<qsa_card[]>([]);
-    const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateCurrentPage, setStateCurrentPage] = useState<number>(1);
@@ -196,7 +195,6 @@ export default function Page({ user_id }: Props) {
                 <Chapter user_id={user_id} book_uuid={stateBook} onSelect={async (chapter_uuid: string) => {
                     setStateChapter(chapter_uuid)
                     setStateCurrent(undefined)
-                    setStateNeedSave(false)
                     await loadData(chapter_uuid)
                 }} />
             </div>

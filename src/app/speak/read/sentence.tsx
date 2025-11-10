@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { Button, Textarea, Tooltip } from "@heroui/react";
 import { MdArrowDownward, MdArrowUpward, MdDelete, MdMic, MdMicOff, MdOutlineKeyboardDoubleArrowDown, MdOutlineKeyboardDoubleArrowUp, MdPlayCircle } from 'react-icons/md'
 import { ActionResult, read_sentence_browser } from '@/lib/types';
@@ -24,9 +24,6 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
     const [stateProcessing, setStateProcessing] = useState(false);
     const [stateGenerating, setStateGenerating] = useState<boolean>(false);
     const [stateOriginal, setStateOriginal] = useState<boolean>(false);
-
-    const sentenceChunks = useRef<BlobPart[]>([]);
-    const recorderRef = useRef<MediaRecorder | null>(null);
 
     const toggleRecordingLocal = async () => {
         const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
