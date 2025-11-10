@@ -5,11 +5,12 @@ import { Button, Select, SelectItem } from "@heroui/react";
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify';
 import { saveAudioDB } from '@/app/actions/practice';
-import { ActionResult, practice_audio_browser } from '@/lib/types';
+import { ActionResult } from '@/lib/types';
 import { cacheBlobInMemory, dropWeakCache, getBlobFromWeakCache } from '../weak-cache';
 import { deleteBlobFromIndexedDB, getBlobFromIndexedDB, saveBlobToIndexedDB } from '../idb-blob-store';
 import { saveAudio } from '@/app/actions/audio';
 import { EngineList, toggleRecording } from '@/lib/recording';
+import { practice_audio } from '@prisma/client';
 
 type Props = {
     uuid: string,
@@ -23,7 +24,7 @@ export default function Item({ uuid, user_id }: Props) {
     const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
-    const [stateCurrent, setStateCurrent] = useState<practice_audio_browser>();
+    const [stateCurrent, setStateCurrent] = useState<practice_audio>();
     const [stateVideoURL, setStateVideoURL] = useState<string>("");
     const [stateAudioURL, setStateAudioURL] = useState<string>("");
 
@@ -103,10 +104,9 @@ export default function Item({ uuid, user_id }: Props) {
                 text_uuid: uuid,
                 recognized: result.status === "success" ? result.data : "",
                 audio_path: `/api/data/video/${audio_uuid}.mp4`,
-                in_db: false,
-                on_fs: false,
-                modified_db: true,
-                modified_fs: true,
+                created_by: user_id,
+                created_at: new Date(),
+                updated_at: new Date(),
             })
 
             if (result.status === 'error') {
