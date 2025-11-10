@@ -86,3 +86,15 @@ export async function saveAnswer(item: ask_answer): Promise<ActionResult<ask_ans
         return { status: 'error', error: (error as object).toString() }
     }
 }
+
+export async function removeAnswer(uuid: string): Promise<ActionResult<ask_answer>> {
+    try {
+        const result = await prisma.ask_answer.delete({
+            where: { uuid },
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}

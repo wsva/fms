@@ -3,18 +3,18 @@ import Item from './item';
 import { auth } from '@/auth';
 
 type Props = {
-  params: Promise<{ uuid: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+    params: Promise<{ uuid: string }>
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 };
 
 export default async function ExamplePage({ params }: Props) {
-  const session = await auth();
-  const email = session?.user?.email || '';
+    const session = await auth();
+    const email = session?.user?.email || '';
 
-  const p = await params;
-  const uuid = (typeof p.uuid === 'string' && p.uuid !== 'add') ? p.uuid : ""
+    const p = await params;
+    const uuid = (typeof p.uuid === 'string' && p.uuid !== 'add') ? p.uuid : ""
 
-  return (
-    <Item uuid={uuid} user_id={email} />
-  )
+    return (
+        <Item uuid={uuid} user_id={email} />
+    )
 }

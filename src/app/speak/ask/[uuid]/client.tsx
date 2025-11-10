@@ -1,40 +1,41 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
-import { Button, Input, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
+import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-toastify';
-import { ask_question } from '@prisma/client';
-import { getQuestionAll, removeQuestion, saveQuestion } from '@/app/actions/ask';
-import { EngineList, toggleRecording } from '@/lib/recording';
+import { ask_answer, ask_question } from '@prisma/client';
 import { ActionResult } from '@/lib/types';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
-import Question from './question';
+import { EngineList, toggleRecording } from '@/lib/recording';
+import { getAnswerAll, getQuestion, removeAnswer, saveAnswer } from '@/app/actions/ask';
+import Answer from '../answer';
 
 type Props = {
-    user_id: string;
+    question_uuid: string,
+    user_id: string,
 }
 
-export default function Page({ user_id }: Props) {
+export default function Item({ question_uuid, user_id }: Props) {
+    const [stateQuestion, setStateQuestion] = useState<ask_question>();
+    const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
+    const [stateData, setStateData] = useState<ask_answer[]>([]);
+    const [stateReload, setStateReload] = useState<number>(1);
+    const [stateLoading, setStateLoading] = useState<boolean>(false);
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateEngine, setStateEngine] = useState<string>("local");
     const [stateMode, setStateMode] = useState<"video" | "audio">("video");
     const [stateStream, setStateStream] = useState<MediaStream>();
     const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
-    const [stateNewTitle, setStateNewTitle] = useState<string>("");
     const [stateNewVideo, setStateNewVideo] = useState<{ data: Blob, url: string }>();
     const [stateNewAudio, setStateNewAudio] = useState<{ data: Blob, url: string }>();
     const [stateNewContent, setStateNewContent] = useState<string>();
-    const [stateData, setStateData] = useState<ask_question[]>([]);
-    const [stateReload, setStateReload] = useState<number>(1);
-    const [stateOnlyMy, setStateOnlyMy] = useState<boolean>(false);
-    const [stateLoading, setStateLoading] = useState<boolean>(false);
-    const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     const previewRef = useRef<HTMLVideoElement>(null);
 
-    const handleDelete = async (item: ask_question) => {
+    const handleDelete = async (item: ask_answer) => {
         if (!!item.audio_path) {
             const result = await removeAudio("ask", `${item.uuid}.wav`)
             if (result.status === "error") {
@@ -51,7 +52,7 @@ export default function Page({ user_id }: Props) {
                 return
             }
         }
-        const result = await removeQuestion(item.uuid);
+        const result = await removeAnswer(item.uuid);
         if (result.status === 'success') {
             toast.success("delete success");
             setStateReload(current => current + 1)
@@ -61,10 +62,6 @@ export default function Page({ user_id }: Props) {
     }
 
     const handleAdd = async () => {
-        if (!stateNewTitle) {
-            alert("title is empty")
-            return
-        }
         if (!stateNewContent) {
             alert("content is empty")
             return
@@ -74,11 +71,11 @@ export default function Page({ user_id }: Props) {
             return
         }
 
-        const uuid = getUUID();
+        const answer_uuid = getUUID();
         setStateSaving(true);
 
         if (!!stateNewVideo) {
-            const result = await saveAudio(stateNewVideo.data, "ask", `${uuid}.mp4`);
+            const result = await saveAudio(stateNewVideo.data, "ask", `${answer_uuid}.mp4`);
             if (result.status === "error") {
                 toast.error("save video failed");
                 setStateSaving(false)
@@ -87,7 +84,7 @@ export default function Page({ user_id }: Props) {
         }
 
         if (!!stateNewAudio) {
-            const result = await saveAudio(stateNewAudio.data, "ask", `${uuid}.wav`);
+            const result = await saveAudio(stateNewAudio.data, "ask", `${answer_uuid}.wav`);
             if (result.status === "error") {
                 toast.error("save audio failed");
                 setStateSaving(false)
@@ -95,12 +92,12 @@ export default function Page({ user_id }: Props) {
             }
         }
 
-        const result = await saveQuestion({
-            uuid: uuid,
+        const result = await saveAnswer({
+            uuid: answer_uuid,
             user_id: user_id,
-            title: stateNewTitle,
-            audio_path: !!stateNewAudio ? `/api/data/ask/${uuid}.wav` : "",
-            video_path: !!stateNewVideo ? `/api/data/ask/${uuid}.mp4` : "",
+            question_uuid: question_uuid,
+            audio_path: !!stateNewAudio ? `/api/data/ask/${answer_uuid}.wav` : "",
+            video_path: !!stateNewVideo ? `/api/data/ask/${answer_uuid}.mp4` : "",
             content: stateNewContent,
             created_by: user_id,
             created_at: new Date(),
@@ -108,7 +105,6 @@ export default function Page({ user_id }: Props) {
         });
         if (result.status === 'success') {
             toast.success("add success");
-            setStateNewTitle("");
             setStateNewContent("");
             if (!!stateNewVideo) {
                 URL.revokeObjectURL(stateNewVideo.url)
@@ -169,9 +165,21 @@ export default function Page({ user_id }: Props) {
     }
 
     useEffect(() => {
-        const loadData = async () => {
+        const loadQuestion = async () => {
             setStateLoading(true)
-            const result = await getQuestionAll()
+            const result = await getQuestion(question_uuid)
+            if (result.status === "success") {
+                setStateQuestion(result.data)
+            } else {
+                console.log(result.error)
+                toast.error("load data error")
+            }
+            setStateLoading(false)
+        }
+
+        const loadAnswer = async () => {
+            setStateLoading(true)
+            const result = await getAnswerAll(question_uuid)
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
@@ -181,15 +189,30 @@ export default function Page({ user_id }: Props) {
             setStateLoading(false)
         }
 
-        loadData();
+        loadQuestion();
+        loadAnswer();
 
         if (!!previewRef.current && !!stateStream) {
             previewRef.current.srcObject = stateStream;
         }
-    }, [stateReload, previewRef, stateStream]);
+    }, [question_uuid, stateReload, previewRef, stateStream]);
 
     return (
-        <div>
+        <div className='w-full space-y-4 mb-10'>
+            {!!stateQuestion && (
+                stateQuestion.user_id === user_id ? (
+                    <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300'>
+                        <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300 text-xl'>
+                            {stateQuestion.title}
+                        </div>
+                    </div>
+                ) : (
+                    <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300 text-xl'>
+                        {stateQuestion.title}
+                    </div>
+                )
+            )}
+
             <div className='flex flex-col lg:flex-row items-center justify-center gap-4 my-4'>
                 <Select aria-label='stt engine' className='max-w-sm'
                     selectedKeys={[stateEngine]}
@@ -224,10 +247,6 @@ export default function Page({ user_id }: Props) {
                 <video ref={previewRef} autoPlay muted playsInline />
             ) : (
                 <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
-                    <Input label="title" size="lg" className='w-full'
-                        value={stateNewTitle}
-                        onChange={(e) => setStateNewTitle(e.target.value)}
-                    />
                     {!!stateNewAudio && (<audio controls src={stateNewAudio.url} />)}
                     {!!stateNewVideo && (<video controls src={stateNewVideo.url} />)}
                     <Textarea size='lg' className='w-full' label="content"
@@ -252,17 +271,9 @@ export default function Page({ user_id }: Props) {
                 </div>
             )}
 
-            <div className='flex flex-row items-center justify-end gap-4 my-4 mb-0'>
-                <Button variant='solid' color='primary'
-                    isDisabled={!user_id} onPress={() => setStateOnlyMy(!stateOnlyMy)}
-                >
-                    {stateOnlyMy ? "All Texts" : "Only My Texts"}
-                </Button>
-            </div>
-
             <div className="flex flex-col w-full gap-4 my-4">
-                {stateData.filter((v) => !stateOnlyMy || v.user_id === user_id).map((v, i) =>
-                    <Question
+                {stateData.map((v, i) =>
+                    <Answer
                         key={`${i}-${v.uuid}`}
                         user_id={user_id}
                         item={v}
@@ -273,3 +284,4 @@ export default function Page({ user_id }: Props) {
         </div >
     )
 }
+
