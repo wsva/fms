@@ -5,7 +5,6 @@ import React, { useEffect, useState } from 'react'
 import { getTagAll, removeTag, saveTag } from '@/app/actions/card';
 import { getUUID } from "@/lib/utils";
 import { toast } from "react-toastify";
-import { useImmer } from "use-immer";
 import { qsa_tag } from "@prisma/client";
 
 type PropsItem = {
@@ -71,7 +70,8 @@ type Props = {
 }
 
 export default function Page({ user_id }: Props) {
-    const [stateData, updateStateData] = useImmer<qsa_tag[]>([]);
+    const [stateData, setStateData] = useState<qsa_tag[]>([]);
+    const [stateReload, setStateReload] = useState<number>(1);
     const [stateNew, setStateNew] = useState<Partial<qsa_tag>>({});
     const [stateSaving, setStateSaving] = useState<boolean>(false);
 
@@ -82,77 +82,63 @@ export default function Page({ user_id }: Props) {
         }
 
         setStateSaving(true)
-
-        const new_tag = {
+        const result = await saveTag({
             uuid: getUUID(),
             tag: stateNew.tag,
             description: stateNew.description || "",
             user_id: user_id,
             created_at: new Date(),
             updated_at: new Date(),
-        };
-
-        const result = await saveTag(new_tag)
-        if (result.status === "error") {
-            toast.error("save db failed");
-            setStateSaving(false)
-            return
+        })
+        if (result.status === 'success') {
+            setStateNew({})
+            toast.success("add tag success");
+            setStateReload(current => current + 1)
+        } else {
+            toast.error('add tag failed')
         }
-        updateStateData(draft => {
-            draft.push(new_tag);
-        });
-
-        toast.success("add tag successfully!");
         setStateSaving(false)
     }
 
     const handleUpdate = async (new_item: qsa_tag) => {
+        setStateSaving(true)
         const result = await saveTag({
             ...new_item,
             updated_at: new Date(),
         });
-        if (result.status !== "success") {
+        if (result.status === "success") {
+            toast.success("save tag success");
+            setStateReload(current => current + 1)
+        } else {
             toast.error("save tag failed");
-            return
         }
-        updateStateData(draft => {
-            const index = draft.findIndex(i => i.uuid === new_item.uuid);
-            if (index !== -1) {
-                draft[index] = new_item;
-            }
-        });
-        toast.success("save tag success");
+        setStateSaving(false)
     }
 
     const handleDelete = async (uuid: string) => {
-        const result = await removeTag(uuid);
-        if (result.status !== "success") {
-            toast.error("delete tag failed");
-            return
+        setStateSaving(true)
+        const result = await removeTag(uuid)
+        if (result.status === 'success') {
+            toast.success("delete tag success")
+            setStateReload(current => current + 1)
+        } else {
+            toast.error('delete tag failed')
         }
-        updateStateData(draft => {
-            const index = draft.findIndex(i => i.uuid === uuid);
-            if (index !== -1) {
-                draft.splice(index, 1);
-            }
-        });
-        toast.success("delete tag success");
+        setStateSaving(false)
     }
 
     useEffect(() => {
         const loadData = async () => {
             const result = await getTagAll(user_id);
             if (result.status === "success") {
-                updateStateData((draft) => {
-                    draft.length = 0;
-                    for (const item of result.data) {
-                        draft.push(item);
-                    }
-                });
+                setStateData(result.data)
+            } else {
+                console.log(result.error)
+                toast.error("load data error")
             }
         }
         loadData();
-    }, [user_id]);
+    }, [user_id, stateReload]);
 
     return (
         <div className='flex flex-col w-full gap-4 py-4'>

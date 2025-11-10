@@ -5,10 +5,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { ActionResult, card_ext, card_review } from "@/lib/types";
-import { getUUID, getWeightedRandom } from "@/lib/utils";
-import { qsa_card, Prisma, qsa_tag, qsa_card_tag, qsa_card_review } from '@prisma/client'
-import { FilterType, TagAll, TagUnspecified, TagNo } from "@/lib/card";
+import { ActionResult } from "@/lib/types";
 
 export const clearCardData = async (user_id: string, copy_from: string): Promise<ActionResult<boolean>> => {
     try {
