@@ -28,7 +28,7 @@ jobs:
 
       - name: Build Next.js project
         run: |
-          export DATABASE_URL="to avoid build warning"
+          export DATABASE_URL="postgres://to_avoid_build_warning"
           npm run build
           sed -i "s/BUILD_TIME/$(date +"%Y%m%d_%H%M%S")/g" deployment.yaml
 
