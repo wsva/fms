@@ -45,27 +45,6 @@ type read_sentence_browser = {
     modified_fs: boolean;
 }
 
-type practice_text_browser = {
-    uuid: string;
-    user_id: string;
-    text: string;
-    created_at?: Date;
-    modified: boolean;
-}
-
-type practice_audio_browser = {
-    uuid: string;
-    user_id: string;
-    text_uuid: string;
-    recognized: string;
-    audio_path: string;
-    created_at?: Date;
-    in_db: boolean;
-    on_fs: boolean;
-    modified_db: boolean;
-    modified_fs: boolean;
-}
-
 type audio = {
     url?: string; // audio data in object url format, URL.createObjectURL(audioBlob)
     path?: string; // audio file on disk and can be accessed by http(s)

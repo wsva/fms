@@ -1,12 +1,13 @@
 'use client'
 
-import { getUUID} from '@/lib/utils';
+import { getUUID, toExactType } from '@/lib/utils';
 import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
-import { practice_audio, practice_text } from '@prisma/client';
+import { practice_text } from '@prisma/client';
 import { getAudioDBAll, getText, removeAudioDB, saveAudioDB, saveText } from '@/app/actions/practice';
-import { ActionResult } from '@/lib/types';
+import { ActionResult, practice_audio_browser } from '@/lib/types';
+import { useImmer } from 'use-immer';
 import { highlightDifferences } from '../../lcs';
 import { MdDelete, MdPlayCircle } from 'react-icons/md';
 import { cacheBlobInMemory, dropWeakCache, getBlobFromWeakCache } from '../../weak-cache';
@@ -22,25 +23,54 @@ type Props = {
 export default function Item({ uuid, user_id }: Props) {
     const [stateText, setStateText] = useState<practice_text>();
     const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
-    const [stateData, setStateData] = useState<practice_audio[]>([]);
-    const [stateReload, setStateReload] = useState<number>(1);
+    const [stateAudio, updateStateAudio] = useImmer<practice_audio_browser[]>([]);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateEngine, setStateEngine] = useState<string>("local");
     const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
-    const [stateCurrent, setStateCurrent] = useState<practice_audio>();
+    const [stateCurrent, setStateCurrent] = useState<practice_audio_browser>();
+
+    const loadData = async (uuid: string) => {
+        setStateLoading(true)
+        const resultText = await getText(uuid)
+        if (resultText.status === "success") {
+            setStateText(resultText.data)
+        }
+
+        const resultAudio = await getAudioDBAll(uuid)
+        if (resultAudio.status === "success") {
+            const newList = resultAudio.data.map((v) => {
+                return {
+                    ...toExactType<practice_audio_browser>(v),
+                    in_db: true,
+                    on_fs: true,
+                    modified_db: false,
+                    modified_fs: false,
+                }
+            });
+            updateStateAudio((draft) => {
+                draft.length = 0;
+                for (const item of newList) {
+                    draft.push(item);
+                }
+            });
+        }
+        setStateLoading(false)
+    }
 
     const handleSaveText = async () => {
-        if (!stateText) return;
         setStateSaving(true)
+        if (!stateText) return;
+
         const resultDb = await saveText({ ...stateText, updated_at: new Date() });
-        if (resultDb.status === "success") {
-            toast.success("save text success");
-        } else {
+        if (resultDb.status === "error") {
             toast.error("save text failed");
+            setStateSaving(false)
+            return
         }
+        toast.success("saved successfully!");
         setStateSaving(false)
     }
 
@@ -59,7 +89,10 @@ export default function Item({ uuid, user_id }: Props) {
             return
         }
         const resultFs = await saveAudio(audioBlob, "practice", `${stateCurrent.uuid}.wav`);
-        if (resultFs.status === "error") {
+        if (resultFs.status === "success") {
+            await deleteBlobFromIndexedDB(stateCurrent.uuid);
+            dropWeakCache(stateCurrent.uuid);
+        } else {
             toast.error("save audio failed");
             setStateSaving(false)
             return
@@ -81,32 +114,46 @@ export default function Item({ uuid, user_id }: Props) {
             return
         }
 
-        await deleteBlobFromIndexedDB(stateCurrent.uuid);
-        dropWeakCache(stateCurrent.uuid);
+        updateStateAudio(draft => {
+            draft.push({
+                ...stateCurrent,
+                in_db: true,
+                on_fs: true,
+                modified_db: false,
+                modified_fs: false,
+            });
+        });
         setStateCurrent(undefined);
-        toast.success("save audio success");
+
+        toast.success("added and saved successfully!");
         setStateSaving(false)
-        setStateReload(current => current + 1)
     }
 
-    const handleDelete = async (item: practice_audio) => {
-        await deleteBlobFromIndexedDB(item.uuid);
-        dropWeakCache(item.uuid);
-
-        const resultFs = await removeAudio("practice", `${item.uuid}.wav`);
-        if (resultFs.status === "error") {
-            toast.error("delete audio file failed");
-            return
+    const handleDelete = async (item: practice_audio_browser) => {
+        if (item.modified_fs) {
+            await deleteBlobFromIndexedDB(item.uuid);
+            dropWeakCache(item.uuid);
         }
-
-        const resultDb = await removeAudioDB(item.uuid);
-        if (resultDb.status === "error") {
-            toast.error("delete audio in database failed");
-            return
+        if (item.on_fs) {
+            const result = await removeAudio("practice", `${item.uuid}.wav`);
+            if (result.status !== "success") {
+                toast.error("delete audio file failed");
+                return
+            }
         }
-
+        if (item.in_db) {
+            const result = await removeAudioDB(item.uuid);
+            if (result.status !== "success") {
+                toast.error("delete audio in database failed");
+                return
+            }
+        }
         toast.success("delete audio success");
-        setStateReload(current => current + 1)
+
+        updateStateAudio(draft => {
+            const index = draft.findIndex(i => i.uuid === uuid);
+            if (index !== -1) draft.splice(index, 1);
+        });
     }
 
     const toggleRecordingLocal = async () => {
@@ -118,11 +165,12 @@ export default function Item({ uuid, user_id }: Props) {
                 uuid: audio_uuid,
                 user_id: user_id,
                 text_uuid: uuid,
-                audio_path: `/api/data/practice/${audio_uuid}.wav`,
                 recognized: result.status === 'success' ? result.data : "",
-                created_by: user_id,
-                created_at: new Date(),
-                updated_at: new Date(),
+                audio_path: `/api/data/practice/${audio_uuid}.wav`,
+                in_db: false,
+                on_fs: false,
+                modified_db: true,
+                modified_fs: true,
             })
             if (result.status === 'error') {
                 toast.error(result.error as string)
@@ -143,28 +191,8 @@ export default function Item({ uuid, user_id }: Props) {
     }
 
     useEffect(() => {
-        const loadData = async () => {
-            setStateLoading(true)
-            const resultText = await getText(uuid)
-            if (resultText.status === "success") {
-                setStateText(resultText.data)
-            } else {
-                console.log(resultText.error)
-                toast.error("load data error")
-            }
-
-            const resultAudio = await getAudioDBAll(uuid)
-            if (resultAudio.status === "success") {
-                setStateData(resultAudio.data)
-            } else {
-                console.log(resultAudio.error)
-                toast.error("load data error")
-            }
-            setStateLoading(false)
-        }
-
-        loadData();
-    }, [uuid, stateReload]);
+        loadData(uuid);
+    }, []);
 
     return (
         <div className='w-full space-y-4 mb-10'>
@@ -267,17 +295,37 @@ export default function Item({ uuid, user_id }: Props) {
                 </div>
             )}
 
-            {stateData.length > 0 && (
+            {stateAudio.length > 0 && (
                 <div className="flex flex-col w-full gap-4 my-4 bg-sand-300">
-                    {stateData.map((v, i) =>
+                    {stateAudio.map((v, i) =>
                         <div key={`${i}-${v.uuid}`} className='flex flex-col w-full ps-2'>
                             <div className="flex flex-row items-center justify-start">
                                 <div className="flex flex-row items-center justify-start w-full">
                                     <div className="text-md text-gray-400">recognized from audio:</div>
                                     <Button isIconOnly variant='light' className='h-fit'
-                                        onPress={() => {
-                                            const audio = new Audio(v.audio_path);
-                                            audio.play();
+                                        onPress={async () => {
+                                            if (v.modified_fs) {
+                                                let audioBlob = getBlobFromWeakCache(v.uuid);
+                                                if (!audioBlob) {
+                                                    audioBlob = await getBlobFromIndexedDB(v.uuid);
+                                                    if (audioBlob) {
+                                                        cacheBlobInMemory(v.uuid, audioBlob);
+                                                    } else {
+                                                        toast.error(`Blob of audio not found`);
+                                                    }
+                                                }
+                                                if (audioBlob) {
+                                                    const audioUrl = URL.createObjectURL(audioBlob);
+                                                    const audio = new Audio(audioUrl);
+                                                    audio.play();
+                                                    audio.onended = () => {
+                                                        URL.revokeObjectURL(audioUrl);
+                                                    };
+                                                }
+                                            } else {
+                                                const audio = new Audio(v.audio_path);
+                                                audio.play();
+                                            }
                                         }}
                                     >
                                         <MdPlayCircle size={20} />
