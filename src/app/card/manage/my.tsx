@@ -20,33 +20,34 @@ export default function CardMarket({ user_id_my }: Props) {
     const [stateCurrentPage, setStateCurrentPage] = useState<number>(1);
     const [stateTotalPages, setStateTotalPages] = useState<number>(0);
 
-    const loadTags = async () => {
-        setStateLoading(true)
-        const resultM = await getTagAll(user_id_my);
-        if (resultM.status === "success") {
-            setStateMyTags(resultM.data)
-        } else {
-            toast.error(resultM.error as string)
-        }
-        setStateLoading(false)
-    }
-
-    const loadCards = async () => {
-        setStateLoading(true)
-        const result = await getCardAll(user_id_my, FilterType.Normal, stateMyTagUUID, "", stateCurrentPage, 20)
-        if (result.status === 'success') {
-            setStateCards(result.data)
-            setStateTotalPages(result.total_pages || 0)
-        } else {
-            toast.error(result.error as string)
-        }
-        setStateLoading(false)
-    }
-
     useEffect(() => {
+        const loadTags = async () => {
+            setStateLoading(true)
+            const result = await getTagAll(user_id_my);
+            if (result.status === "success") {
+                setStateMyTags(result.data)
+            } else {
+                console.log(result.error)
+                toast.error("load data error")
+            }
+            setStateLoading(false)
+        }
+
+        const loadCards = async () => {
+            setStateLoading(true)
+            const result = await getCardAll(user_id_my, FilterType.Normal, stateMyTagUUID, "", stateCurrentPage, 20)
+            if (result.status === 'success') {
+                setStateCards(result.data)
+                setStateTotalPages(result.total_pages || 0)
+            } else {
+                toast.error(result.error as string)
+            }
+            setStateLoading(false)
+        }
+
         loadTags();
         loadCards();
-    }, [stateMyTagUUID, stateCurrentPage]);
+    }, [user_id_my, stateMyTagUUID, stateCurrentPage]);
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>

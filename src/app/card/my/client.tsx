@@ -9,11 +9,11 @@ import { FilterType, FilterTypeList, TagAll, TagUnspecified, TagNo } from "@/lib
 import { BiSearch } from 'react-icons/bi';
 
 type Props = {
-    email: string
+    user_id: string
     tag_list: qsa_tag[]
 };
 
-export default function CardFilter({ email, tag_list }: Props) {
+export default function CardFilter({ user_id, tag_list }: Props) {
     const [stateFilterType, setStateFilterType] = useState<FilterType>(FilterType.Normal)
     const [stateLoading, setStateLoading] = useState<boolean>(false)
     const [stateTagUUID, setStateTagUUID] = useState<string>(TagUnspecified)
@@ -26,7 +26,7 @@ export default function CardFilter({ email, tag_list }: Props) {
         const loadData = async () => {
             setStateLoading(true)
             const result = await getCardAll(
-                email, stateFilterType, stateTagUUID, stateKeyword, stateCurrentPage, 20)
+                user_id, stateFilterType, stateTagUUID, stateKeyword, stateCurrentPage, 20)
             if (result.status === 'success') {
                 setStateCards(result.data)
                 setStateTotalPages(result.total_pages || 0)
@@ -36,7 +36,7 @@ export default function CardFilter({ email, tag_list }: Props) {
             setStateLoading(false)
         }
         loadData()
-    }, [stateFilterType, stateTagUUID, stateKeyword, stateCurrentPage]);
+    }, [user_id, stateFilterType, stateTagUUID, stateKeyword, stateCurrentPage]);
 
     const getChipType = (value: FilterType, description: string) => {
         return (
@@ -119,7 +119,7 @@ export default function CardFilter({ email, tag_list }: Props) {
                         <CircularProgress label="Loading..." />
                     </div >
                 )
-                : (<CardList email={email} card_list={stateCards} edit_view={stateFilterType == FilterType.Uncomplete} />)
+                : (<CardList email={user_id} card_list={stateCards} edit_view={stateFilterType == FilterType.Uncomplete} />)
             }
             {!stateLoading && (
                 <div className='flex flex-row items-center justify-center gap-4'>
