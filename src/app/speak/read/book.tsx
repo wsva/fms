@@ -18,18 +18,6 @@ export default function Page({ user_id, onSelect }: Props) {
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
 
-    const loadData = async () => {
-        setStateLoading(true)
-        const result = await getBookAll(user_id)
-        if (result.status === "success") {
-            setStateData(result.data)
-        } else {
-            console.log(result.error)
-            toast.error("load data error")
-        }
-        setStateLoading(false)
-    }
-
     const handleAdd = async () => {
         setStateSaving(true)
         const result = await saveBook({
@@ -63,6 +51,18 @@ export default function Page({ user_id, onSelect }: Props) {
     }
 
     useEffect(() => {
+        const loadData = async () => {
+            setStateLoading(true)
+            const result = await getBookAll(user_id)
+            if (result.status === "success") {
+                setStateData(result.data)
+            } else {
+                console.log(result.error)
+                toast.error("load data error")
+            }
+            setStateLoading(false)
+        }
+
         loadData()
     }, [stateReload]);
 

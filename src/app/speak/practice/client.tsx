@@ -20,18 +20,6 @@ export default function Page({ user_id }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
 
-    const loadData = async () => {
-        setStateLoading(true)
-        const result = await getTextAll()
-        if (result.status === "success") {
-            setStateData(result.data)
-        } else {
-            console.log(result.error)
-            toast.error("load data error")
-        }
-        setStateLoading(false)
-    }
-
     const handleDelete = async (item: practice_text) => {
         const result = await removeText(item.uuid);
         if (result.status === 'success') {
@@ -65,6 +53,18 @@ export default function Page({ user_id }: Props) {
     }
 
     useEffect(() => {
+        const loadData = async () => {
+            setStateLoading(true)
+            const result = await getTextAll()
+            if (result.status === "success") {
+                setStateData(result.data)
+            } else {
+                console.log(result.error)
+                toast.error("load data error")
+            }
+            setStateLoading(false)
+        }
+
         loadData();
     }, [stateReload]);
 

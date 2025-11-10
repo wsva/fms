@@ -20,18 +20,6 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
 
-    const loadData = async () => {
-        setStateLoading(true)
-        const result = await getChapterAll(book_uuid)
-        if (result.status === "success") {
-            setStateData(result.data)
-        } else {
-            console.log(result.error)
-            toast.error("load data error")
-        }
-        setStateLoading(false)
-    }
-
     const handleAdd = async () => {
         if (!book_uuid) {
             toast.error('no book selected')
@@ -70,6 +58,18 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
     }
 
     useEffect(() => {
+        const loadData = async () => {
+            setStateLoading(true)
+            const result = await getChapterAll(book_uuid)
+            if (result.status === "success") {
+                setStateData(result.data)
+            } else {
+                console.log(result.error)
+                toast.error("load data error")
+            }
+            setStateLoading(false)
+        }
+
         loadData()
     }, [stateReload]);
 
@@ -89,9 +89,6 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
             <div className='flex flex-row gap-1'>
                 <Button size="sm" radius="full" onPress={() => setStateEdit(!stateEdit)}>
                     {stateEdit ? "finish" : "edit"}
-                </Button>
-                <Button size="sm" radius="full" onPress={loadData}>
-                    refresh
                 </Button>
             </div>
             {stateEdit && (
