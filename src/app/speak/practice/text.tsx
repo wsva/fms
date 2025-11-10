@@ -2,28 +2,15 @@
 
 import React from 'react'
 import { Link } from "@heroui/react";
-import { practice_text_browser } from '@/lib/types';
-import { toast } from 'react-toastify';
-import { removeText } from '@/app/actions/practice';
+import { practice_text } from '@prisma/client';
 
 type Props = {
     user_id: string;
-    item: practice_text_browser;
-    onDelete: (uuid: string) => void;
+    item: practice_text;
+    handleDelete: (item: practice_text) => Promise<void>;
 }
 
-export default function Page({ user_id, item, onDelete }: Props) {
-    const handleDelete = async () => {
-        const result = await removeText(item.uuid);
-        if (result.status === "success") {
-            toast.success("delete sentence success");
-        } else {
-            toast.error("delete sentence failed");
-            return
-        }
-        onDelete(item.uuid)
-    }
-
+export default function Page({ user_id, item, handleDelete }: Props) {
     return (
         <div className={`flex flex-col w-full items-start rounded-md p-1 bg-sand-300`}>
             <div className='flex flex-row w-full items-center justify-start gap-2'>
@@ -45,9 +32,9 @@ export default function Page({ user_id, item, onDelete }: Props) {
                 </Link>
                 {item.user_id === user_id && (
                     <Link as='button' isBlock color='danger' className='text-xl'
-                        onPress={() => {
+                        onPress={async () => {
                             if (window.confirm("Are you sure to delete?")) {
-                                handleDelete();
+                                await handleDelete(item);
                             }
                         }}
                     >
