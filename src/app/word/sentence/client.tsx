@@ -3,8 +3,7 @@
 import { getExample, searchExample } from '@/app/actions/word'
 import React, { useEffect, useState } from 'react'
 import { ActionResult } from '@/lib/types';
-import { CircularProgress, Input } from "@heroui/react";
-import SentenceList from '@/components/SentenceList';
+import { CircularProgress, Input, Link } from "@heroui/react";
 import { BiSearch } from 'react-icons/bi';
 
 type Props = {
@@ -48,18 +47,30 @@ export default function Sentence({ word_id, keyword }: Props) {
                     }
                 }}
             />
-            {stateLoading
-                ? (
-                    <div className='flex flex-row w-full items-center justify-center gap-4'>
-                        <CircularProgress label="Loading..." />
-                    </div >
-                )
-                : (
-                    stateResult && (stateResult.status === 'success') && (
-                        <SentenceList list={stateResult.data} />
-                    )
-                )
-            }
+            {stateLoading ? (
+                <div className='flex flex-row w-full items-center justify-center gap-4'>
+                    <CircularProgress label="Loading..." />
+                </div >
+            ) : (
+                <>
+                    {stateResult && (stateResult.status === 'success') && (
+                        <div className="flex flex-col w-full gap-4 py-4" >
+                            {stateResult.data.map((v, i) => (
+                                <div key={i} className="flex flex-col w-full items-start bg-sand-300 rounded-md p-1">
+                                    <div className="text-xl whitespace-pre-wrap" >{v}</div>
+                                    <div className="flex flex-row w-full items-end justify-end gap-4">
+                                        <Link className='text-blue-600 hover:underline' target='_blank'
+                                            href={`/card/add?edit=y&question=${encodeURIComponent(v)}`}
+                                        >
+                                            Add to Card
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     )
 }

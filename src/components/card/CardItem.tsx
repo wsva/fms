@@ -35,28 +35,20 @@ export default function CardItem({ email, card, edit_view, tag_list }: Props) {
     return (
         <div className={`flex flex-col w-full items-start rounded-md p-1 ${getColor(stateFamiliarity)}`}>
             <div className='flex flex-row w-full items-center justify-start gap-2'>
-                <Link target='_blank'
+                <Link target='_blank' className='text-2xl text-blue-600 hover:underline'
                     href={`/card/${card.uuid}${!!edit_view ? '?edit=y' : ''}`}
-                    className='text-2xl text-blue-600 hover:underline'
                 >
-                    <pre className='font-roboto leading-none text-wrap'>
-                        {card.question}
-                    </pre>
+                    <pre className='font-roboto leading-none text-wrap'>{card.question}</pre>
                 </Link>
             </div>
             {!isOwner && (
-                <Link target='_blank'
+                <Link target='_blank' className='text-sm text-gray-500 hover:underline'
                     href={`/card/market?user_id=${card.user_id}`}
-                    className='text-sm text-gray-500 hover:underline'
                 >
                     {`by ${card.user_id}`}
                 </Link>
             )}
             <div className="flex flex-row w-full items-end justify-end gap-4">
-                {/* <Button variant='light' className='text-xl p-0 m-0'
-                        >
-                            edit tag
-                        </Button> */}
                 {isOwner && (
                     // 神奇的问题： 如果把Tooltip放到DropdownTrigger里，会导致CardFilter里面的useEffect不停被调用
                     (<Tooltip content={`current: ${stateFamiliarity}\n${getDescription(stateFamiliarity)}`}>

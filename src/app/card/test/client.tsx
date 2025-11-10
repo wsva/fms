@@ -5,7 +5,6 @@ import React, { useEffect, useState } from 'react'
 import { getHTML } from '@/lib/utils';
 import { BiCaretDown } from 'react-icons/bi';
 import { card_review } from '@/lib/types';
-import SentenceList from '@/components/SentenceList';
 import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import '@/lib/Markdown.css';
@@ -234,7 +233,20 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                         />
                     ) : null}
                     {stateExamples.length > 0 && (
-                        <SentenceList list={stateExamples} />
+                        <div className="flex flex-col w-full gap-4 py-4" >
+                            {stateExamples.map((v, i) => (
+                                <div key={i} className="flex flex-col w-full items-start bg-sand-300 rounded-md p-1">
+                                    <div className="text-xl whitespace-pre-wrap" >{v}</div>
+                                    <div className="flex flex-row w-full items-end justify-end gap-4">
+                                        <Link className='text-blue-600 hover:underline' target='_blank'
+                                            href={`/card/add?edit=y&question=${encodeURIComponent(v)}`}
+                                        >
+                                            Add to Card
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
             )}
