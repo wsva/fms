@@ -12,32 +12,32 @@ type Props = {
 }
 
 export default function Page({ user_id, book_uuid, onSelect }: Props) {
-    const [stateData, setStateBookList] = useState<read_chapter[]>([]);
+    const [stateData, setStateData] = useState<read_chapter[]>([]);
+    const [stateReload, setStateReload] = useState<number>(1);
     const [stateOrder, setStateOrder] = useState<string>("");
     const [stateName, setStateName] = useState<string>("");
     const [stateEdit, setStateEdit] = useState<boolean>(false);
-    const [stateDisable, setStateDisable] = useState<boolean>(false);
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
 
     const loadData = async () => {
         setStateLoading(true)
         const result = await getChapterAll(book_uuid)
         if (result.status === "success") {
-            setStateBookList(result.data)
+            setStateData(result.data)
+        } else {
+            console.log(result.error)
+            toast.error("load data error")
         }
         setStateLoading(false)
     }
 
     const handleAdd = async () => {
-        if (!user_id) {
-            toast.error('not logged in')
-            return
-        }
         if (!book_uuid) {
             toast.error('no book selected')
             return
         }
-        setStateDisable(true)
+        setStateSaving(true)
         const result = await saveChapter({
             uuid: getUUID(),
             book_uuid: book_uuid,
@@ -48,28 +48,30 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
             updated_at: new Date(),
         })
         if (result.status === 'success') {
-            toast.success('save chapter success')
             setStateName("")
+            toast.success('save chapter success')
+            setStateReload(current => current + 1)
         } else {
             toast.error('save chapter failed')
         }
-        setStateDisable(false)
+        setStateSaving(false)
     }
 
     const handleDelete = async (uuid: string) => {
-        setStateDisable(true)
+        setStateSaving(true)
         const result = await removeChapter(uuid)
         if (result.status === 'success') {
-            toast.success('delete chapter success')
+            toast.success("delete chapter success")
+            setStateReload(current => current + 1)
         } else {
             toast.error('delete chapter failed')
         }
-        setStateDisable(false)
+        setStateSaving(false)
     }
 
     useEffect(() => {
         loadData()
-    }, [book_uuid]);
+    }, [stateReload]);
 
     return (
         <div className='flex flex-col gap-1 w-full'>
@@ -101,14 +103,14 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
                         <Input label='Name of Book' size='sm'
                             onChange={(e) => setStateName(e.target.value)}
                         />
-                        <Button size="sm" radius="full" isDisabled={stateDisable} onPress={handleAdd}>
+                        <Button size="sm" radius="full" isDisabled={stateSaving} onPress={handleAdd}>
                             add
                         </Button>
                     </div>
                     {stateData.map((v) => (
                         <div key={v.uuid} className='flex flex-row items-center justify-start gap-2 bg-sand-300'>
                             {v.order_num} - {v.name}
-                            <Button size="sm" radius="full" onPress={() => handleDelete(v.uuid)}>
+                            <Button size="sm" radius="full" isDisabled={stateSaving} onPress={() => handleDelete(v.uuid)}>
                                 delete
                             </Button>
                         </div>

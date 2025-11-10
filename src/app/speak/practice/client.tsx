@@ -34,20 +34,19 @@ export default function Page({ user_id }: Props) {
 
     const handleDelete = async (item: practice_text) => {
         const result = await removeText(item.uuid);
-        if (result.status === "success") {
+        if (result.status === 'success') {
             toast.success("delete sentence success");
+            setStateReload(current => current + 1)
         } else {
             toast.error("delete sentence failed");
-            return
         }
-        setStateReload(current => current + 1)
     }
 
     const handleAdd = async () => {
         if (!stateNew) return
 
         setStateSaving(true)
-        const resultDb = await saveText({
+        const result = await saveText({
             uuid: getUUID(),
             user_id: user_id,
             text: stateNew,
@@ -55,15 +54,14 @@ export default function Page({ user_id }: Props) {
             created_at: new Date(),
             updated_at: new Date(),
         });
-        if (resultDb.status === "error") {
+        if (result.status === 'success') {
+            setStateNew("");
+            toast.success("added text successfully!");
+            setStateReload(current => current + 1)
+        } else {
             toast.error("save text failed");
-            setStateSaving(false)
-            return
         }
-        setStateNew("");
-        toast.success("added text successfully!");
         setStateSaving(false)
-        setStateReload(current => current + 1)
     }
 
     useEffect(() => {
