@@ -28,6 +28,7 @@ jobs:
 
       - name: Build Next.js project
         run: |
+          export DATABASE_URL="to avoid build warning"
           npm run build
           sed -i "s/BUILD_TIME/$(date +"%Y%m%d_%H%M%S")/g" deployment.yaml
 
