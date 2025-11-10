@@ -64,7 +64,7 @@ export default function Page({ user_id, onSelect }: Props) {
         }
 
         loadData()
-    }, [stateReload]);
+    }, [user_id, stateReload]);
 
     return (
         <div className='flex flex-col gap-1 w-full'>
