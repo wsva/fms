@@ -108,8 +108,10 @@ CREATE TABLE read_sentence (
 CREATE TABLE ask_question (
     uuid          VARCHAR(100) PRIMARY KEY,
     user_id       VARCHAR(100) NOT NULL,
+    title         TEXT,
     audio_path    TEXT,
-    recognized    TEXT,
+    video_path    TEXT,
+    content       TEXT,
     created_by    VARCHAR(100) NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -120,7 +122,8 @@ CREATE TABLE ask_answer (
     user_id       VARCHAR(100) NOT NULL,
     question_uuid VARCHAR(100) NOT NULL,
     audio_path    TEXT,
-    recognized    TEXT,
+    video_path    TEXT,
+    content       TEXT,
     created_by    VARCHAR(100) NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()

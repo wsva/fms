@@ -61,6 +61,18 @@ export async function saveQuestion(item: ask_question): Promise<ActionResult<ask
     }
 }
 
+export async function removeQuestion(uuid: string): Promise<ActionResult<ask_question>> {
+    try {
+        const result = await prisma.ask_question.delete({
+            where: { uuid },
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
+
 export async function saveAnswer(item: ask_answer): Promise<ActionResult<ask_answer>> {
     try {
         const result = await prisma.ask_answer.upsert({

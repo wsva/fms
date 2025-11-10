@@ -221,19 +221,18 @@ export default function Page({ user_id }: Props) {
                 </div>
             )}
 
-            <div className='flex flex-row items-center justify-center gap-4'>
-                <div>Page</div>
-                <Pagination showControls loop variant='bordered'
-                    total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                />
-            </div>
-            {stateLoading
-                ? (
-                    <div className='flex flex-row w-full items-center justify-center gap-4'>
-                        <CircularProgress label="Loading..." />
-                    </div >
-                )
-                : (
+            {stateLoading ? (
+                <div className='flex flex-row w-full items-center justify-center gap-4'>
+                    <CircularProgress label="Loading..." />
+                </div >
+            ) : (
+                <>
+                    <div className='flex flex-row items-center justify-center gap-4'>
+                        <div>Page</div>
+                        <Pagination showControls loop variant='bordered'
+                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
+                        />
+                    </div>
                     <div className="flex flex-col w-full gap-4 my-4">
                         {reversedList.map((v, i) =>
                             <Item
@@ -244,14 +243,14 @@ export default function Page({ user_id }: Props) {
                             />
                         )}
                     </div>
-                )
-            }
-            <div className='flex flex-row items-center justify-center gap-4'>
-                <div>Page</div>
-                <Pagination showControls loop variant='bordered'
-                    total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                />
-            </div>
+                    <div className='flex flex-row items-center justify-center gap-4'>
+                        <div>Page</div>
+                        <Pagination showControls loop variant='bordered'
+                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
+                        />
+                    </div>
+                </>
+            )}
         </div>
     )
 }

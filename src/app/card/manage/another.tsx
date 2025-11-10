@@ -95,30 +95,26 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                 </div>
             </div>
 
-
-            {!stateLoading && stateTotalPages > 1 && (
-                <div className='flex flex-row items-center justify-center gap-4'>
-                    <div>Page</div>
-                    <Pagination showControls loop variant='bordered'
-                        total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                    />
-                </div>
-            )}
-            {stateLoading
-                ? (
-                    <div className='flex flex-row w-full items-center justify-center gap-4'>
-                        <CircularProgress label="Loading..." />
-                    </div >
-                )
-                : (<CardList user_id={user_id_my} card_list={stateCards} />)
-            }
-            {!stateLoading && stateTotalPages > 1 && (
-                <div className='flex flex-row items-center justify-center gap-4'>
-                    <div>Page</div>
-                    <Pagination showControls loop variant='bordered'
-                        total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                    />
-                </div>
+            {stateLoading ? (
+                <div className='flex flex-row w-full items-center justify-center gap-4'>
+                    <CircularProgress label="Loading..." />
+                </div >
+            ) : (
+                <>
+                    <div className='flex flex-row items-center justify-center gap-4'>
+                        <div>Page</div>
+                        <Pagination showControls loop variant='bordered'
+                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
+                        />
+                    </div>
+                    <CardList user_id={user_id_my} card_list={stateCards} />
+                    <div className='flex flex-row items-center justify-center gap-4'>
+                        <div>Page</div>
+                        <Pagination showControls loop variant='bordered'
+                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
+                        />
+                    </div>
+                </>
             )}
         </div>
     )

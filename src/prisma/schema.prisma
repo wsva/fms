@@ -220,8 +220,10 @@ model read_sentence {
 model ask_question {
   uuid       String   @unique
   user_id    String
+  title      String
   audio_path String
-  recognized String
+  video_path String
+  content    String
   created_by String
   created_at DateTime
   updated_at DateTime
@@ -232,7 +234,8 @@ model ask_answer {
   user_id       String
   question_uuid String
   audio_path    String
-  recognized    String
+  video_path    String
+  content       String
   created_by    String
   created_at    DateTime
   updated_at    DateTime
