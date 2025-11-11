@@ -7,18 +7,21 @@ import CardList from '@/components/card/CardList';
 import { getCardAll, getTagAll } from '@/app/actions/card';
 import { FilterType } from '@/lib/card';
 import { toast } from 'react-toastify';
+import { removeCardsByTag } from '@/app/actions/manage';
 
 type Props = {
-    user_id_my: string; // me
+    user_id_my: string;
 };
 
-export default function CardMarket({ user_id_my }: Props) {
+export default function Page({ user_id_my }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
     const [stateMyTags, setStateMyTags] = useState<qsa_tag[]>([])
     const [stateMyTagUUID, setStateMyTagUUID] = useState<string>("")
-    const [stateCards, setStateCards] = useState<qsa_card[]>([])
+    const [stateData, setStateData] = useState<qsa_card[]>([])
+    const [stateReload, setStateReload] = useState<number>(1);
     const [stateCurrentPage, setStateCurrentPage] = useState<number>(1);
     const [stateTotalPages, setStateTotalPages] = useState<number>(0);
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     useEffect(() => {
         const loadTags = async () => {
@@ -37,7 +40,7 @@ export default function CardMarket({ user_id_my }: Props) {
             setStateLoading(true)
             const result = await getCardAll(user_id_my, FilterType.Normal, stateMyTagUUID, "", stateCurrentPage, 20)
             if (result.status === 'success') {
-                setStateCards(result.data)
+                setStateData(result.data)
                 setStateTotalPages(result.total_pages || 0)
             } else {
                 toast.error(result.error as string)
@@ -47,7 +50,7 @@ export default function CardMarket({ user_id_my }: Props) {
 
         loadTags();
         loadCards();
-    }, [user_id_my, stateMyTagUUID, stateCurrentPage]);
+    }, [user_id_my, stateMyTagUUID, stateCurrentPage, stateReload]);
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
@@ -62,7 +65,21 @@ export default function CardMarket({ user_id_my }: Props) {
 
             <div className='flex flex-row items-center justify-center gap-4'>
                 <Button variant='solid' color='primary' id='button-toggel-recording'
-                    isDisabled={!stateMyTagUUID}
+                    isDisabled={!stateMyTagUUID || stateSaving}
+                    onPress={async () => {
+                        if (window.confirm("Are you sure to delete all cards with this tag?")) {
+                            setStateSaving(true)
+                            const result = await removeCardsByTag(user_id_my, stateMyTagUUID);
+                            if (result.status === "success") {
+                                toast.success("clear data success")
+                                setStateReload(current => current + 1)
+                            } else {
+                                console.log(result.error)
+                                toast.error("clear data failed")
+                            }
+                            setStateSaving(false)
+                        }
+                    }}
                 >
                     delete all cards under this tag
                 </Button>
@@ -80,7 +97,7 @@ export default function CardMarket({ user_id_my }: Props) {
                             total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
                         />
                     </div>
-                    <CardList user_id={user_id_my} card_list={stateCards} />
+                    <CardList user_id={user_id_my} card_list={stateData} />
                     <div className='flex flex-row items-center justify-center gap-4'>
                         <div>Page</div>
                         <Pagination showControls loop variant='bordered'

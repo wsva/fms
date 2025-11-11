@@ -7,10 +7,11 @@ import CardList from '@/components/card/CardList';
 import { getCardAll, getTagAll } from '@/app/actions/card';
 import { FilterType } from '@/lib/card';
 import { toast } from 'react-toastify';
+import { copyCardsByTag } from '@/app/actions/manage';
 
 type Props = {
-    user_id_my: string; // me
-    user_id_another: string // another
+    user_id_my: string;
+    user_id_another: string;
 };
 
 export default function CardMarket({ user_id_my, user_id_another }: Props) {
@@ -19,9 +20,11 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
     const [stateTagUUIDOfAnother, setStateTagUUIDOfAnother] = useState<string>("")
     const [stateMyTags, setStateMyTags] = useState<qsa_tag[]>([])
     const [stateMyTagUUID, setStateMyTagUUID] = useState<string>("")
-    const [stateCards, setStateCards] = useState<qsa_card[]>([])
+    const [stateData, setStateData] = useState<qsa_card[]>([])
+    const [stateReload, setStateReload] = useState<number>(1);
     const [stateCurrentPage, setStateCurrentPage] = useState<number>(1);
     const [stateTotalPages, setStateTotalPages] = useState<number>(0);
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     useEffect(() => {
         const loadMyTags = async () => {
@@ -52,7 +55,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
             setStateLoading(true)
             const result = await getCardAll(user_id_another, FilterType.Normal, stateTagUUIDOfAnother, "", stateCurrentPage, 20)
             if (result.status === 'success') {
-                setStateCards(result.data)
+                setStateData(result.data)
                 setStateTotalPages(result.total_pages || 0)
             } else {
                 toast.error(result.error as string)
@@ -63,7 +66,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
         loadMyTags();
         loadTagsOfAnother();
         loadCards();
-    }, [user_id_my, user_id_another, stateTagUUIDOfAnother, stateCurrentPage]);
+    }, [user_id_my, user_id_another, stateTagUUIDOfAnother, stateCurrentPage, stateReload]);
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
@@ -88,7 +91,21 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                         ))}
                     </Select>
                     <Button variant='solid' color='primary' id='button-toggel-recording'
-                        isDisabled={!stateMyTagUUID || !stateTagUUIDOfAnother}
+                        isDisabled={!stateMyTagUUID || !stateTagUUIDOfAnother || stateSaving}
+                        onPress={async () => {
+                            if (window.confirm("Are you sure to copy all cards to your account?")) {
+                                setStateSaving(true)
+                                const result = await copyCardsByTag(user_id_another, stateTagUUIDOfAnother, user_id_my, stateMyTagUUID);
+                                if (result.status === "success") {
+                                    toast.success("clear data success")
+                                    setStateReload(current => current + 1)
+                                } else {
+                                    console.log(result.error)
+                                    toast.error("clear data failed")
+                                }
+                                setStateSaving(false)
+                            }
+                        }}
                     >
                         Collect
                     </Button>
@@ -107,7 +124,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                             total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
                         />
                     </div>
-                    <CardList user_id={user_id_my} card_list={stateCards} />
+                    <CardList user_id={user_id_my} card_list={stateData} />
                     <div className='flex flex-row items-center justify-center gap-4'>
                         <div>Page</div>
                         <Pagination showControls loop variant='bordered'

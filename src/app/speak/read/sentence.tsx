@@ -124,9 +124,9 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
 
                             <Tooltip placement='top' content="delete">
                                 <Button isIconOnly variant='light' color='danger' className='w-fit h-fit'
-                                    onPress={() => {
+                                    onPress={async () => {
                                         if (window.confirm("Are you sure to delete?")) {
-                                            handleDelete(item);
+                                            await handleDelete(item);
                                         }
                                     }}
                                 >
