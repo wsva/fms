@@ -18,7 +18,6 @@ export default function Collect({ user_id, card }: Props) {
     const [stateSelected, setStateSelected] = useState<string[]>([]);
     const { handleSubmit } = useForm();
 
-    // 空依赖数组意味着仅在组件挂载时执行一次
     useEffect(() => {
         const loadData = async () => {
             const tag_list_result = await getTagAll(user_id);
@@ -28,7 +27,6 @@ export default function Collect({ user_id, card }: Props) {
             setStateTagList(tag_list_result.data)
         };
         loadData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user_id]);
 
     const onSubmit = async () => {

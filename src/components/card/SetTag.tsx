@@ -1,6 +1,6 @@
 'use client'
 
-import { getCardTag, getTagAll, saveCardTag } from '@/app/actions/card';
+import { getCardTag, saveCardTag } from '@/app/actions/card';
 import { card_ext } from '@/lib/types';
 import { Checkbox, CheckboxGroup, CircularProgress, Link } from "@heroui/react"
 import { qsa_card, qsa_tag } from '@prisma/client';
@@ -40,7 +40,7 @@ export default function SetTag({ user_id, card, tag_list }: Props) {
             setStateLoading(false)
         };
         loadData();
-    }, [user_id, card]);
+    }, [user_id, card, tag_list]);
 
     const onSubmit = async () => {
         const item: card_ext = {

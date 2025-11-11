@@ -18,7 +18,6 @@ type Props = {
 
 export default function Item({ question_uuid, user_id }: Props) {
     const [stateQuestion, setStateQuestion] = useState<ask_question>();
-    const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
     const [stateData, setStateData] = useState<ask_answer[]>([]);
     const [stateReload, setStateReload] = useState<number>(1);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
