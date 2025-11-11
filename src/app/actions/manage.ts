@@ -9,6 +9,19 @@ import { ActionResult } from "@/lib/types";
 import { getUUID } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 
+export async function getUserIDAll(): Promise<ActionResult<string[]>> {
+    try {
+        const result = await prisma.qsa_card.findMany({
+            select: { user_id: true },
+            distinct: ['user_id'],
+        });
+        return { status: "success", data: result.map(r => r.user_id) }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
+
 export const removeCardsByTag = async (user_id: string, tag_uuid: string): Promise<ActionResult<boolean>> => {
     try {
         await prisma.$transaction(async (prismaTx) => {
