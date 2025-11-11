@@ -12,6 +12,12 @@ type MenuGroup = {
 
 export const menuList: MenuGroup[] = [
     {
+        name: "Plan",
+        items: [
+            { key: "plan_main", name: "my plan", description: "set and view plans", href: "/plan" },
+        ],
+    },
+    {
         name: "Word",
         items: [
             { key: "word_top", name: "Top Words", description: "top words", href: "/word/top" },

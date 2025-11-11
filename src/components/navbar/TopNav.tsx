@@ -1,17 +1,18 @@
 'use client';
 
-import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
+import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
 import React, { useEffect } from 'react'
 import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react"
 import { Session } from "next-auth"
-import { MdHelpOutline, MdMic, MdMicOff, MdOutlineSettings } from "react-icons/md";
+import { MdHelpOutline, MdMic, MdMicOff, MdOutlineRedo, MdOutlineSettings, MdOutlineUndo } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
 import { EngineList, toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
 import { initCmdHelpMap } from "@/app/actions/voice_access";
+import { signOut } from "next-auth/react";
 
 const ChevronDown = () => {
     return (
@@ -145,6 +146,20 @@ export default function TopNav({ session }: Props) {
                             </Link>
                         </Tooltip>
                     </NavbarBrand>
+                    <ButtonGroup>
+                        <Button isIconOnly size="sm" onPress={() => {
+                            router.back()
+                            setIsMenuOpen(!isMenuOpen)
+                        }}>
+                            <MdOutlineUndo />
+                        </Button>
+                        <Button isIconOnly size="sm" onPress={() => {
+                            router.forward()
+                            setIsMenuOpen(!isMenuOpen)
+                        }}>
+                            <MdOutlineRedo />
+                        </Button>
+                    </ButtonGroup>
                 </NavbarContent>
 
                 <NavbarContent className="hidden lg:flex gap-3" justify="start">
@@ -260,7 +275,7 @@ export default function TopNav({ session }: Props) {
                 </NavbarContent>
 
 
-                <NavbarContent justify='end'>
+                <NavbarContent justify='end' className="hidden lg:flex">
                     {session?.user ? (
                         <UserMenu session={session} />
                     ) : (
@@ -272,17 +287,44 @@ export default function TopNav({ session }: Props) {
                     )}
                 </NavbarContent>
 
-                <NavbarMenu>
-                    {menuList.map((group) => (
-                        group.items.map((item) => (
-                            <NavbarMenuItem key={item.key} className="my-1">
-                                <Link className="w-full text-blue-600 underline" href={item.href}
-                                    onPress={() => setIsMenuOpen(!isMenuOpen)}
+                <NavbarMenu className="pt-4 pb-20">
+                    <div className="bg-sand-300 rounded-sm p-2 mb-5">
+                        {session?.user ? (
+                            <div className="flex flex-col w-full">
+                                <div className="flex flex-row items-center justify-start gap-2 w-full">
+                                    <div className="w-full font-bold select-none">{session.user?.name}</div>
+                                    <Button color="danger" size="sm"
+                                        onPress={() => { signOut({ redirectTo: "/" }) }}
+                                    >
+                                        Sign Out
+                                    </Button>
+                                </div>
+                                <div className="select-none">{session.user?.email}</div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-row items-center justify-center gap-2 w-full">
+                                <Button color="primary" size="sm"
+                                    onPress={() => signIn('wsva_oauth2')}
                                 >
-                                    {item.name}
-                                </Link>
-                            </NavbarMenuItem>
-                        ))
+                                    Login
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                    {menuList.map((group) => (
+                        <div key={group.name}>
+                            <div className="select-none font-bold">{group.name}</div>
+                            <Divider />
+                            {group.items.map((item) => (
+                                <NavbarMenuItem key={item.key} className="my-1 pl-4">
+                                    <Link className="w-full text-blue-600 underline" href={item.href}
+                                        onPress={() => setIsMenuOpen(!isMenuOpen)}
+                                    >
+                                        {item.name}
+                                    </Link>
+                                </NavbarMenuItem>
+                            ))}
+                        </div>
                     ))}
                 </NavbarMenu>
             </Navbar >

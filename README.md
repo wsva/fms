@@ -168,6 +168,17 @@ CREATE TABLE practice_audio (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE plan_plan (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    user_id       VARCHAR(100) NOT NULL,
+    minutes       INT NOT NULL,
+    content       TEXT NOT NULL,
+    status        VARCHAR(100) NOT NULL,
+    created_by    VARCHAR(100) NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 `````
 
 # clean data

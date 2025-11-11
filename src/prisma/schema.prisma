@@ -280,3 +280,14 @@ model practice_audio {
   created_at    DateTime
   updated_at    DateTime
 }
+
+model plan_plan {
+  uuid          String   @unique
+  user_id       String
+  minutes       Int // 15, 30, 60
+  content       String
+  status        String // pending, completed, failed
+  created_by    String
+  created_at    DateTime
+  updated_at    DateTime
+}
