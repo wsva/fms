@@ -1,6 +1,6 @@
 'use client';
 
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react"
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react"
 import { Session } from 'next-auth';
 import React from 'react'
 import { signOut } from "next-auth/react"
@@ -13,7 +13,9 @@ export default function UserMenu({ session }: Props) {
     return (
         <Dropdown placement="bottom-start">
             <DropdownTrigger>
-                <div className='text-lg rounded-lg bg-slate-200 px-2 py-0.5'>{session.user?.name}</div>
+                <Button size="sm" className="text-lg bg-sand-400">
+                    {session.user?.name}
+                </Button>
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions" variant="flat">
                 <DropdownItem key="profile" className="h-14 gap-2">

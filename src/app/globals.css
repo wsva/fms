@@ -6,8 +6,16 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --color-sand-50:  #FFFAF2;
+  --color-sand-100: #FEF3E5;
   --color-sand-200: #FBEDDA;
   --color-sand-300: #ECD2B0;
+  --color-sand-400: #DBB98A;
+  --color-sand-500: #C7A067;
+  --color-sand-600: #A8804C;
+  --color-sand-700: #86633B;
+  --color-sand-800: #63492B;
+  --color-sand-900: #3E2E1B;
 }
 
 body {

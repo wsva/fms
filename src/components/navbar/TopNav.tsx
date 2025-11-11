@@ -147,16 +147,20 @@ export default function TopNav({ session }: Props) {
                         </Tooltip>
                     </NavbarBrand>
                     <ButtonGroup>
-                        <Button isIconOnly size="sm" onPress={() => {
-                            router.back()
-                            setIsMenuOpen(!isMenuOpen)
-                        }}>
+                        <Button isIconOnly size="sm" className="bg-sand-400 hover:bg-sand-500"
+                            onPress={() => {
+                                router.back()
+                                setIsMenuOpen(!isMenuOpen)
+                            }}
+                        >
                             <MdOutlineUndo />
                         </Button>
-                        <Button isIconOnly size="sm" onPress={() => {
-                            router.forward()
-                            setIsMenuOpen(!isMenuOpen)
-                        }}>
+                        <Button isIconOnly size="sm" className="bg-sand-400 hover:bg-sand-500"
+                            onPress={() => {
+                                router.forward()
+                                setIsMenuOpen(!isMenuOpen)
+                            }}
+                        >
                             <MdOutlineRedo />
                         </Button>
                     </ButtonGroup>
@@ -199,6 +203,9 @@ export default function TopNav({ session }: Props) {
 
                 <NavbarContent justify='center'>
                     <Input className="mx-0 w-[60vw] lg:w-[30vw]"
+                        classNames={{
+                            "inputWrapper": "bg-sand-100 data-[hover=true]:bg-sand-100 group-data-[focus=true]:bg-sand-100",
+                        }}
                         startContent={
                             <Tooltip content="F2" placement="right">
                                 <Button isIconOnly size="sm" color={stateColor} id="button-voice-access"
@@ -292,7 +299,12 @@ export default function TopNav({ session }: Props) {
                         {session?.user ? (
                             <div className="flex flex-col w-full">
                                 <div className="flex flex-row items-center justify-start gap-2 w-full">
-                                    <div className="w-full font-bold select-none">{session.user?.name}</div>
+                                    <div className="flex-1">
+                                        <Button size="sm" isDisabled className="text-lg bg-sand-400 disabled:opacity-100">
+                                            {session.user?.name}
+                                        </Button>
+                                    </div>
+
                                     <Button color="danger" size="sm"
                                         onPress={() => { signOut({ redirectTo: "/" }) }}
                                     >
