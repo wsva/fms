@@ -133,19 +133,21 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
 
     return (
         <div className="flex flex-col items-center justify-center bg-sand-300 rounded-lg py-2 w-full mb-96">
-            {isAudio(src) ? (
-                <audio controls ref={audioRef} className="w-full" src={src} />
-            ) : (
-                <div className='flex flex-row items-end justify-end fixed bottom-0 end-0 p-4 z-50'>
-                    <video controls ref={videoRef} className='h-[30vh] w-auto max-w-full'>
-                        <source src={src} />
-                        <track
-                            src={stateDictation ? "" : `/api/listen/subtitle/${stateSubtitle?.uuid}`}
-                            kind="subtitles"
-                            default
-                        />
-                    </video>
-                </div>
+            {!!src && (
+                isAudio(src) ? (
+                    <audio controls ref={audioRef} className="w-full" src={src} preload="auto" />
+                ) : (
+                    <div className='flex flex-row items-end justify-end fixed bottom-0 end-0 p-4 z-50'>
+                        <video controls ref={videoRef} preload="auto" className='h-[30vh] w-auto max-w-full'>
+                            <source src={src} />
+                            <track
+                                src={stateDictation ? "" : `/api/listen/subtitle/${stateSubtitle?.uuid}`}
+                                kind="subtitles"
+                                default
+                            />
+                        </video>
+                    </div>
+                )
             )}
 
             {!!stateCues && stateCues.length > 0 && (
