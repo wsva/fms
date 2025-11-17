@@ -4,16 +4,15 @@ import React, { useState, useEffect } from 'react'
 import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import { toast } from 'react-toastify';
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
-import { plan_plan } from '@prisma/client';
 import Plan from './plan';
 import { getUUID } from '@/lib/utils';
+import { plan_plan } from '@prisma/client';
 
 type Props = {
     user_id: string;
 }
 
 export default function Client({ user_id }: Props) {
-    const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateTimeSpan, setStateTimeSpan] = useState<number>(15);
     const [statePlanContent, setStatePlanContent] = useState<string>("");
@@ -33,7 +32,6 @@ export default function Client({ user_id }: Props) {
     const handleUpdate = async (new_item: plan_plan) => {
         const result = await savePlan(new_item)
         if (result.status === 'success') {
-            toast.success('status updated');
             setStateReload(current => current + 1)
         } else {
             toast.error('update failed');
@@ -52,9 +50,8 @@ export default function Client({ user_id }: Props) {
                 uuid: getUUID(),
                 user_id: user_id,
                 content: content,
+                favorite: "N",
                 minutes: stateTimeSpan,
-                status: 'pending',
-                created_by: user_id,
                 created_at: new Date(),
                 updated_at: new Date(),
             })
@@ -72,7 +69,6 @@ export default function Client({ user_id }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
-            setStateLoading(true)
             const result = await getPlanAll(user_id)
             if (result.status === "success") {
                 setStateData(result.data)
@@ -80,7 +76,6 @@ export default function Client({ user_id }: Props) {
                 console.log(result.error)
                 toast.error("load data error")
             }
-            setStateLoading(false)
         }
         loadData()
     }, [user_id, stateReload]);
@@ -116,15 +111,17 @@ export default function Client({ user_id }: Props) {
                 </div>
             </div>
 
-            {stateLoading && (
-                <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
-                    <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
-                </div>
-            )}
-
             {stateData.length > 0 && (
-                <div className="flex flex-col w-full gap-2 my-4">
-                    {stateData.map((p) => <Plan key={p.uuid} item={p} handleDelete={handleDelete} handleUpdate={handleUpdate} />)}
+                <div className="flex flex-col items-center justify-center w-full gap-2 my-4">
+                    {stateData.map((p) => (
+                        <Plan
+                            key={p.uuid}
+                            item={p}
+                            user_id={user_id}
+                            handleDelete={handleDelete}
+                            handleUpdate={handleUpdate}
+                        />
+                    ))}
                 </div>
             )}
         </div>

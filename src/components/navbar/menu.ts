@@ -14,7 +14,7 @@ export const menuList: MenuGroup[] = [
     {
         name: "Plan",
         items: [
-            { key: "plan_main", name: "my plan", description: "set and view plans", href: "/plan" },
+            { key: "plan_main", name: "My Plans", description: "set and view plans", href: "/plan" },
         ],
     },
     {

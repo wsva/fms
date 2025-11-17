@@ -284,10 +284,19 @@ model practice_audio {
 model plan_plan {
     uuid       String   @unique
     user_id    String
-    minutes    Int // 15, 30, 60
     content    String
+    minutes    Int // 15, 30, 60
+    favorite   String // pending, completed, failed
+    created_at DateTime
+    updated_at DateTime
+}
+
+model plan_record {
+    uuid       String   @unique
+    user_id    String
+    plan_uuid  String
+    start_at   DateTime
     status     String // pending, completed, failed
-    created_by String
     created_at DateTime
     updated_at DateTime
 }

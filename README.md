@@ -173,10 +173,19 @@ CREATE TABLE practice_audio (
 CREATE TABLE plan_plan (
     uuid          VARCHAR(100) PRIMARY KEY,
     user_id       VARCHAR(100) NOT NULL,
-    minutes       INT NOT NULL,
     content       TEXT NOT NULL,
+    minutes       INT NOT NULL,
+    favorite      VARCHAR(1),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE plan_record (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    user_id       VARCHAR(100) NOT NULL,
+    plan_uuid     VARCHAR(100) NOT NULL,
+    start_at      TIMESTAMPTZ,
     status        VARCHAR(100) NOT NULL,
-    created_by    VARCHAR(100) NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

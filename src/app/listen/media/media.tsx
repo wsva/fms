@@ -59,7 +59,9 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
         if (transcript_list.length === 1) {
             setStateTranscript(transcript_list[0])
         }
+    }, [subtitle_list, transcript_list]);
 
+    useEffect(() => {
         const loadCues = () => {
             if (!stateSubtitle) {
                 updateStateCues((draft) => {
@@ -88,7 +90,7 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
             });
         }
         loadCues();
-    }, [subtitle_list, transcript_list, updateStateCues, stateSubtitle]);
+    }, [updateStateCues, stateSubtitle]);
 
     useEffect(() => {
         const audioE = audioRef.current;

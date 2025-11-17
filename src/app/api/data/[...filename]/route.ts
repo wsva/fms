@@ -1,33 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
-import path from "path";
 import fs from "fs";
+import path from "path";
 import mime from "mime";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ filename: string[] }> }) {
     const p = await context.params;
+
     try {
         const filePath = path.join("/fms_data", ...p.filename);
         const stat = fs.statSync(filePath);
         const totalSize = stat.size;
-        const fileBuffer = await readFile(filePath);
         const contentType = mime.getType(filePath) || "application/octet-stream";
 
-        return new NextResponse(new Uint8Array(fileBuffer), {
+        const range = request.headers.get("range");
+
+        // --- Case 1: 带 Range 请求（推荐的视频按需加载方式） ---
+        if (range) {
+            const match = range.match(/bytes=(\d+)-(\d*)/);
+            const start = parseInt(match![1], 10);
+            const end = match![2] ? parseInt(match![2], 10) : totalSize - 1;
+            const chunkSize = end - start + 1;
+
+            const fileStream = fs.createReadStream(filePath, { start, end });
+
+            return new NextResponse(fileStream as any, {
+                status: 206,
+                headers: {
+                    "Content-Type": contentType,
+                    "Content-Length": chunkSize.toString(),
+                    "Content-Range": `bytes ${start}-${end}/${totalSize}`,
+                    "Accept-Ranges": "bytes",
+
+                    // CORS
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "*",
+                },
+            });
+        }
+
+        // --- Case 2: 无 Range 请求（浏览器第一次访问） ---
+        const fileStream = fs.createReadStream(filePath);
+
+        return new NextResponse(fileStream as any, {
             headers: {
                 "Content-Type": contentType,
                 "Content-Length": totalSize.toString(),
-
-                // 支持 Range 请求（视频、音频播放必要）
                 "Accept-Ranges": "bytes",
 
-                // ---- CORS ----
+                // CORS
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET, OPTIONS",
                 "Access-Control-Allow-Headers": "*",
             },
         });
-    } catch {
+    } catch (err) {
         return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 }
+

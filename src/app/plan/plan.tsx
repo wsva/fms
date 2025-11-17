@@ -1,68 +1,109 @@
 'use client'
 
-import React from 'react'
-import { Button } from '@heroui/react'
-import { plan_plan } from '@prisma/client'
-
-const ColorMap = new Map<string, string>([
-    ["pending", "bg-sand-300"],
-    ["completed", "bg-green-200"],
-    ["failed", "bg-red-200"],
-]);
+import React, { useEffect, useState } from 'react'
+import { Button, Divider, Spinner, Tooltip } from '@heroui/react'
+import Record from './record';
+import { plan_plan, plan_record } from '@prisma/client';
+import { getRecordAll, saveRecord } from '../actions/plan';
+import { toast } from 'react-toastify';
+import { getUUID } from '@/lib/utils';
+import { MdCelebration, MdDelete, MdOutlineStar, MdOutlineStarBorder } from 'react-icons/md';
 
 export type Props = {
     item: plan_plan;
+    user_id: string;
     handleDelete: (item: plan_plan) => Promise<void>;
     handleUpdate: (new_item: plan_plan) => Promise<void>;
 }
 
-export default function Plan({ item, handleDelete, handleUpdate }: Props) {
-    // yyyy-mm-dd of created_at
-    const getDay = () => {
-        const date = new Date(item.created_at);
-        date.setMinutes(date.getMinutes() + 1);
-        return date.toISOString().split('T')[0];
+export default function Page({ item, user_id, handleDelete, handleUpdate }: Props) {
+    const [stateData, setStateData] = useState<plan_record[]>([]);
+    const [stateReload, setStateReload] = useState<number>(1);
+
+    const handleAddRecord = async () => {
+        const result = await saveRecord({
+            uuid: getUUID(),
+            user_id: user_id,
+            plan_uuid: item.uuid,
+            start_at: new Date(),
+            status: "pending",
+            created_at: new Date(),
+            updated_at: new Date(),
+        });
+        if (result.status === 'success') {
+            setStateReload(current => current + 1)
+        } else {
+            toast.error("save failed");
+        }
     }
 
-    // hh:mm, the next minute of created_at
-    const getStartTime = () => {
-        const date = new Date(item.created_at);
-        date.setMinutes(date.getMinutes() + 1);
-        return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+    const handleUpdateRecord = async (new_item: plan_record) => {
+        const result = await saveRecord({
+            ...new_item,
+            updated_at: new Date(),
+        });
+        if (result.status === 'success') {
+            setStateReload(current => current + 1)
+        } else {
+            toast.error("save failed");
+        }
     }
+
+    useEffect(() => {
+        const loadData = async () => {
+            const result = await getRecordAll(item.uuid)
+            if (result.status === "success") {
+                setStateData(result.data)
+            } else {
+                console.log(result.error)
+                toast.error("load data error")
+            }
+        }
+
+        loadData();
+    }, [item, stateReload]);
 
     return (
-        <div className={`flex flex-col items-start justify-center w-full rounded-md p-1 ${ColorMap.get(item.status)}`}>
-            <div className="flex-1 text-xl font-bold mx-2">{item.content}</div>
-            <div className="flex flex-col lg:flex-row items-end justify-center w-full">
-                {/** text shold unselectable */}
-                <div className="text-lg text-gray-500 w-full select-none">
-                    {getDay()}&emsp;
-                    {item.minutes} min (from {getStartTime()})&emsp;
-                    {item.status}
+        <div className="flex flex-col items-start justify-center w-full rounded-md mx-2 p-1 bg-sand-300">
+            <div className="flex flex-row items-start justify-center w-full rounded-md p-1 gap-2">
+                <div className="flex-1 text-xl font-bold">
+                    {`${item.content} (${item.minutes} min)`}
                 </div>
-                <div className="flex flex-row items-start justify-center gap-4">
-                    {item.status === "pending" && (
-                        <>
-                            <Button size="sm" color="success"
-                                onPress={async () => { await handleUpdate({ ...item, status: 'completed' }) }}
-                            >
-                                Complete
-                            </Button>
-                            <Button size="sm" color="warning"
-                                onPress={async () => { await handleUpdate({ ...item, status: 'failed' }) }}
-                            >
-                                Fail
-                            </Button>
-                        </>
-                    )}
-                    <Button size="sm" color="danger"
+                <Tooltip placement='bottom' content="top">
+                    <Button isIconOnly size="sm" variant='light'
+                        onPress={() => handleUpdate({ ...item, favorite: item.favorite === "Y" ? "N" : "Y" })}
+                    >
+                        {item.favorite === "Y" ? (
+                            <MdOutlineStar className='text-blue-700' size={24} />
+                        ) : (
+                            <MdOutlineStarBorder size={24} />
+                        )}
+                    </Button>
+                </Tooltip>
+                <Tooltip placement='bottom' content="start">
+                    <Button isIconOnly size="sm" variant='light'
+                        onPress={handleAddRecord}
+                    >
+                        <MdCelebration className='text-blue-700' size={24} />
+                    </Button>
+                </Tooltip>
+                <Tooltip placement='bottom' content="delete">
+                    <Button isIconOnly size="sm" variant='light'
                         onPress={async () => { await handleDelete(item) }}
                     >
-                        Delete
+                        <MdDelete className='text-red-400' size={24} />
                     </Button>
-                </div>
+                </Tooltip>
             </div>
+
+            {stateData.length > 0 && (
+                <div className="flex flex-col items-center justify-center w-full">
+                    <Divider />
+                    {stateData.map((v, i) => (
+                        <Record key={i} item={v} handleUpdate={handleUpdateRecord} />
+                    ))}
+                </div>
+            )}
         </div>
     )
 }

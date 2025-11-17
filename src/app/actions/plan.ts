@@ -5,7 +5,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
-import { plan_plan } from "@prisma/client";
+import { plan_plan, plan_record } from "@prisma/client";
 
 export async function getPlan(uuid: string): Promise<ActionResult<plan_plan>> {
     try {
@@ -26,7 +26,10 @@ export async function getPlanAll(user_id: string): Promise<ActionResult<plan_pla
     try {
         const result = await prisma.plan_plan.findMany({
             where: { user_id },
-            orderBy: { created_at: 'desc' },
+            orderBy: [
+                { favorite: "desc" },
+                { created_at: "desc" }
+            ],
         })
         return { status: "success", data: result }
     } catch (error) {
@@ -64,4 +67,56 @@ export async function removePlan(uuid: string): Promise<ActionResult<plan_plan>>
     }
 }
 
+export async function getRecord(uuid: string): Promise<ActionResult<plan_record>> {
+    try {
+        const result = await prisma.plan_record.findUnique({
+            where: { uuid }
+        })
+        if (!result) {
+            return { status: 'error', error: 'no data found' }
+        }
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
 
+export async function getRecordAll(plan_uuid: string): Promise<ActionResult<plan_record[]>> {
+    try {
+        const result = await prisma.plan_record.findMany({
+            where: { plan_uuid },
+            orderBy: { created_at: 'desc' },
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
+
+export async function saveRecord(item: plan_record): Promise<ActionResult<plan_record>> {
+    try {
+        const result = await prisma.plan_record.upsert({
+            where: { uuid: item.uuid },
+            create: item,
+            update: item,
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
+
+export async function removeRecord(uuid: string): Promise<ActionResult<plan_record>> {
+    try {
+        const result = await prisma.plan_record.delete({
+            where: { uuid }
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.log(error)
+        return { status: 'error', error: (error as object).toString() }
+    }
+}
