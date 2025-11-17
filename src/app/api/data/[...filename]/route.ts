@@ -2,7 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import mime from "mime";
+import { Readable } from "stream";
 
+
+/**
+When utilizing fs.createReadStream to read a file and then 
+attempting to use that fs.ReadStream as the body for a NextResponse in Next.js, 
+a direct assignment may lead to type errors or unexpected behavior. 
+This is because fs.ReadStream is a Node.js ReadableStream, 
+while NextResponse expects a Web Platform ReadableStream 
+(or other BodyInit types like string, Blob, BufferSource, etc.).
+
+To bridge this difference, the Node.js ReadableStream needs to be 
+converted into a Web Platform ReadableStream. This can be achieved using 
+the Readable.toWeb() method, which is available from the stream module in Node.js.
+ */
 export async function GET(request: NextRequest, context: { params: Promise<{ filename: string[] }> }) {
     const p = await context.params;
 
@@ -22,8 +36,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ fil
             const chunkSize = end - start + 1;
 
             const fileStream = fs.createReadStream(filePath, { start, end });
+            const webStream = Readable.toWeb(fileStream) as ReadableStream<any>;
 
-            return new NextResponse(fileStream as any, {
+            return new NextResponse(webStream, {
                 status: 206,
                 headers: {
                     "Content-Type": contentType,
@@ -41,8 +56,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ fil
 
         // --- Case 2: 无 Range 请求（浏览器第一次访问） ---
         const fileStream = fs.createReadStream(filePath);
+        const webStream = Readable.toWeb(fileStream) as ReadableStream<any>;
 
-        return new NextResponse(fileStream as any, {
+        return new NextResponse(webStream, {
             headers: {
                 "Content-Type": contentType,
                 "Content-Length": totalSize.toString(),
@@ -55,6 +71,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ fil
             },
         });
     } catch (err) {
+        console.log(err);
         return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 }

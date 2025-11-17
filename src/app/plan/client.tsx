@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { Button, Select, SelectItem, Textarea } from "@heroui/react";
 import { toast } from 'react-toastify';
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
 import Plan from './plan';

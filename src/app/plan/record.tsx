@@ -3,7 +3,7 @@
 import React from 'react'
 import { Button, Tooltip } from '@heroui/react'
 import { plan_record } from '@prisma/client';
-import { MdClose, MdDone, MdDoneOutline } from 'react-icons/md';
+import { MdClose, MdDone } from 'react-icons/md';
 
 const ColorMap = new Map<string, string>([
     ["pending", "bg-sand-300"],

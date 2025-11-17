@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Button, Divider, Spinner, Tooltip } from '@heroui/react'
+import { Button, Divider, Tooltip } from '@heroui/react'
 import Record from './record';
 import { plan_plan, plan_record } from '@prisma/client';
 import { getRecordAll, saveRecord } from '../actions/plan';
