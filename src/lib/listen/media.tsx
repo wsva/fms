@@ -1,36 +1,19 @@
 "use client"
 
 import React from "react";
+import { isAudio } from "./utils";
 
 type Props = {
-    ref: React.Ref<HTMLAudioElement | HTMLVideoElement> | undefined;
     src: string;
     className?: string;
     controls?: boolean;
     autoPlay?: boolean;
 }
 
-const AUDIO_EXT = ["mp3", "wav", "aac", "m4a", "ogg", "flac", "wma"];
-
-const getExtension = (src: string): string | null => {
-    try {
-        const url = new URL(src);
-        const pathname = url.pathname;
-        return pathname.split(".").pop()?.toLowerCase() || null;
-    } catch {
-        // 本地 blob: URL
-        return src.split(".").pop()?.toLowerCase() || null;
-    }
-};
-
-export default ({ src, className = "", controls = true, autoPlay = false }: Props) => {
-    const ext = getExtension(src);
-
-    const isAudio = ext && AUDIO_EXT.includes(ext);
-
+export default function Page({ src, className = "", controls = true, autoPlay = false }: Props) {
     return (
         <>
-            {isAudio ? (
+            {isAudio(src) ? (
                 <div className='sticky top-0 p-4 z-50'>
                     <audio
                         src={src}

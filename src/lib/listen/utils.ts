@@ -1,4 +1,3 @@
-import { ActionResult } from "@/lib/types";
 import { Cue } from "./subtitle";
 
 /**

@@ -19,7 +19,6 @@ export default function Page({ user_id }: Props) {
     const [stateTagUUID, setStateTagUUID] = useState<string>("")
     const [stateMediaUUID, setStateMediaUUID] = useState<string>("")
     const [stateData, setStateData] = useState<listen_media_ext>()
-    const [stateReload, setStateReload] = useState<number>(1)
 
     useEffect(() => {
         const loadTagList = async () => {
@@ -68,7 +67,7 @@ export default function Page({ user_id }: Props) {
         loadTagList();
         loadMediaList();
         loadMedia();
-    }, [user_id, stateTagUUID, stateMediaUUID, stateReload]);
+    }, [user_id, stateTagUUID, stateMediaUUID]);
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>

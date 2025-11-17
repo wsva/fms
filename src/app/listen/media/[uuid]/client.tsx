@@ -1,13 +1,12 @@
 'use client'
 
-import { getHTML, getProperty, getUUID } from '@/lib/utils';
-import { Button, ButtonGroup, Checkbox, CheckboxGroup, Divider, Input, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
-import React, { useEffect, useRef, useState } from 'react'
+import { getUUID } from '@/lib/utils';
+import { Button, Checkbox, CheckboxGroup, Input, Link } from "@heroui/react";
+import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
 import { listen_media, listen_note, listen_subtitle, listen_transcript, qsa_card, qsa_tag } from '@prisma/client';
 import { getMediaTag, getTagAll, removeMedia, saveMedia, saveMediaTag } from '@/app/actions/listen';
 import { getMedia } from '@/app/actions/listen';
-import { languageOptions } from '@/lib/language';
 import Transcript from './transcript';
 import Subtitle from './subtitle';
 import Note from './note';
@@ -37,8 +36,6 @@ export default function CardForm({ user_id, uuid }: Props) {
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
     const [stateTagSelected, setStateTagSelected] = useState<string[]>([]);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
-    const [stateAudioURL, setStateAudioURL] = useState<string>();
-    const [stateVideoURL, setStateVideoURL] = useState<string>();
     const [stateTranscript, setStateTranscript] = useState<listen_transcript>({
         uuid: getUUID(),
         user_id: user_id,

@@ -10,7 +10,7 @@ type Props = {
     handleDelete: (item: listen_transcript) => Promise<void>
 }
 
-export default ({ user_id, item, handleUpdate, handleDelete }: Props) => {
+export default function Page({ user_id, item, handleUpdate, handleDelete }: Props) {
     const [stateData, setStateData] = useState<listen_transcript>(item)
 
     return (

@@ -9,7 +9,7 @@ type Props = {
     media: HTMLMediaElement | null;
 }
 
-export default ({ cue, media }: Props) => {
+export default function Page({ cue, media }: Props) {
     const [stateInput, setStateInput] = useState<string>('')
     const [stateSuccess, setStateSuccess] = useState<boolean>(false)
     const [stateTips, setStateTips] = useState<boolean>(false)

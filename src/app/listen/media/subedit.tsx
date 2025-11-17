@@ -120,7 +120,7 @@ type Props = {
     updateStateCues: Updater<Cue[]>;
 }
 
-export default ({ media, stateCues, updateStateCues }: Props) => {
+export default function Page({ media, stateCues, updateStateCues }: Props) {
     const handleUpdate = (new_item: Cue) => {
         updateStateCues(draft => {
             const index = draft.findIndex(i => i.index === new_item.index);

@@ -1,6 +1,5 @@
-import { languageOptions } from "@/lib/language";
-import { Button, Select, SelectItem, Textarea } from "@heroui/react";
-import { listen_note, listen_transcript } from "@prisma/client";
+import { Button, Textarea } from "@heroui/react";
+import { listen_note } from "@prisma/client";
 import React, { useState } from "react";
 
 type Props = {
@@ -10,7 +9,7 @@ type Props = {
     handleDelete: (item: listen_note) => Promise<void>
 }
 
-export default ({ user_id, item, handleUpdate, handleDelete }: Props) => {
+export default function Page({ user_id, item, handleUpdate, handleDelete }: Props) {
     const [stateData, setStateData] = useState<listen_note>(item)
 
     return (

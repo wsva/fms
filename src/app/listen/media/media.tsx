@@ -17,7 +17,7 @@ type Props = {
     transcript_list: listen_transcript[];
 }
 
-export default ({ src, subtitle_list, transcript_list }: Props) => {
+export default function Page({ src, subtitle_list, transcript_list }: Props) {
     const [stateSubtitle, setStateSubtitle] = useState<listen_subtitle>();
     const [stateCues, updateStateCues] = useImmer<Cue[]>([]);
     const [stateActiveCue, setStateActiveCue] = useState<string>("");
@@ -88,15 +88,17 @@ export default ({ src, subtitle_list, transcript_list }: Props) => {
             });
         }
         loadCues();
-    }, [stateSubtitle]);
+    }, [subtitle_list, transcript_list, updateStateCues, stateSubtitle]);
 
     useEffect(() => {
+        const audioE = audioRef.current;
+        const videoE = videoRef.current;
         const onTimeUpdate = () => {
             let currentTime = 0;
-            if (!!audioRef.current) {
-                currentTime = audioRef.current.currentTime;
-            } else if (!!videoRef.current) {
-                currentTime = videoRef.current.currentTime;
+            if (!!audioE) {
+                currentTime = audioE.currentTime;
+            } else if (!!videoE) {
+                currentTime = videoE.currentTime;
             } else {
                 return
             }
@@ -114,18 +116,18 @@ export default ({ src, subtitle_list, transcript_list }: Props) => {
             }
         };
 
-        if (!!audioRef.current) {
-            audioRef.current.addEventListener("timeupdate", onTimeUpdate);
+        if (!!audioE) {
+            audioE.addEventListener("timeupdate", onTimeUpdate);
         }
-        if (!!videoRef.current) {
-            videoRef.current.addEventListener("timeupdate", onTimeUpdate);
+        if (!!videoE) {
+            videoE.addEventListener("timeupdate", onTimeUpdate);
         }
 
         return () => {
-            audioRef.current?.removeEventListener("timeupdate", onTimeUpdate);
-            videoRef.current?.removeEventListener("timeupdate", onTimeUpdate);
+            audioE?.removeEventListener("timeupdate", onTimeUpdate);
+            videoE?.removeEventListener("timeupdate", onTimeUpdate);
         };
-    }, [stateSubtitle, stateCues]);
+    }, [stateSubtitle, stateCues, updateStateCues]);
 
     return (
         <div className="flex flex-col items-center justify-center bg-sand-300 rounded-lg py-2 w-full mb-96">
