@@ -1,293 +1,350 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 model topword_de {
-  id        Int    @unique
-  word      String
-  freq      Int
-  examples  Int
-  in_dict   String
-  base_form String
-  article   String
-  level     String
+    id        Int    @unique
+    word      String
+    freq      Int
+    examples  Int
+    in_dict   String
+    base_form String
+    article   String
+    level     String
 }
 
 model topword_de_example {
-  id      Int    @unique
-  word_id Int
-  example String
+    id      Int    @unique
+    word_id Int
+    example String
 }
 
 model torsten_voice {
-  id     String @unique
-  subset String
-  style  String
-  text   String
-  source String
+    id     String @unique
+    subset String
+    style  String
+    text   String
+    source String
 }
 
 model word_trash {
-  uuid       String   @unique
-  word       String
-  created_by String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    word       String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model word_user {
-  uuid        String   @unique
-  user_id     String
-  word        String
-  familiarity Int
-  language    String
-  created_at  DateTime
-  updated_at  DateTime
-  domain_list String
-  in_dict     Boolean
-  alias       String
-  note        String
+    uuid        String   @unique
+    user_id     String
+    word        String
+    familiarity Int
+    language    String
+    created_at  DateTime
+    updated_at  DateTime
+    domain_list String
+    in_dict     Boolean
+    alias       String
+    note        String
 }
 
 model dict_de_level {
-  id       Int    @unique
-  lemma    String
-  pos      String
-  articles String
-  level    String
-  url      String
+    id       Int    @unique
+    lemma    String
+    pos      String
+    articles String
+    level    String
+    url      String
 }
 
 model dict_en {
-  id        Int    @unique
-  headword  String
-  pos       String
-  level     String
-  inventory String
-  notes     String
+    id        Int    @unique
+    headword  String
+    pos       String
+    level     String
+    inventory String
+    notes     String
 }
 
 model word_example {
-  uuid        String   @unique
-  content     String
-  user_id     String
-  language    String
-  created_at  DateTime
-  updated_at  DateTime
-  context     String
-  familiarity Int
-  source      String
-  note        String
+    uuid        String   @unique
+    content     String
+    user_id     String
+    language    String
+    created_at  DateTime
+    updated_at  DateTime
+    context     String
+    familiarity Int
+    source      String
+    note        String
 }
 
 model word_example_lemma {
-  uuid         String @unique
-  lemma        String
-  example_uuid String
+    uuid         String @unique
+    lemma        String
+    example_uuid String
 }
 
 model word_phrase {
-  uuid        String   @unique
-  user_id     String
-  phrase      String
-  familiarity Int
-  language    String
-  note        String
-  created_at  DateTime
-  updated_at  DateTime
+    uuid        String   @unique
+    user_id     String
+    phrase      String
+    familiarity Int
+    language    String
+    note        String
+    created_at  DateTime
+    updated_at  DateTime
 }
 
 model blog {
-  uuid        String   @unique
-  user_id     String
-  title       String
-  description String
-  content     String
-  created_at  DateTime
-  updated_at  DateTime
+    uuid        String   @unique
+    user_id     String
+    title       String
+    description String
+    content     String
+    created_at  DateTime
+    updated_at  DateTime
 }
 
 model qsa_card {
-  uuid        String   @unique
-  user_id     String
-  question    String
-  suggestion  String
-  answer      String
-  familiarity Int
-  note        String
-  created_at  DateTime
-  updated_at  DateTime
+    uuid        String   @unique
+    user_id     String
+    question    String
+    suggestion  String
+    answer      String
+    familiarity Int
+    note        String
+    created_at  DateTime
+    updated_at  DateTime
 }
 
 model qsa_tag {
-  uuid        String   @unique
-  tag         String
-  description String
-  user_id     String
-  created_at  DateTime
-  updated_at  DateTime
+    uuid        String   @unique
+    tag         String
+    description String
+    user_id     String
+    created_at  DateTime
+    updated_at  DateTime
 }
 
 model qsa_card_tag {
-  uuid       String   @unique
-  card_uuid  String
-  tag_uuid   String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    card_uuid  String
+    tag_uuid   String
+    created_at DateTime
+    updated_at DateTime
 
-  @@unique([card_uuid, tag_uuid])
+    @@unique([card_uuid, tag_uuid])
 }
 
 model qsa_card_review {
-  uuid           String   @unique
-  card_uuid      String
-  user_id        String
-  interval_days  Int
-  ease_factor    Int
-  repetitions    Int
-  familiarity    Int
-  last_review_at DateTime
-  next_review_at DateTime
+    uuid           String   @unique
+    card_uuid      String
+    user_id        String
+    interval_days  Int
+    ease_factor    Int
+    repetitions    Int
+    familiarity    Int
+    last_review_at DateTime
+    next_review_at DateTime
 }
 
 model speak_text {
-  uuid       String   @unique
-  text       String
-  note       String
-  created_by String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    text       String
+    note       String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model speak_media {
-  uuid       String   @unique
-  text_uuid  String
-  location   String
-  original   String
-  created_by String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    text_uuid  String
+    location   String
+    original   String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model speak_review {
-  uuid           String   @unique
-  text_uuid      String
-  user_id        String
-  interval_days  Int
-  ease_factor    Int
-  repetitions    Int
-  familiarity    Int
-  last_review_at DateTime
-  next_review_at DateTime
+    uuid           String   @unique
+    text_uuid      String
+    user_id        String
+    interval_days  Int
+    ease_factor    Int
+    repetitions    Int
+    familiarity    Int
+    last_review_at DateTime
+    next_review_at DateTime
 }
 
 model read_book {
-  uuid       String   @unique
-  name       String
-  user_id    String
-  created_by String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    name       String
+    user_id    String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model read_chapter {
-  uuid       String   @unique
-  book_uuid  String
-  order_num  Int
-  name       String
-  created_by String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    book_uuid  String
+    order_num  Int
+    name       String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model read_sentence {
-  uuid         String   @unique
-  chapter_uuid String
-  order_num    Int
-  original     String
-  recognized   String
-  audio_path   String
-  created_by   String
-  created_at   DateTime
-  updated_at   DateTime
+    uuid         String   @unique
+    chapter_uuid String
+    order_num    Int
+    original     String
+    recognized   String
+    audio_path   String
+    created_by   String
+    created_at   DateTime
+    updated_at   DateTime
 }
 
 model ask_question {
-  uuid       String   @unique
-  user_id    String
-  title      String
-  audio_path String
-  video_path String
-  content    String
-  created_by String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    user_id    String
+    title      String
+    audio_path String
+    video_path String
+    content    String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model ask_answer {
-  uuid          String   @unique
-  user_id       String
-  question_uuid String
-  audio_path    String
-  video_path    String
-  content       String
-  created_by    String
-  created_at    DateTime
-  updated_at    DateTime
+    uuid          String   @unique
+    user_id       String
+    question_uuid String
+    audio_path    String
+    video_path    String
+    content       String
+    created_by    String
+    created_at    DateTime
+    updated_at    DateTime
 }
 
 model voice_access_action {
-  uuid        String   @unique
-  name        String
-  action_type String
-  payload     String
-  created_by  String
-  created_at  DateTime
-  updated_at  DateTime
+    uuid        String   @unique
+    name        String
+    action_type String
+    payload     String
+    created_by  String
+    created_at  DateTime
+    updated_at  DateTime
 }
 
 model voice_access_command {
-  uuid        String   @unique
-  action_uuid String
-  language    String
-  text        String
-  created_by  String
-  created_at  DateTime
-  updated_at  DateTime
+    uuid        String   @unique
+    action_uuid String
+    language    String
+    text        String
+    created_by  String
+    created_at  DateTime
+    updated_at  DateTime
 }
 
 model practice_text {
-  uuid       String   @unique
-  user_id    String
-  text       String
-  created_by String
-  created_at DateTime
-  updated_at DateTime
+    uuid       String   @unique
+    user_id    String
+    text       String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model practice_audio {
-  uuid          String   @unique
-  user_id       String
-  text_uuid     String
-  audio_path    String
-  recognized    String
-  created_by    String
-  created_at    DateTime
-  updated_at    DateTime
+    uuid       String   @unique
+    user_id    String
+    text_uuid  String
+    audio_path String
+    recognized String
+    created_by String
+    created_at DateTime
+    updated_at DateTime
 }
 
 model plan_plan {
-  uuid          String   @unique
-  user_id       String
-  minutes       Int // 15, 30, 60
-  content       String
-  status        String // pending, completed, failed
-  created_by    String
-  created_at    DateTime
-  updated_at    DateTime
+    uuid       String   @unique
+    user_id    String
+    minutes    Int // 15, 30, 60
+    content    String
+    status     String // pending, completed, failed
+    created_by String
+    created_at DateTime
+    updated_at DateTime
+}
+
+model listen_media {
+    uuid       String   @unique
+    user_id    String
+    title      String
+    source     String
+    note       String
+    created_at DateTime
+    updated_at DateTime
+}
+
+model listen_transcript {
+    uuid       String   @unique
+    user_id    String
+    media_uuid String
+    language   String
+    transcript String
+    created_at DateTime
+    updated_at DateTime
+}
+
+model listen_subtitle {
+    uuid       String   @unique
+    user_id    String
+    media_uuid String
+    language   String
+    subtitle   String
+    format     String
+    created_at DateTime
+    updated_at DateTime
+}
+
+model listen_note {
+    uuid       String   @unique
+    user_id    String
+    media_uuid String
+    note       String
+    created_at DateTime
+    updated_at DateTime
+}
+
+model listen_tag {
+    uuid        String   @unique
+    user_id     String
+    tag         String
+    description String
+    created_at  DateTime
+    updated_at  DateTime
+}
+
+model listen_media_tag {
+    uuid       String   @unique
+    media_uuid String
+    tag_uuid   String
+    created_at DateTime
+    updated_at DateTime
 }

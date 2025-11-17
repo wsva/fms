@@ -222,7 +222,7 @@ export default function Item({ uuid, user_id }: Props) {
                 >
                     {stateRecording
                         ? '⏹ Stop Recording'
-                        : stateProcessing ? "Processing" : '🎤 Read a Sentence'}
+                        : stateProcessing ? "Processing" : '🎤 Read the Sentence'}
                 </Button>
             </div>
 

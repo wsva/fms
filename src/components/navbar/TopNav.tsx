@@ -6,7 +6,7 @@ import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react"
 import { Session } from "next-auth"
-import { MdHelpOutline, MdMic, MdMicOff, MdOutlineRedo, MdOutlineSettings, MdOutlineUndo } from "react-icons/md";
+import { MdArrowBack, MdArrowForward, MdHelpOutline, MdMic, MdMicOff, MdOutlineSettings } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
 import { EngineList, toggleRecording } from "@/lib/recording";
@@ -147,21 +147,21 @@ export default function TopNav({ session }: Props) {
                         </Tooltip>
                     </NavbarBrand>
                     <ButtonGroup>
-                        <Button isIconOnly size="sm" className="bg-sand-400 hover:bg-sand-500"
+                        <Button isIconOnly variant="light"
                             onPress={() => {
                                 router.back()
                                 setIsMenuOpen(!isMenuOpen)
                             }}
                         >
-                            <MdOutlineUndo />
+                            <MdArrowBack size={24} />
                         </Button>
-                        <Button isIconOnly size="sm" className="bg-sand-400 hover:bg-sand-500"
+                        <Button isIconOnly variant="light"
                             onPress={() => {
                                 router.forward()
                                 setIsMenuOpen(!isMenuOpen)
                             }}
                         >
-                            <MdOutlineRedo />
+                            <MdArrowForward size={24} />
                         </Button>
                     </ButtonGroup>
                 </NavbarContent>

@@ -1,4 +1,4 @@
-import { qsa_card, qsa_card_review } from "@prisma/client";
+import { qsa_card, qsa_card_review, listen_media, listen_transcript, listen_subtitle, listen_note } from "@prisma/client";
 import { ZodIssue } from "zod";
 
 type ActionResult<T> = {
@@ -29,6 +29,18 @@ type card_ext = Partial<qsa_card> & {
 
 type card_review = qsa_card_review & {
     card: qsa_card;
+}
+
+type listen_media_ext = {
+    media: listen_media;
+    transcript_list?: listen_transcript[];
+    subtitle_list?: listen_subtitle[];
+    note_list?: listen_note[];
+
+    tag_list_added?: string[];
+    tag_list_new?: string[];
+    tag_list_remove?: string[];
+    tag_list_suggestion?: string[];
 }
 
 type read_sentence_browser = {

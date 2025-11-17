@@ -93,7 +93,7 @@ export default function Client({ user_id }: Props) {
                         inputWrapper: "bg-sand-200",
                         input: "text-md",
                     }}
-                    placeholder="Describe your plan..."
+                    placeholder="Do something"
                     value={statePlanContent}
                     onChange={(e) => setStatePlanContent(e.target.value)}
                 />
@@ -101,7 +101,7 @@ export default function Client({ user_id }: Props) {
                     <Select aria-label='time span' className='max-w-sm'
                         selectedKeys={[String(stateTimeSpan)]}
                         onChange={(e) => setStateTimeSpan(parseInt(e.target.value))}
-                        startContent={<div className="whitespace-nowrap font-bold">Time Span</div>}
+                        startContent={<div className="whitespace-nowrap font-bold">for</div>}
                     >
                         <SelectItem key="15" textValue="15 minutes">15 minutes</SelectItem>
                         <SelectItem key="30" textValue="30 minutes">30 minutes</SelectItem>

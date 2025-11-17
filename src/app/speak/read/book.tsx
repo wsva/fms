@@ -86,18 +86,21 @@ export default function Page({ user_id, onSelect }: Props) {
             </div>
             {stateEdit && (
                 <div className='flex flex-col gap-1 w-full'>
-                    <div className='flex flex-row items-center justify-start gap-2'>
-                        <Input label='Name of Book' size='sm'
+                    <div className='flex flex-row items-center justify-start gap-2 mx-0'>
+                        <Input label='Name' labelPlacement='outside-left' size='sm'
+                            classNames={{
+                                "mainWrapper": "w-full",
+                            }}
                             onChange={(e) => setStateName(e.target.value)}
                         />
-                        <Button size="sm" radius="full" isDisabled={stateSaving} onPress={handleAdd}>
+                        <Button size="sm" isDisabled={stateSaving} onPress={handleAdd}>
                             add
                         </Button>
                     </div>
                     {stateData.map((v) => (
                         <div key={v.uuid} className='flex flex-row items-center justify-start px-2 gap-2 bg-sand-300'>
                             {v.name}
-                            <Button size="sm" radius="full" isDisabled={stateSaving} onPress={() => handleDelete(v.uuid)}>
+                            <Button size="sm" isDisabled={stateSaving} onPress={() => handleDelete(v.uuid)}>
                                 delete
                             </Button>
                         </div>

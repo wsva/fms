@@ -27,7 +27,10 @@ export const menuList: MenuGroup[] = [
     {
         name: "Listen",
         items: [
-            { key: "listen_dictation", name: "dictation", description: "dictation", href: "/listen/dictation" },
+            { key: "listen_dictation", name: "Dictation", description: "dictation", href: "/listen/dictation" },
+            { key: "listen_media_add", name: "Add media", description: "add media", href: "/listen/media/add" },
+            { key: "listen_media", name: "View media", description: "view media", href: "/listen/media" },
+            { key: "listen_tag", name: "Manage Tags", description: "manage tags", href: "/listen/tag" },
         ],
     },
     {

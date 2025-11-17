@@ -54,6 +54,7 @@ npm install wav
 npm i --save-dev @types/wav
 
 npm install use-immer
+npm install mime
 `````
 
 # db
@@ -176,6 +177,63 @@ CREATE TABLE plan_plan (
     content       TEXT NOT NULL,
     status        VARCHAR(100) NOT NULL,
     created_by    VARCHAR(100) NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE listen_media (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    user_id       VARCHAR(100) NOT NULL,
+    title         TEXT NOT NULL,
+    source        TEXT NOT NULL,
+    note          TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE listen_transcript (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    user_id       VARCHAR(100) NOT NULL,
+    media_uuid    VARCHAR(100) NOT NULL,
+    language      VARCHAR(10) NOT NULL,
+    transcript    TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE listen_subtitle (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    user_id       VARCHAR(100) NOT NULL,
+    media_uuid    VARCHAR(100) NOT NULL,
+    language      VARCHAR(10) NOT NULL,
+    subtitle      TEXT NOT NULL,
+    format        VARCHAR(10) NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE listen_note (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    user_id       VARCHAR(100) NOT NULL,
+    media_uuid    VARCHAR(100) NOT NULL,
+    note          TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE listen_tag (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    user_id       VARCHAR(100) NOT NULL,
+    tag           TEXT NOT NULL,
+    description   TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE listen_media_tag (
+    uuid          VARCHAR(100) PRIMARY KEY,
+    media_uuid    VARCHAR(100) NOT NULL,
+    tag_uuid      VARCHAR(100) NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

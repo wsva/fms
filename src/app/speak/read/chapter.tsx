@@ -59,6 +59,9 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
+            if (!book_uuid) {
+                return
+            }
             setStateLoading(true)
             const result = await getChapterAll(book_uuid)
             if (result.status === "success") {
@@ -94,20 +97,23 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
             {stateEdit && (
                 <div className='flex flex-col gap-1 w-full'>
                     <div className='flex flex-row items-center justify-start gap-2'>
-                        <Input label='Order' type="number" size='sm' className='w-1/5'
+                        <Input label='Order' labelPlacement='outside-left' type="number" size='sm' className='w-2/5'
                             onChange={(e) => setStateOrder(e.target.value)}
                         />
-                        <Input label='Name of Book' size='sm'
+                        <Input label='Name' labelPlacement='outside-left' size='sm'
+                            classNames={{
+                                "mainWrapper": "w-full",
+                            }}
                             onChange={(e) => setStateName(e.target.value)}
                         />
-                        <Button size="sm" radius="full" isDisabled={stateSaving} onPress={handleAdd}>
+                        <Button size="sm" isDisabled={stateSaving} onPress={handleAdd}>
                             add
                         </Button>
                     </div>
                     {stateData.map((v) => (
                         <div key={v.uuid} className='flex flex-row items-center justify-start gap-2 bg-sand-300'>
                             {v.order_num} - {v.name}
-                            <Button size="sm" radius="full" isDisabled={stateSaving} onPress={() => handleDelete(v.uuid)}>
+                            <Button size="sm" isDisabled={stateSaving} onPress={() => handleDelete(v.uuid)}>
                                 delete
                             </Button>
                         </div>
