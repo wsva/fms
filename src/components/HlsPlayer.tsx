@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Hls from "hls.js";
 
 type Props = {
     src: string;
-    videoRef: React.RefObject<HTMLVideoElement | null>;
+    videoRef?: React.RefObject<HTMLVideoElement | null>;
     subtitleSrc?: string;
     className?: string;
     controls?: boolean;
@@ -15,8 +15,8 @@ type Props = {
 
 export default function Page({
     src,
-    videoRef,
-    subtitleSrc,
+    videoRef = useRef<HTMLVideoElement>(null),
+    subtitleSrc = "",
     className = "",
     controls = true,
     autoPlay = false,

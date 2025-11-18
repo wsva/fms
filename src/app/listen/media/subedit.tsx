@@ -34,7 +34,7 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
     }
 
     return (
-        <div className="flex flex-col items-center justify-center w-full gap-0.5 my-2">
+        <div className="flex flex-col items-center justify-center w-full gap-0.5 my-2 px-2">
             <div className="flex flex-row items-center justify-start w-full gap-1">
                 <Input aria-label="start time" className="w-fit" size="sm"
                     color={stateStart === "00:00:00.000" || !validateVttTime(stateStart) ? "danger" : "default"}

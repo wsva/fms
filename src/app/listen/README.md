@@ -22,3 +22,8 @@ https://mediathekviewweb.de/
 
 media player 将 tab 放在 音频右侧
 筛选有问题的字幕，存在时间为 0 的条目，支持手动修改
+
+# media
+media及关联的transcript, subtitle, note 如何保存为自己的？
+
+只要不编辑，就还是别人的，不复制

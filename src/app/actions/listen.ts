@@ -7,7 +7,6 @@ import { listen_media, listen_media_tag, listen_note, listen_subtitle, listen_ta
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {
-        console.log("media uuid:", uuid)
         const resultMedia = await prisma.listen_media.findUnique({
             where: { uuid }
         })
@@ -23,12 +22,19 @@ export async function getMedia(uuid: string): Promise<ActionResult<listen_media_
         const resultNote = await prisma.listen_note.findMany({
             where: { media_uuid: resultMedia.uuid }
         })
+        const resultTag = await prisma.listen_media_tag.findMany({
+            where: { media_uuid: resultMedia.uuid }
+        })
         return {
             status: "success", data: {
                 media: resultMedia,
                 transcript_list: resultTranscript,
                 subtitle_list: resultSubtitle,
                 note_list: resultNote,
+                tag_list_added: resultTag.map((v) => v.tag_uuid),
+                tag_list_selected: resultTag.map((v) => v.tag_uuid),
+                tag_list_new: [],
+                tag_list_remove: [],
             }
         }
     } catch (error) {
