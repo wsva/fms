@@ -2,22 +2,23 @@
 
 import { buildVTT, Cue, parseSRT, parseVTT } from "@/lib/listen/subtitle";
 import { Button, Select, SelectItem, Tab, Tabs } from "@heroui/react";
-import { listen_subtitle, listen_transcript } from "@prisma/client";
+import { listen_note, listen_subtitle, listen_transcript } from "@prisma/client";
 import React, { useEffect, useRef, useState } from "react";
 import Dictation from "./dictation";
 import Subedit from "./subedit";
 import { saveSubtitle } from "@/app/actions/listen";
 import { toast } from "react-toastify";
 import { useImmer } from "use-immer";
-import { isAudio } from "@/lib/listen/utils";
+import HlsPlayer from "@/components/HlsPlayer";
 
 type Props = {
     src: string; // audio/video url
     subtitle_list: listen_subtitle[];
     transcript_list: listen_transcript[];
+    note_list: listen_note[];
 }
 
-export default function Page({ src, subtitle_list, transcript_list }: Props) {
+export default function Page({ src, subtitle_list, transcript_list, note_list }: Props) {
     const [stateSubtitle, setStateSubtitle] = useState<listen_subtitle>();
     const [stateCues, updateStateCues] = useImmer<Cue[]>([]);
     const [stateActiveCue, setStateActiveCue] = useState<string>("");
@@ -26,7 +27,6 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
     const [stateEditSubtitle, setStateEditSubtitle] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
 
-    const audioRef = useRef<HTMLAudioElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     const formatTime = (ms: number): string => {
@@ -93,17 +93,11 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
     }, [updateStateCues, stateSubtitle]);
 
     useEffect(() => {
-        const audioE = audioRef.current;
-        const videoE = videoRef.current;
+        const videoEl = videoRef.current;
+        if (!videoEl) return
+
         const onTimeUpdate = () => {
-            let currentTime = 0;
-            if (!!audioE) {
-                currentTime = audioE.currentTime;
-            } else if (!!videoE) {
-                currentTime = videoE.currentTime;
-            } else {
-                return
-            }
+            const currentTime = videoEl.currentTime;
             const currentCue = stateCues.find(
                 (cue) => currentTime * 1000 >= cue.start_ms && currentTime * 1000 <= cue.end_ms
             );
@@ -118,41 +112,29 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
             }
         };
 
-        if (!!audioE) {
-            audioE.addEventListener("timeupdate", onTimeUpdate);
-        }
-        if (!!videoE) {
-            videoE.addEventListener("timeupdate", onTimeUpdate);
-        }
+        videoEl.addEventListener("timeupdate", onTimeUpdate);
 
         return () => {
-            audioE?.removeEventListener("timeupdate", onTimeUpdate);
-            videoE?.removeEventListener("timeupdate", onTimeUpdate);
+            videoEl.removeEventListener("timeupdate", onTimeUpdate);
         };
     }, [stateSubtitle, stateCues, updateStateCues]);
 
     return (
-        <div className="flex flex-col items-center justify-center bg-sand-300 rounded-lg py-2 w-full mb-96">
+        <div className="flex flex-col items-center justify-center bg-sand-300 rounded-lg py-2 w-full">
             {!!src && (
-                isAudio(src) ? (
-                    <audio controls ref={audioRef} className="w-full" src={src} preload="auto" />
-                ) : (
-                    <div className='flex flex-row items-end justify-end fixed bottom-0 end-0 p-4 z-50'>
-                        <video controls ref={videoRef} preload="auto" className='h-[30vh] w-auto max-w-full'>
-                            <source src={src} />
-                            <track
-                                src={stateDictation ? "" : `/api/listen/subtitle/${stateSubtitle?.uuid}`}
-                                kind="subtitles"
-                                default
-                            />
-                        </video>
-                    </div>
-                )
+                <div className='flex flex-row items-end justify-end fixed bottom-0 end-0 p-4 z-50'>
+                    <HlsPlayer
+                        src={src}
+                        videoRef={videoRef}
+                        subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
+                        className='h-[30vh] w-auto max-w-full'
+                    />
+                </div>
             )}
 
             {!!stateCues && stateCues.length > 0 && (
-                <div className="flex justify-center min-h-[3rem] w-full px-2">
-                    <div className="text-xl font-bold text-gray-800 select-none">
+                <div className="flex flex-col lg:flex-row items-center justify-start min-h-[3rem] w-full px-2">
+                    <div className="text-xl font-bold text-gray-800 select-none text-balance hyphens-auto w-fit">
                         {stateDictation ? "" : stateActiveCue}
                     </div>
                 </div>
@@ -191,7 +173,7 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
 
                         {stateEditSubtitle && !!stateSubtitle ? (
                             <Subedit
-                                media={audioRef.current || videoRef.current}
+                                media={videoRef.current}
                                 stateCues={stateCues}
                                 updateStateCues={updateStateCues}
                             />
@@ -211,7 +193,7 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
                     <Tab key="dictation" title="Dictation" className="w-full">
                         <div className="flex flex-col mt-4 text-lg bg-sand-300 rounded-lg p-2 w-full">
                             {stateCues.map((cue, i) => (
-                                <Dictation key={i} cue={cue} media={audioRef.current || videoRef.current} />
+                                <Dictation key={i} cue={cue} media={videoRef.current} />
                             ))}
                         </div>
                     </Tab>
@@ -237,6 +219,18 @@ export default function Page({ src, subtitle_list, transcript_list }: Props) {
                                 {stateTranscript.transcript}
                             </div>
                         )}
+                    </Tab>
+                )}
+
+                {note_list.length > 0 && (
+                    <Tab key="note" title="note" className="w-full">
+                        <div className='flex flex-col items-center justify-center w-full gap-4 my-2'>
+                            {note_list.map((v, i) => (
+                                <div key={i} className='w-full whitespace-pre-wrap bg-sand-200 p-2 text-xl rounded-md'>
+                                    {v.note}
+                                </div>
+                            ))}
+                        </div>
                     </Tab>
                 )}
             </Tabs>

@@ -2,27 +2,76 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import mime from "mime";
-import { readFile } from "fs/promises";
 import { Readable } from "stream";
+import { readFile } from "fs/promises";
 
-export async function GET(request: NextRequest, context: { params: Promise<{ filename: string[] }> }) {
-    const p = await context.params;
+export async function GET(
+    request: NextRequest,
+    context: { params: Promise<{ filename: string[] }> }
+) {
+    const { filename } = await context.params;
 
     try {
-        const filePath = path.join("/fms_data", ...p.filename);
+        // ------------------------
+        // 1. 解析路径（防止目录穿越）
+        // ------------------------
+        const safePath = filename.filter((seg) => !seg.includes("..")).join("/");
+        const filePath = path.join("/fms_data", safePath);
+
+        console.log(request)
+
+        // ------------------------
+        // 2. 如果是 HLS 请求，且存在 HLS 内容 → 返回 HLS 内容
+        // ------------------------
+        if (!!request.headers.get("x-hls-request")) {
+            // 已经指定 hls 路径，不必再校验路径是否存在
+            if (safePath.startsWith("hls/")) {
+                if (!fs.existsSync(filePath)) {
+                    return NextResponse.json({ error: "HLS manifest missing" }, { status: 404 });
+                }
+
+                const mimeType = mime.getType(filePath) || "application/vnd.apple.mpegURL";
+
+                return new NextResponse(fs.readFileSync(filePath), {
+                    headers: {
+                        "Content-Type": mimeType,
+                        "Access-Control-Allow-Origin": "*",
+                    },
+                });
+            }
+
+            // 未指定 hls 路径，则只有当 hls 存在时，才返回 hls 内容
+            const hlsPath = path.join("/fms_data/hls", safePath);
+            if (fs.existsSync(hlsPath)) {
+                const host = request.headers.get("host"); // client看到的域名
+                const protocol = request.headers.get("x-forwarded-proto") || "http"; // 支持代理传递协议
+                const redirectUrl = `${protocol}://${host}/api/data/hls/${safePath}/index.m3u8`;
+                return NextResponse.redirect(redirectUrl, 307); // 307 保留原请求方法
+            }
+        }
+
+        // ------------------------
+        // 3. 如果没有 HLS → 返回原始文件（支持 Range）
+        // ------------------------
+        if (!fs.existsSync(filePath)) {
+            return NextResponse.json({ error: "File not found" }, { status: 404 });
+        }
+
         const stat = fs.statSync(filePath);
         const totalSize = stat.size;
-        const contentType = mime.getType(filePath) || "application/octet-stream";
 
         const range = request.headers.get("range");
+        const contentType = mime.getType(filePath) || "application/octet-stream";
 
-        // --- Case 1: 带 Range 请求（推荐的视频按需加载方式） ---
+        // ------------------------
+        // 4. 处理 Range 请求（视频/音频播放必要）
+        // ------------------------
         if (range) {
-            const match = range.match(/bytes=(\d+)-(\d*)/);
-            const start = parseInt(match![1], 10);
-            const end = match![2] ? parseInt(match![2], 10) : totalSize - 1;
-            const chunkSize = end - start + 1;
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
 
+            const chunkSize = end - start + 1;
             const fileStream = fs.createReadStream(filePath, { start, end });
             const webStream = Readable.toWeb(fileStream) as ReadableStream<Uint8Array>;
 
@@ -30,11 +79,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ fil
                 status: 206,
                 headers: {
                     "Content-Type": contentType,
-                    "Content-Length": chunkSize.toString(),
+                    "Content-Length": String(chunkSize),
                     "Content-Range": `bytes ${start}-${end}/${totalSize}`,
                     "Accept-Ranges": "bytes",
-
-                    // CORS
                     "Access-Control-Allow-Origin": "*",
                     "Access-Control-Allow-Methods": "GET, OPTIONS",
                     "Access-Control-Allow-Headers": "*",
@@ -42,23 +89,22 @@ export async function GET(request: NextRequest, context: { params: Promise<{ fil
             });
         }
 
-        // --- Case 2: 无 Range 请求（浏览器第一次访问） ---
+        // ------------------------
+        // 5. 无 Range → 直接返回整个文件
+        // ------------------------
         const fileBuffer = await readFile(filePath);
-
         return new NextResponse(new Uint8Array(fileBuffer), {
             headers: {
                 "Content-Type": contentType,
-                "Content-Length": totalSize.toString(),
+                "Content-Length": String(totalSize),
                 "Accept-Ranges": "bytes",
-
-                // CORS
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "GET, OPTIONS",
                 "Access-Control-Allow-Headers": "*",
             },
         });
     } catch (err) {
-        console.log(err);
-        return NextResponse.json({ error: "File not found" }, { status: 404 });
+        console.error("File server error:", err);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
 }

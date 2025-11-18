@@ -55,6 +55,7 @@ npm i --save-dev @types/wav
 
 npm install use-immer
 npm install mime
+npm install hls.js
 `````
 
 # db

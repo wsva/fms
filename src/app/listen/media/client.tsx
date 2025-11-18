@@ -112,15 +112,8 @@ export default function Page({ user_id }: Props) {
                         src={stateData.media.source}
                         subtitle_list={stateData.subtitle_list || []}
                         transcript_list={stateData.transcript_list || []}
+                        note_list={stateData.note_list || []}
                     />
-
-                    {!!stateData.note_list && (
-                        stateData.note_list.map((v, i) => (
-                            <div key={i} className='w-full whitespace-pre-wrap bg-sand-300 p-2 text-xl'>
-                                {v.note}
-                            </div>
-                        ))
-                    )}
                 </div>
             )}
         </div>
