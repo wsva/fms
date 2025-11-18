@@ -43,11 +43,8 @@ export async function GET(
             // 未指定 hls 路径，则只有当 hls 存在时，才返回 hls 内容
             const hlsPath = path.join("/fms_data/hls", safePath);
             if (fs.existsSync(hlsPath)) {
-                console.log("====================================================")
-                console.log(request)
-                console.log("====================================================")
                 const host = request.headers.get("host"); // client看到的域名
-                const protocol = request.headers.get("x-forwarded-proto") || "https"; // 支持代理传递协议
+                const protocol = host?.includes("localhost") ? "http" : "https";
                 const redirectUrl = `${protocol}://${host}/api/data/hls/${safePath}/index.m3u8`;
                 return NextResponse.redirect(redirectUrl, 307); // 307 保留原请求方法
             }
