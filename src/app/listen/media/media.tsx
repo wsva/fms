@@ -10,6 +10,7 @@ import { saveSubtitle } from "@/app/actions/listen";
 import { toast } from "react-toastify";
 import { useImmer } from "use-immer";
 import HlsPlayer from "@/components/HlsPlayer";
+import { MdMoveDown, MdMoveUp } from "react-icons/md";
 
 type Props = {
     src: string; // audio/video url
@@ -26,6 +27,7 @@ export default function Page({ src, subtitle_list, transcript_list, note_list }:
     const [stateDictation, setStateDictation] = useState<boolean>(false);
     const [stateEditSubtitle, setStateEditSubtitle] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
+    const [stateVideoPosition, setStateVideoPosition] = useState<string>("bottom");
 
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -122,7 +124,12 @@ export default function Page({ src, subtitle_list, transcript_list, note_list }:
     return (
         <div className="flex flex-col items-center justify-center bg-sand-300 rounded-lg py-2 w-full">
             {!!src && (
-                <div className='flex flex-row items-end justify-end fixed bottom-0 end-0 p-4 z-50'>
+                <div className={`flex flex-row items-end justify-end fixed ${stateVideoPosition}-0 end-0 p-4 z-50`}>
+                    <Button isIconOnly variant='light' tabIndex={-1} size="sm"
+                        onPress={() => setStateVideoPosition(stateVideoPosition === "bottom" ? "top" : "bottom")}
+                    >
+                        {stateVideoPosition === "bottom" ? <MdMoveUp size={24} /> : <MdMoveDown size={24} />}
+                    </Button>
                     <HlsPlayer
                         src={src}
                         videoRef={videoRef}
