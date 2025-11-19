@@ -23,31 +23,30 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
     const [stateEdit, setStateEdit] = useState<boolean>(false);
     const [stateMode, setStateMode] = useState<"edit" | "correct">("edit");
 
-    const loadCues = (subtitle: listen_subtitle) => {
-        let cue_list: Cue[] = [];
-        switch (subtitle.format) {
-            case "vtt":
-                cue_list = parseVTT(subtitle.subtitle, false);
-                break;
-            case "srt":
-                cue_list = parseSRT(subtitle.subtitle, false);
-                break;
-            default:
-                toast.error("invalid subtitle format");
-        }
-        updateStateCues((draft) => {
-            draft.length = 0;
-            let index = 1;
-            for (const item of cue_list) {
-                draft.push({ ...item, index: index });
-                index++;
-            }
-        });
-    };
-
     useEffect(() => {
-        loadCues(item);
-    }, [item]);
+        const loadCues = (subtitle: listen_subtitle) => {
+            let cue_list: Cue[] = [];
+            switch (subtitle.format) {
+                case "vtt":
+                    cue_list = parseVTT(subtitle.subtitle, false);
+                    break;
+                case "srt":
+                    cue_list = parseSRT(subtitle.subtitle, false);
+                    break;
+                default:
+                    toast.error("invalid subtitle format");
+            }
+            updateStateCues((draft) => {
+                draft.length = 0;
+                let index = 1;
+                for (const item of cue_list) {
+                    draft.push({ ...item, index: index });
+                    index++;
+                }
+            });
+        };
+        loadCues(stateSubtitle);
+    }, [stateSubtitle]);
 
     useEffect(() => {
         setStateSubtitle(current => {
@@ -141,7 +140,6 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
                                     subtitle: e.target.value,
                                 };
                                 setStateSubtitle(new_subtitle);
-                                loadCues(new_subtitle);
                             }}
                         />
                     )}

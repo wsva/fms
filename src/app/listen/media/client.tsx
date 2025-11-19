@@ -111,7 +111,7 @@ export default function Page({ user_id, uuid }: Props) {
             setStateLoading(false);
         }
         loadMedia();
-    }, [stateMediaUUID]);
+    }, [user_id, stateMediaUUID]);
 
     useEffect(() => {
         const loadTagList = async () => {
@@ -158,7 +158,7 @@ export default function Page({ user_id, uuid }: Props) {
             setStateLoading(false);
         }
         loadMediaList();
-    }, [stateTagUUID]);
+    }, [user_id, stateTagUUID]);
 
     useEffect(() => {
         setStateSubtitle(undefined)
