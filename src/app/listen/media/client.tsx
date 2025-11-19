@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Button, Checkbox, CheckboxGroup, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs, Textarea } from "@heroui/react"
+import { Button, Checkbox, CheckboxGroup, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_tag, listen_transcript } from '@prisma/client'
 import { toast } from 'react-toastify'
 import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getTagAll, removeMedia, saveMedia, saveSubtitle } from '@/app/actions/listen'
@@ -145,29 +145,6 @@ export default function Page({ user_id, uuid }: Props) {
         });
     }
 
-    const formatTime = (ms: number): string => {
-        const min = Math.floor(ms / 60000).toString().padStart(2, "0")
-        const sec = Math.floor((ms % 60000) / 1000).toString().padStart(2, "0")
-        return `${min}:${sec}`
-    }
-
-    const handleSaveSubtitle = async () => {
-        if (!stateSubtitle) return
-
-        setStateSaving(true)
-
-        const content = buildVTT(stateCues)
-        const subtitle_new = { ...stateSubtitle, subtitle: content }
-        const result = await saveSubtitle(subtitle_new)
-        if (result.status === "success") {
-            setStateSubtitle(subtitle_new)
-            toast.success("save success")
-        } else {
-            toast.error("save failed")
-        }
-        setStateSaving(false)
-    }
-
     const handleSave = async () => {
         if (!stateMedia) return
 
@@ -201,19 +178,19 @@ export default function Page({ user_id, uuid }: Props) {
 
     useEffect(() => {
         loadMedia()
-    }, [stateMediaUUID])
+    }, [stateMediaUUID, loadMedia])
 
     useEffect(() => {
         loadTagList()
-    }, [user_id])
+    }, [user_id, loadTagList])
 
     useEffect(() => {
         updateMediaTags()
-    }, [stateTagList])
+    }, [stateTagList, updateMediaTags])
 
     useEffect(() => {
         loadMediaList()
-    }, [stateTagUUID])
+    }, [stateTagUUID, loadMediaList])
 
     useEffect(() => {
         setStateSubtitle(undefined)
@@ -228,11 +205,11 @@ export default function Page({ user_id, uuid }: Props) {
                 }
             }
         }
-    }, [stateMedia])
+    }, [stateMedia, user_id])
 
     useEffect(() => {
         loadCues()
-    }, [updateStateCues, stateSubtitle])
+    }, [updateStateCues, stateSubtitle, loadCues])
 
     useEffect(() => {
         const videoEl = videoRef.current
@@ -641,7 +618,7 @@ export default function Page({ user_id, uuid }: Props) {
                                     setStateMedia({
                                         ...stateMedia,
                                         note_list: stateMedia.note_list.map((v) => {
-                                            return v.uuid === v.uuid ? { ...v, need_delete: true } : v;
+                                            return v.uuid === item.uuid ? { ...v, need_delete: true } : v;
                                         }),
                                     })
                                 }}

@@ -7,7 +7,6 @@ import { useImmer } from "use-immer";
 import { listen_subtitle } from "@prisma/client";
 import { toast } from "react-toastify";
 import { languageOptions } from "@/lib/language";
-import { getUUID } from "@/lib/utils";
 import SubtitleCorrect from './subtitle_correct'
 
 type Props = {
@@ -48,13 +47,15 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
 
     useEffect(() => {
         loadCues(item);
-    }, [item]);
+    }, [item, loadCues]);
 
     useEffect(() => {
-        setStateSubtitle({
-            ...stateSubtitle,
-            subtitle: buildVTT(stateCues),
-            format: "vtt",
+        setStateSubtitle(current => {
+            return {
+                ...current,
+                subtitle: buildVTT(stateCues),
+                format: "vtt",
+            }
         });
     }, [stateCues]);
 
