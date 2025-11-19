@@ -5,7 +5,7 @@ import Hls from "hls.js";
 
 type Props = {
     src: string;
-    videoRef?: React.RefObject<HTMLVideoElement | null>;
+    videoRef: React.RefObject<HTMLVideoElement | null>;
     subtitleSrc?: string;
     className?: string;
     controls?: boolean;
@@ -15,7 +15,7 @@ type Props = {
 
 export default function Page({
     src,
-    videoRef = useRef<HTMLVideoElement>(null),
+    videoRef,
     subtitleSrc = "",
     className = "",
     controls = true,

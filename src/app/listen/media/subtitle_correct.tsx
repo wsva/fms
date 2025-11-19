@@ -34,10 +34,13 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
     }
 
     return (
-        <div className="flex flex-col items-center justify-center w-full gap-0.5 my-2 px-2">
+        <div className="flex flex-col items-center justify-center w-full gap-0.5 my-2">
             <div className="flex flex-row items-center justify-start w-full gap-1">
                 <Input aria-label="start time" className="w-fit" size="sm"
                     color={stateStart === "00:00:00.000" || !validateVttTime(stateStart) ? "danger" : "default"}
+                    classNames={{
+                        "inputWrapper": "bg-sand-400",
+                    }}
                     value={stateStart}
                     onChange={(e) => {
                         const timeStr = e.target.value
@@ -50,6 +53,9 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
                 <div>{"-->"}</div>
                 <Input aria-label="end time" className="w-fit" size="sm"
                     color={stateEnd === "00:00:00.000" || !validateVttTime(stateEnd) ? "danger" : "default"}
+                    classNames={{
+                        "inputWrapper": "bg-sand-400",
+                    }}
                     value={stateEnd}
                     onChange={(e) => {
                         const timeStr = e.target.value
@@ -103,7 +109,10 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
                 </Button>
             </div>
             <Textarea aria-label="text"
-                classNames={{ input: 'text-xl leading-tight font-roboto whitespace-pre-wrap' }}
+                classNames={{
+                    "input": 'text-xl leading-tight font-roboto whitespace-pre-wrap',
+                    "inputWrapper": "bg-sand-400",
+                }}
                 value={cue.text.join("\n")}
                 minRows={1}
                 onChange={(e) => {
@@ -115,13 +124,13 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
 }
 
 type Props = {
-    media: HTMLMediaElement | null;
-    stateCues: Cue[]
+    stateCues: Cue[];
     updateStateCues: Updater<Cue[]>;
+    media: HTMLMediaElement | null;
 }
 
-export default function Page({ media, stateCues, updateStateCues }: Props) {
-    const handleUpdate = (new_item: Cue) => {
+export default function Page({ stateCues, updateStateCues, media }: Props) {
+    const handleUpdateCue = (new_item: Cue) => {
         updateStateCues(draft => {
             const index = draft.findIndex(i => i.index === new_item.index);
             if (index !== -1) {
@@ -177,7 +186,7 @@ export default function Page({ media, stateCues, updateStateCues }: Props) {
                             key={`${v.start_ms}-${v.end_ms}-${i}`}
                             cue={v}
                             media={media}
-                            handleUpdate={handleUpdate}
+                            handleUpdate={handleUpdateCue}
                             handleDelete={handleDelete}
                             handleInsert={handleInsert}
                         />
