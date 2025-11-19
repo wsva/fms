@@ -130,8 +130,6 @@ export default function Page({ user_id, uuid }: Props) {
 
     useEffect(() => {
         const updateMediaTags = async () => {
-            if (!stateMedia || stateTagList.length === 0) return
-
             const tag_list = stateTagList.map((v) => v.uuid);
             setStateMedia(current => {
                 return {
