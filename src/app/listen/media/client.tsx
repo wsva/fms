@@ -9,7 +9,7 @@ import { listen_media_ext } from '@/lib/types'
 import { getUUID, toExactType } from '@/lib/utils'
 import { MdFileUpload, MdMoveDown, MdMoveUp } from 'react-icons/md'
 import HlsPlayer from '@/components/HlsPlayer'
-import { buildVTT, Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
+import { Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
 import { useImmer } from 'use-immer'
 import Dictation from './dictation'
 import Subtitle from './subtitle'
@@ -62,89 +62,6 @@ export default function Page({ user_id, uuid }: Props) {
 
     const videoRef = useRef<HTMLVideoElement>(null)
 
-    const loadMedia = async () => {
-        if (!stateMediaUUID) {
-            setStateMedia(newMedia(user_id));
-            return
-        }
-
-        setStateLoading(true)
-        const result = await getMedia(stateMediaUUID)
-        if (result.status === 'success') {
-            setStateMedia(result.data)
-        } else {
-            console.log(result.error)
-            toast.error("load data error")
-        }
-        setStateLoading(false)
-    }
-
-    const loadTagList = async () => {
-        setStateLoading(true)
-        const result = await getTagAll(user_id);
-        if (result.status === "success") {
-            setStateTagList(result.data)
-        } else {
-            console.log(result.error)
-            toast.error("load data error")
-        }
-        setStateLoading(false)
-    }
-
-    const updateMediaTags = async () => {
-        if (!stateMedia || stateTagList.length === 0) return
-
-        const tag_list = stateTagList.map((v) => v.uuid)
-        setStateMedia({
-            ...stateMedia,
-            tag_list_selected: stateMedia.tag_list_added.filter((v) => tag_list.includes(v)),
-        })
-    }
-
-    const loadMediaList = async () => {
-        if (!stateTagUUID) {
-            return
-        }
-        setStateLoading(true)
-        const result = stateTagUUID === "invalid-subtitle"
-            ? await getMediaByInvalidSubtitle(user_id)
-            : await getMediaByTag(user_id, stateTagUUID)
-        if (result.status === 'success') {
-            setStateMediaList(result.data)
-        } else {
-            toast.error(result.error as string)
-        }
-        setStateLoading(false)
-    }
-
-    const loadCues = () => {
-        if (!stateSubtitle) {
-            updateStateCues((draft) => {
-                draft.length = 0;
-            });
-            return
-        }
-        let cue_list: Cue[] = [];
-        switch (stateSubtitle.format) {
-            case "vtt":
-                cue_list = parseVTT(stateSubtitle.subtitle, false)
-                break
-            case "srt":
-                cue_list = parseSRT(stateSubtitle.subtitle, false)
-                break
-            default:
-                toast.error("invalid subtitle format")
-        }
-        updateStateCues((draft) => {
-            draft.length = 0;
-            let index = 1
-            for (const item of cue_list) {
-                draft.push({ ...item, index: index });
-                index++
-            }
-        });
-    }
-
     const handleSave = async () => {
         if (!stateMedia) return
 
@@ -177,20 +94,71 @@ export default function Page({ user_id, uuid }: Props) {
     }
 
     useEffect(() => {
-        loadMedia()
-    }, [stateMediaUUID, loadMedia])
+        const loadMedia = async () => {
+            if (!stateMediaUUID) {
+                setStateMedia(newMedia(user_id));
+                return
+            }
+
+            setStateLoading(true);
+            const result = await getMedia(stateMediaUUID);
+            if (result.status === 'success') {
+                setStateMedia(result.data);
+            } else {
+                console.log(result.error);
+                toast.error("load data error");
+            }
+            setStateLoading(false);
+        }
+        loadMedia();
+    }, [stateMediaUUID]);
 
     useEffect(() => {
-        loadTagList()
-    }, [user_id, loadTagList])
+        const loadTagList = async () => {
+            setStateLoading(true);
+            const result = await getTagAll(user_id);
+            if (result.status === "success") {
+                setStateTagList(result.data);
+            } else {
+                console.log(result.error);
+                toast.error("load data error");
+            }
+            setStateLoading(false);
+        }
+        loadTagList();
+    }, [user_id]);
 
     useEffect(() => {
-        updateMediaTags()
-    }, [stateTagList, updateMediaTags])
+        const updateMediaTags = async () => {
+            if (!stateMedia || stateTagList.length === 0) return
+
+            const tag_list = stateTagList.map((v) => v.uuid);
+            setStateMedia({
+                ...stateMedia,
+                tag_list_selected: stateMedia.tag_list_added.filter((v) => tag_list.includes(v)),
+            });
+        }
+        updateMediaTags();
+    }, [stateTagList]);
 
     useEffect(() => {
-        loadMediaList()
-    }, [stateTagUUID, loadMediaList])
+        const loadMediaList = async () => {
+            if (!stateTagUUID) {
+                return
+            }
+            setStateLoading(true);
+            const result = stateTagUUID === "invalid-subtitle"
+                ? await getMediaByInvalidSubtitle(user_id)
+                : await getMediaByTag(user_id, stateTagUUID);
+            if (result.status === 'success') {
+                setStateMediaList(result.data);
+            } else {
+                toast.error(result.error as string);
+            }
+            setStateLoading(false);
+        }
+        loadMediaList();
+    }, [stateTagUUID]);
 
     useEffect(() => {
         setStateSubtitle(undefined)
@@ -205,11 +173,38 @@ export default function Page({ user_id, uuid }: Props) {
                 }
             }
         }
-    }, [stateMedia, user_id])
+    }, [stateMedia, user_id]);
 
     useEffect(() => {
-        loadCues()
-    }, [updateStateCues, stateSubtitle, loadCues])
+        const loadCues = () => {
+            if (!stateSubtitle) {
+                updateStateCues((draft) => {
+                    draft.length = 0;
+                });
+                return
+            }
+            let cue_list: Cue[] = [];
+            switch (stateSubtitle.format) {
+                case "vtt":
+                    cue_list = parseVTT(stateSubtitle.subtitle, false);
+                    break
+                case "srt":
+                    cue_list = parseSRT(stateSubtitle.subtitle, false);
+                    break
+                default:
+                    toast.error("invalid subtitle format");
+            }
+            updateStateCues((draft) => {
+                draft.length = 0;
+                let index = 1
+                for (const item of cue_list) {
+                    draft.push({ ...item, index: index });
+                    index++
+                }
+            });
+        }
+        loadCues();
+    }, [updateStateCues, stateSubtitle]);
 
     useEffect(() => {
         const videoEl = videoRef.current

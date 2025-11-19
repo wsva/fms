@@ -47,7 +47,7 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
 
     useEffect(() => {
         loadCues(item);
-    }, [item, loadCues]);
+    }, [item]);
 
     useEffect(() => {
         setStateSubtitle(current => {
