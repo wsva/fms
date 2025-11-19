@@ -133,9 +133,11 @@ export default function Page({ user_id, uuid }: Props) {
             if (!stateMedia || stateTagList.length === 0) return
 
             const tag_list = stateTagList.map((v) => v.uuid);
-            setStateMedia({
-                ...stateMedia,
-                tag_list_selected: stateMedia.tag_list_added.filter((v) => tag_list.includes(v)),
+            setStateMedia(current => {
+                return {
+                    ...current,
+                    tag_list_selected: current.tag_list_added.filter((v) => tag_list.includes(v)),
+                }
             });
         }
         updateMediaTags();
