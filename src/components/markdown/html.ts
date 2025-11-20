@@ -42,7 +42,30 @@ export function toHTML(content: string) {
     const lines = content.replace(/\r/g, "").split("\n");
     const regHead = /^(#+)\s+(.*)$/;
 
+    let inCodeBlock = false;
+
     for (const line of lines) {
+
+        // ----------------------------------------
+        // 1. 检测代码块 ``` 开始 / 结束
+        // ----------------------------------------
+        if (line.trim().startsWith("`````")) {
+            inCodeBlock = !inCodeBlock;  // 进入或退出代码块
+            buffer += line + "\n";
+            continue;
+        }
+
+        // ----------------------------------------
+        // 2. 若在代码块中 → 不解析 heading，直接写入 buffer
+        // ----------------------------------------
+        if (inCodeBlock) {
+            buffer += line + "\n";
+            continue;
+        }
+
+        // ----------------------------------------
+        // 3. 处理 Markdown heading
+        // ----------------------------------------
         if (regHead.test(line)) {
             // flush previous paragraph
             if (buffer !== "") {
@@ -68,7 +91,7 @@ export function toHTML(content: string) {
 
     if (buffer !== "") body.push(marked.parse(buffer) as string);
 
-    // optional processors like Go version
+    // 清理空 thead
     body = tableRemoveEmptyThead(body);
 
     return {

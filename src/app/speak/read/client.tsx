@@ -11,7 +11,7 @@ import Book from './book';
 import { getSentenceAll, removeSentence, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
-import { MdPlayCircle } from 'react-icons/md';
+import { MdChromeReaderMode, MdPlayCircle } from 'react-icons/md';
 import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store";
 import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache";
 import { highlightDifferences } from '@/app/speak/lcs';
@@ -32,6 +32,7 @@ export default function Page({ email }: Props) {
     const [stateNeedSave, setStateNeedSave] = useState<boolean>(false);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
+    const [stateReaderMode, setStateReaderMode] = useState<boolean>(false);
 
     const reversedList = useMemo(() => stateData.slice().reverse(), [stateData]);
 
@@ -328,6 +329,14 @@ export default function Page({ email }: Props) {
 
     return (
         <div>
+            <div className='flex flex-row items-center justify-end w-full gap-4'>
+                <Button isIconOnly variant="light"
+                    onPress={() => setStateReaderMode(!stateReaderMode)}
+                >
+                    <MdChromeReaderMode size={24} />
+                </Button>
+            </div>
+
             <div className='flex flex-col md:flex-row gap-4 my-4'>
                 <Book user_id={email} onSelect={async (book_uuid: string) => {
                     setStateBook(book_uuid)

@@ -97,13 +97,15 @@ export default function Page({ item, user_id, handleDelete, handleUpdate }: Prop
                         <MdCelebration className='text-blue-700' size={24} />
                     </Button>
                 </Tooltip>
-                <Tooltip placement='bottom' content="delete">
-                    <Button isIconOnly size="sm" variant='light'
-                        onPress={async () => { await handleDelete(item) }}
-                    >
-                        <MdDelete className='text-red-400' size={24} />
-                    </Button>
-                </Tooltip>
+                {item.favorite !== "Y" && (
+                    <Tooltip placement='bottom' content="delete">
+                        <Button isIconOnly size="sm" variant='light'
+                            onPress={async () => { await handleDelete(item) }}
+                        >
+                            <MdDelete className='text-red-400' size={24} />
+                        </Button>
+                    </Tooltip>
+                )}
             </div>
 
             {stateData.length > 0 && (
