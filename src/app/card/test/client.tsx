@@ -2,7 +2,6 @@
 
 import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress, Input, addToast } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
-import { getHTML } from '@/lib/utils';
 import { BiCaretDown } from 'react-icons/bi';
 import { card_review } from '@/lib/types';
 import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
@@ -10,6 +9,7 @@ import { FamiliarityList } from '@/lib/card';
 import '@/lib/Markdown.css';
 import { searchExample } from "@/app/actions/word";
 import { qsa_tag } from "@prisma/client";
+import Markdown2Html from '@/components/markdown/markdown';
 
 type Props = {
     user_id: string;
@@ -224,12 +224,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                         />
                     ) : null}
                     {stateAnswer ? (
-                        <div
-                            className='MD my-1 text-base md:text-xl lg:text-2xl xl:text-4xl leading-tight font-roboto indent-0 whitespace-pre-wrap break-words hyphens-auto'
-                            dangerouslySetInnerHTML={{
-                                __html: getHTML(stateCard.card.answer)
-                            }}
-                        />
+                        <Markdown2Html content={stateCard.card.answer} />
                     ) : null}
                     {stateAnswer ? (
                         <Textarea isDisabled

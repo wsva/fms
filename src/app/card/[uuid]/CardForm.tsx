@@ -1,6 +1,6 @@
 'use client'
 
-import { getHTML, getProperty, getUUID } from '@/lib/utils';
+import { getProperty, getUUID } from '@/lib/utils';
 import { addToast, Button, ButtonGroup, Checkbox, CheckboxGroup, Divider, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
 import React, { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -10,6 +10,7 @@ import { getCardTag, getTagAll, removeCard, saveCard, saveCardTag } from '@/app/
 import '@/lib/Markdown.css';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
+import Markdown2Html from '@/components/markdown/markdown';
 
 type Props = {
     card_ext: Partial<card_ext>,
@@ -372,12 +373,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             {watch('suggestion', getDefault('suggestion') as string || '')}
                         </div>
                         <Divider />
-                        <div
-                            className='MD my-1 text-xl leading-tight font-roboto indent-0 whitespace-pre-wrap break-words hyphens-auto'
-                            dangerouslySetInnerHTML={{
-                                __html: getHTML(watch('answer', getDefault('answer') as string) || '')
-                            }}
-                        />
+                        <Markdown2Html content={watch('answer', getDefault('answer') as string)} />
                         <Divider />
                         <pre className='text-md font-roboto mx-8'>
                             {watch('note', getDefault('note') as string || '')}

@@ -1,13 +1,13 @@
 'use client'
 
-import { getHTML, getProperty, getUUID } from '@/lib/utils';
+import { getProperty, getUUID } from '@/lib/utils';
 import { Button, Input, Textarea, Link, addToast } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
 import { blog } from '@prisma/client';
 import { saveBlog } from '@/app/actions/blog';
-import '@/lib/Markdown.css';
+import Markdown2Html from '@/components/markdown/markdown';
 
 type Props = {
     item?: blog,
@@ -111,15 +111,10 @@ export default function BlogForm({ item, email, edit_view }: Props) {
                         <div className='text-3xl leading-tight font-roboto font-bold'>
                             {watch('title', getDefault('title') as string | '')}
                         </div>
-                        {/* <div className='text-md font-roboto mx-8'>
+                        <div className='text-xl font-roboto'>
                             {watch('description', getDefault('description') as string | '')}
-                        </div> */}
-                        <div
-                            className='MD px-2 my-1 text-xl leading-tight font-roboto indent-0 whitespace-pre-wrap break-words hyphens-auto'
-                            dangerouslySetInnerHTML={{
-                                __html: getHTML(watch('content', getDefault('content') as string) || '')
-                            }}
-                        />
+                        </div>
+                        <Markdown2Html content={watch('content', getDefault('content') as string)} />
                         <div>
                             TODO:
                             write commentar

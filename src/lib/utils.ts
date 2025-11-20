@@ -1,6 +1,4 @@
 import CryptoJS from "crypto-js";
-import DOMPurify from "isomorphic-dompurify";
-import { marked } from "marked";
 import { v4 as uuidv4 } from "uuid";
 
 export const formatDate = (date: Date) => {
@@ -44,14 +42,6 @@ export function getProperty<T, K extends keyof T>(o: T, propertyName: K): T[K] {
 
 export const checkSQLSafe = (str: string) => {
     return !!str.match(/^[^'"=]+$/)
-}
-
-export const getHTML = (content: string) => {
-    return DOMPurify.sanitize(marked.parse(content, {
-        async: false,
-        pedantic: false,
-        gfm: true,
-    }))
 }
 
 export const sleep = async (ms: number): Promise<void> => {
