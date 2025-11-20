@@ -157,6 +157,7 @@ export default function Page({ user_id, uuid }: Props) {
 
     useEffect(() => {
         const loadMediaList = async () => {
+            setStateMediaList([]);
             if (!stateTagUUID) {
                 return
             }

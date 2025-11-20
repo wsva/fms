@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import Hls from "hls.js";
+import { isAudio } from "@/lib/listen/utils";
 
 type Props = {
     src: string;
@@ -75,7 +76,7 @@ export default function Page({
             autoPlay={autoPlay}
             preload={preload}
         >
-            {!!subtitleSrc && (
+            {!!subtitleSrc && !isAudio(src) && (
                 <track
                     src={subtitleSrc}
                     kind="subtitles"
