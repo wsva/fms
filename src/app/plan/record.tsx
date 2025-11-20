@@ -18,14 +18,31 @@ export type Props = {
 
 export default function Page({ item, handleUpdate }: Props) {
     // yyyy-mm-dd
-    const getDay = (date: Date) => {
-        return date.toISOString().split('T')[0];
-    }
+    const getDay = (date: Date): string => {
+        const inputDate = new Date(date);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // 今天零点
+
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1); // 昨天零点
+
+        inputDate.setHours(0, 0, 0, 0); // 将输入日期归零点
+
+        if (inputDate.getTime() === today.getTime()) {
+            return "Today";
+        } else if (inputDate.getTime() === yesterday.getTime()) {
+            return "Yesterday";
+        } else {
+            return inputDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+    };
 
     // hh:mm
     const formatTime = (date: Date) => {
-        date.setMinutes(date.getMinutes());
-        return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+        const inputDate = new Date(date);
+        inputDate.setMinutes(inputDate.getMinutes());
+        return inputDate.getHours().toString().padStart(2, '0') + ':' + inputDate.getMinutes().toString().padStart(2, '0');
     }
 
     return (
