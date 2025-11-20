@@ -21,6 +21,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
     const [stateCues, updateStateCues] = useImmer<Cue[]>([]);
     const [stateEdit, setStateEdit] = useState<boolean>(false);
     const [stateMode, setStateMode] = useState<"edit" | "correct">("edit");
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     // load Cues on init
     useEffect(() => {
@@ -142,9 +143,15 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
 
                         {stateEdit && (
                             <Button variant='solid' size="sm" color="secondary"
+                                isDisabled={stateSaving}
                                 onPress={async () => {
+                                    setStateSaving(true);
                                     const result = await saveSubtitle({ ...stateData, updated_at: new Date() });
                                     if (result.status === "success") {
+                                        addToast({
+                                            title: "save data success",
+                                            color: "success",
+                                        });
                                         setStateReloadSubtitle(current => current + 1);
                                     } else {
                                         console.log(result.error);
@@ -153,6 +160,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                                             color: "danger",
                                         });
                                     }
+                                    setStateSaving(false);
                                 }}
                             >
                                 Save
@@ -163,9 +171,15 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                 {item.user_id === user_id && (
                     <div className="flex flex-row items-center justify-center gap-2">
                         <Button variant='solid' size="sm" color="danger"
+                            isDisabled={stateSaving}
                             onPress={async () => {
+                                setStateSaving(true);
                                 const result = await removeSubtitle(item.uuid);
                                 if (result.status === "success") {
+                                    addToast({
+                                        title: "remove data success",
+                                        color: "success",
+                                    });
                                     setStateReloadSubtitle(current => current + 1);
                                 } else {
                                     console.log(result.error);
@@ -174,6 +188,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                                         color: "danger",
                                     });
                                 }
+                                setStateSaving(false);
                             }}
                         >
                             Delete

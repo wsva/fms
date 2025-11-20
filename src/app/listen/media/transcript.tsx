@@ -15,6 +15,7 @@ type Props = {
 export default function Page({ item, user_id, setStateReloadTranscript }: Props) {
     const [stateEdit, setStateEdit] = useState<boolean>(false);
     const [stateData, setStateData] = useState<listen_transcript>(item);
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     return (
         <div className='flex flex-col items-center justify-start w-full my-2'>
@@ -37,9 +38,15 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                 )}
                 {stateEdit && (
                     <Button variant='solid' size="sm" color="secondary"
+                        isDisabled={stateSaving}
                         onPress={async () => {
+                            setStateSaving(true);
                             const result = await saveTranscript({ ...stateData, updated_at: new Date() });
                             if (result.status === "success") {
+                                addToast({
+                                    title: "save data success",
+                                    color: "success",
+                                });
                                 setStateReloadTranscript(current => current + 1);
                             } else {
                                 console.log(result.error);
@@ -48,6 +55,7 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                                     color: "danger",
                                 });
                             }
+                            setStateSaving(false);
                         }}
                     >
                         Save
@@ -56,9 +64,15 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                 {item.user_id === user_id && (
                     <div className="flex flex-row items-center justify-center gap-2">
                         <Button variant='solid' size="sm" color="danger"
+                            isDisabled={stateSaving}
                             onPress={async () => {
+                                setStateSaving(true);
                                 const result = await removeTranscript(item.uuid);
                                 if (result.status === "success") {
+                                    addToast({
+                                        title: "remove data success",
+                                        color: "success",
+                                    });
                                     setStateReloadTranscript(current => current + 1);
                                 } else {
                                     console.log(result.error);
@@ -67,6 +81,7 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                                         color: "danger",
                                     });
                                 }
+                                setStateSaving(false);
                             }}
                         >
                             Delete

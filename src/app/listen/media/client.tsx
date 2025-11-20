@@ -48,6 +48,7 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateMediaFile, setStateMediaFile] = useState<File>();
     const [stateVideoPosition, setStateVideoPosition] = useState<string>("bottom");
     const [stateMedia, setStateMedia] = useState<listen_media_ext>(newMedia(user_id));
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     const [stateSubtitleList, setStateSubtitleList] = useState<listen_subtitle[]>([]);
     const [stateReloadSubtitle, setStateReloadSubtitle] = useState<number>(1);
@@ -326,7 +327,9 @@ export default function Page({ user_id, uuid }: Props) {
                         <div className='flex flex-row items-center justify-end w-full gap-2'>
                             {stateMedia.media.user_id === user_id && (
                                 <Button color="primary" variant="solid" size='sm'
+                                    isDisabled={stateSaving}
                                     onPress={async () => {
+                                        setStateSaving(true);
                                         const result = await saveMedia(stateMedia.media)
                                         if (result.status === "success") {
                                             addToast({
@@ -340,6 +343,7 @@ export default function Page({ user_id, uuid }: Props) {
                                                 color: "danger",
                                             });
                                         }
+                                        setStateSaving(false);
                                     }}
                                 >
                                     Save
@@ -347,9 +351,11 @@ export default function Page({ user_id, uuid }: Props) {
                             )}
                             {stateMedia.media.user_id === user_id && (
                                 <Button color="danger" variant="solid" size='sm'
+                                    isDisabled={stateSaving}
                                     onPress={async () => {
                                         if (!stateMedia) return
 
+                                        setStateSaving(true);
                                         const result = await removeMedia(uuid)
                                         if (result.status === "success") {
                                             addToast({
@@ -363,6 +369,7 @@ export default function Page({ user_id, uuid }: Props) {
                                                 color: "danger",
                                             });
                                         }
+                                        setStateSaving(false);
                                     }}
                                 >
                                     Remove
