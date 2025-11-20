@@ -1,11 +1,10 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Button, Divider, Tooltip } from '@heroui/react'
+import { addToast, Button, Divider, Tooltip } from '@heroui/react'
 import Record from './record';
 import { plan_plan, plan_record } from '@prisma/client';
 import { getRecordAll, saveRecord } from '../actions/plan';
-import { toast } from 'react-toastify';
 import { getUUID } from '@/lib/utils';
 import { MdCelebration, MdDelete, MdOutlineStar, MdOutlineStarBorder } from 'react-icons/md';
 
@@ -33,7 +32,11 @@ export default function Page({ item, user_id, handleDelete, handleUpdate }: Prop
         if (result.status === 'success') {
             setStateReload(current => current + 1)
         } else {
-            toast.error("save failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
     }
 
@@ -45,7 +48,11 @@ export default function Page({ item, user_id, handleDelete, handleUpdate }: Prop
         if (result.status === 'success') {
             setStateReload(current => current + 1)
         } else {
-            toast.error("save failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
     }
 
@@ -55,8 +62,11 @@ export default function Page({ item, user_id, handleDelete, handleUpdate }: Prop
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
         }
 

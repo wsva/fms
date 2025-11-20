@@ -3,11 +3,10 @@
 import { qsa_card, qsa_tag } from '@prisma/client';
 import React, { useState } from 'react';
 import { FamiliarityList } from '@/lib/card';
-import { ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Link, Popover, PopoverContent, PopoverTrigger, Tooltip } from '@heroui/react';
+import { addToast, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Link, Popover, PopoverContent, PopoverTrigger, Tooltip } from '@heroui/react';
 import Collect from './Collect';
 import SetTag from './SetTag';
 import { setCardFamiliarity } from '@/app/actions/card';
-import { toast } from 'react-toastify';
 
 type Props = {
     user_id: string
@@ -66,9 +65,15 @@ export default function Card({ user_id, card, tag_list }: Props) {
                                             setStateFamiliarity(familiarity)
                                             const result = await setCardFamiliarity(card.uuid, familiarity)
                                             if (result) {
-                                                toast.success(`save familiarity successfully`)
+                                                addToast({
+                                                    title: "save data success",
+                                                    color: "success",
+                                                });
                                             } else {
-                                                toast.error(`save familiarity failed`)
+                                                addToast({
+                                                    title: "save data error",
+                                                    color: "danger",
+                                                });
                                             }
                                         }
                                     }}

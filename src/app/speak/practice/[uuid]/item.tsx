@@ -1,9 +1,8 @@
 'use client'
 
-import { getUUID} from '@/lib/utils';
-import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { getUUID } from '@/lib/utils';
+import { addToast, Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
-import { toast } from 'react-toastify';
 import { practice_audio, practice_text } from '@prisma/client';
 import { getAudioDBAll, getText, removeAudioDB, saveAudioDB, saveText } from '@/app/actions/practice';
 import { ActionResult } from '@/lib/types';
@@ -36,10 +35,12 @@ export default function Item({ uuid, user_id }: Props) {
         if (!stateText) return;
         setStateSaving(true)
         const resultDb = await saveText({ ...stateText, updated_at: new Date() });
-        if (resultDb.status === "success") {
-            toast.success("save text success");
-        } else {
-            toast.error("save text failed");
+        if (resultDb.status !== "success") {
+            console.log(resultDb.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -54,13 +55,20 @@ export default function Item({ uuid, user_id }: Props) {
             audioBlob = await getBlobFromIndexedDB(stateCurrent.uuid);
         }
         if (!audioBlob) {
-            toast.error(`Blob of audio not found`);
+            addToast({
+                title: "Blob of audio not found",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
         const resultFs = await saveAudio(audioBlob, "practice", `${stateCurrent.uuid}.wav`);
         if (resultFs.status === "error") {
-            toast.error("save audio failed");
+            console.log(resultFs.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
@@ -76,7 +84,11 @@ export default function Item({ uuid, user_id }: Props) {
             updated_at: new Date(),
         });
         if (resultDb.status === "error") {
-            toast.error("save db failed");
+            console.log(resultDb.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
@@ -84,7 +96,10 @@ export default function Item({ uuid, user_id }: Props) {
         await deleteBlobFromIndexedDB(stateCurrent.uuid);
         dropWeakCache(stateCurrent.uuid);
         setStateCurrent(undefined);
-        toast.success("save audio success");
+        addToast({
+            title: "save data success",
+            color: "success",
+        });
         setStateSaving(false)
         setStateReload(current => current + 1)
     }
@@ -95,17 +110,28 @@ export default function Item({ uuid, user_id }: Props) {
 
         const resultFs = await removeAudio("practice", `${item.uuid}.wav`);
         if (resultFs.status === "error") {
-            toast.error("delete audio file failed");
+            console.log(resultFs.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
             return
         }
 
         const resultDb = await removeAudioDB(item.uuid);
         if (resultDb.status === "error") {
-            toast.error("delete audio in database failed");
+            console.log(resultDb.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
             return
         }
 
-        toast.success("delete audio success");
+        addToast({
+            title: "remove data success",
+            color: "success",
+        });
         setStateReload(current => current + 1)
     }
 
@@ -125,7 +151,10 @@ export default function Item({ uuid, user_id }: Props) {
                 updated_at: new Date(),
             })
             if (result.status === 'error') {
-                toast.error(result.error as string)
+                addToast({
+                    title: result.error as string,
+                    color: "danger",
+                });
             }
         }
 
@@ -149,16 +178,22 @@ export default function Item({ uuid, user_id }: Props) {
             if (resultText.status === "success") {
                 setStateText(resultText.data)
             } else {
-                console.log(resultText.error)
-                toast.error("load data error")
+                console.log(resultText.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
 
             const resultAudio = await getAudioDBAll(uuid)
             if (resultAudio.status === "success") {
                 setStateData(resultAudio.data)
             } else {
-                console.log(resultAudio.error)
-                toast.error("load data error")
+                console.log(resultAudio.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }
@@ -239,7 +274,10 @@ export default function Item({ uuid, user_id }: Props) {
                                         if (audioBlob) {
                                             cacheBlobInMemory(stateCurrent.uuid, audioBlob);
                                         } else {
-                                            toast.error(`Blob of audio not found`);
+                                            addToast({
+                                                title: "Blob of audio not found",
+                                                color: "danger",
+                                            });
                                         }
                                     }
                                     if (audioBlob) {

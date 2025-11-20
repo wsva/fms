@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress, Input } from "@heroui/react";
+import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress, Input, addToast } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { getHTML } from '@/lib/utils';
 import { BiCaretDown } from 'react-icons/bi';
@@ -8,7 +8,6 @@ import { card_review } from '@/lib/types';
 import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import '@/lib/Markdown.css';
-import { toast } from 'react-toastify';
 import { searchExample } from "@/app/actions/word";
 import { qsa_tag } from "@prisma/client";
 
@@ -57,7 +56,10 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
             return
         }
         if (user_id !== stateCard.user_id) {
-            toast.error("this is not your card")
+            addToast({
+                title: "this is not your card",
+                color: "danger",
+            });
             return
         }
 
@@ -103,7 +105,10 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
         if (result) {
             window.location.reload()
         } else {
-            toast.error("save review error")
+            addToast({
+                title: "save review error",
+                color: "danger",
+            });
         }
     }
 

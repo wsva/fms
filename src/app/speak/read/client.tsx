@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useImmer } from 'use-immer'
-import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { addToast, Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import Sentence from './sentence';
 import { EngineList, toggleRecording } from '@/lib/recording';
 import { ActionResult, read_sentence_browser } from '@/lib/types';
@@ -10,7 +10,6 @@ import { getUUID, toExactType } from '@/lib/utils';
 import Book from './book';
 import { getSentenceAll, removeSentence, saveSentence } from '@/app/actions/reading';
 import Chapter from './chapter';
-import { toast } from 'react-toastify';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
 import { MdPlayCircle } from 'react-icons/md';
 import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store";
@@ -94,14 +93,22 @@ export default function Page({ email }: Props) {
         if (item.on_fs) {
             const result = await removeAudio("reading", `${item.uuid}.wav`);
             if (result.status !== "success") {
-                toast.error("delete audio failed");
+                console.log(result.error);
+                addToast({
+                    title: "remove data error",
+                    color: "danger",
+                });
                 return
             }
         }
         if (item.in_db) {
             const result = await removeSentence(item.uuid);
             if (result.status !== "success") {
-                toast.error("delete sentence failed");
+                console.log(result.error);
+                addToast({
+                    title: "remove data error",
+                    color: "danger",
+                });
                 return
             }
         }
@@ -119,7 +126,10 @@ export default function Page({ email }: Props) {
         });
         setStateNeedSave(true);
 
-        toast.error("delete sentence success");
+        addToast({
+            title: "remove data success",
+            color: "success",
+        });
     }
 
     const handleAddAndSave = async () => {
@@ -132,7 +142,10 @@ export default function Page({ email }: Props) {
             audioBlob = await getBlobFromIndexedDB(stateCurrent.uuid);
         }
         if (!audioBlob) {
-            toast.error(`Blob of audio not found`);
+            addToast({
+                title: "Blob of audio not found",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
@@ -141,7 +154,11 @@ export default function Page({ email }: Props) {
             await deleteBlobFromIndexedDB(stateCurrent.uuid);
             dropWeakCache(stateCurrent.uuid);
         } else {
-            toast.error("save audio failed");
+            console.log(resultFs.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
@@ -158,7 +175,11 @@ export default function Page({ email }: Props) {
             updated_at: new Date(),
         });
         if (resultDb.status === "error") {
-            toast.error("save db failed");
+            console.log(resultDb.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
@@ -174,7 +195,10 @@ export default function Page({ email }: Props) {
         });
         setStateCurrent(undefined);
 
-        toast.success("added and saved successfully!");
+        addToast({
+            title: "save data success",
+            color: "success",
+        });
         setStateSaving(false)
     }
 
@@ -229,9 +253,16 @@ export default function Page({ email }: Props) {
             }
 
             setStateNeedSave(false);
-            toast.success("All sentences saved successfully!");
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
         } catch (err: unknown) {
-            toast.error((err as Error).message || "Failed to save sentences");
+            console.log(err);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -254,7 +285,10 @@ export default function Page({ email }: Props) {
                 modified_fs: true,
             })
             if (result.status === 'error') {
-                toast.error(result.error as string)
+                addToast({
+                    title: result.error as string,
+                    color: "danger",
+                });
             }
         }
 
@@ -349,7 +383,10 @@ export default function Page({ email }: Props) {
                                         if (audioBlob) {
                                             cacheBlobInMemory(stateCurrent.uuid, audioBlob);
                                         } else {
-                                            toast.error(`Blob of audio not found`);
+                                            addToast({
+                                                title: "Blob of audio not found",
+                                                color: "danger",
+                                            });
                                         }
                                     }
                                     if (audioBlob) {

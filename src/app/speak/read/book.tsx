@@ -1,9 +1,8 @@
 import { getBookAll, removeBook, saveBook } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
-import { Button, CircularProgress, Input, Select, SelectItem } from "@heroui/react";
+import { addToast, Button, CircularProgress, Input, Select, SelectItem } from "@heroui/react";
 import { read_book } from '@prisma/client';
 import React, { useEffect, useState } from 'react'
-import { toast } from 'react-toastify';
 
 type Props = {
     user_id: string;
@@ -30,10 +29,13 @@ export default function Page({ user_id, onSelect }: Props) {
         })
         if (result.status === 'success') {
             setStateName("")
-            toast.success('save book success')
             setStateReload(current => current + 1)
         } else {
-            toast.error('save book failed')
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -42,10 +44,13 @@ export default function Page({ user_id, onSelect }: Props) {
         setStateSaving(true)
         const result = await removeBook(uuid)
         if (result.status === 'success') {
-            toast.success("delete book success")
             setStateReload(current => current + 1)
         } else {
-            toast.error('delete book failed')
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -57,8 +62,11 @@ export default function Page({ user_id, onSelect }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }

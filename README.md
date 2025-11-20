@@ -31,7 +31,6 @@ npm install next-auth@beta
 npx auth secret
 npm install uuid
 npm install -D @types/uuid
-npm install react-toastify
 npm install marked
 
 # error: sanitize is not a function

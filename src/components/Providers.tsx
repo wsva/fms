@@ -3,8 +3,7 @@
 import React, { ReactNode } from 'react'
 import { HeroUIProvider } from "@heroui/react"
 import { useRouter } from "next/navigation";
-import { ToastContainer } from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
+import { ToastProvider } from "@heroui/toast";
 
 // Only if using TypeScript
 declare module "@react-types/shared" {
@@ -18,11 +17,7 @@ export default function Providers({ children }: { children: ReactNode }) {
 
     return (
         <HeroUIProvider navigate={router.push}>
-            <ToastContainer
-                position='bottom-right'
-                hideProgressBar
-                className='z-50'
-            />
+            <ToastProvider />
             {children}
         </HeroUIProvider>
     )

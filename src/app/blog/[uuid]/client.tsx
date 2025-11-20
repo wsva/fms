@@ -1,11 +1,10 @@
 'use client'
 
 import { getHTML, getProperty, getUUID } from '@/lib/utils';
-import { Button, Input, Textarea, Link } from "@heroui/react";
+import { Button, Input, Textarea, Link, addToast } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
-import { toast } from 'react-toastify';
 import { blog } from '@prisma/client';
 import { saveBlog } from '@/app/actions/blog';
 import '@/lib/Markdown.css';
@@ -47,11 +46,13 @@ export default function BlogForm({ item, email, edit_view }: Props) {
             updated_at: new Date(),
         })
         if (result.status === 'success') {
-            toast.success('save blog success')
-            //setStateEdit(false)
             window.location.href = "/blog"
         } else {
-            toast.error('save blog failed')
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
     }
 

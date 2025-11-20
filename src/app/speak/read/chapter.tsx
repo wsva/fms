@@ -1,9 +1,8 @@
 import { getChapterAll, removeChapter, saveChapter } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
-import { Button, CircularProgress, Input, Select, SelectItem } from "@heroui/react";
+import { addToast, Button, CircularProgress, Input, Select, SelectItem } from "@heroui/react";
 import { read_chapter } from '@prisma/client';
 import React, { useEffect, useState } from 'react'
-import { toast } from 'react-toastify';
 
 type Props = {
     user_id: string;
@@ -22,7 +21,10 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
 
     const handleAdd = async () => {
         if (!book_uuid) {
-            toast.error('no book selected')
+            addToast({
+                title: "no book selected",
+                color: "danger",
+            });
             return
         }
         setStateSaving(true)
@@ -37,10 +39,13 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
         })
         if (result.status === 'success') {
             setStateName("")
-            toast.success('save chapter success')
             setStateReload(current => current + 1)
         } else {
-            toast.error('save chapter failed')
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -49,10 +54,13 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
         setStateSaving(true)
         const result = await removeChapter(uuid)
         if (result.status === 'success') {
-            toast.success("delete chapter success")
             setStateReload(current => current + 1)
         } else {
-            toast.error('delete chapter failed')
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -67,8 +75,11 @@ export default function Page({ user_id, book_uuid, onSelect }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }

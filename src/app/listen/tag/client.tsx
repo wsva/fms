@@ -1,10 +1,9 @@
 'use client';
 
-import { Button, Input, Textarea } from "@heroui/react";
+import { addToast, Button, Input, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { getTagAll, removeTag, saveTag } from '@/app/actions/listen';
 import { getUUID } from "@/lib/utils";
-import { toast } from "react-toastify";
 import { listen_tag, qsa_tag } from "@prisma/client";
 
 type PropsItem = {
@@ -92,10 +91,13 @@ export default function Page({ user_id }: Props) {
         })
         if (result.status === 'success') {
             setStateNew({})
-            toast.success("add tag success");
             setStateReload(current => current + 1)
         } else {
-            toast.error('add tag failed')
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -107,10 +109,13 @@ export default function Page({ user_id }: Props) {
             updated_at: new Date(),
         });
         if (result.status === "success") {
-            toast.success("save tag success");
             setStateReload(current => current + 1)
         } else {
-            toast.error("save tag failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -119,10 +124,13 @@ export default function Page({ user_id }: Props) {
         setStateSaving(true)
         const result = await removeTag(uuid)
         if (result.status === 'success') {
-            toast.success("delete tag success")
             setStateReload(current => current + 1)
         } else {
-            toast.error('delete tag failed')
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -133,8 +141,11 @@ export default function Page({ user_id }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
         }
         loadData();

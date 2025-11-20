@@ -3,8 +3,8 @@
 import { qsa_card, qsa_tag } from '@prisma/client';
 import React, { useEffect, useState } from 'react';
 import { getTagAll } from '@/app/actions/card';
-import { toast } from 'react-toastify';
 import Card from './Card';
+import { addToast } from '@heroui/react';
 
 type Props = {
     user_id: string
@@ -20,8 +20,11 @@ export default function CardList({ user_id, card_list }: Props) {
             if (result.status === "success") {
                 setStateTagList(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data success",
+                    color: "danger",
+                });
             }
         };
         loadData();

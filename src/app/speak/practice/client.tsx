@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Button, Spinner, Textarea } from "@heroui/react";
+import { addToast, Button, Spinner, Textarea } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
 import Text from './text';
-import { toast } from 'react-toastify';
 import { getTextAll, removeText, saveText } from '@/app/actions/practice';
 import { practice_text } from '@prisma/client';
 
@@ -23,10 +22,13 @@ export default function Page({ user_id }: Props) {
     const handleDelete = async (item: practice_text) => {
         const result = await removeText(item.uuid);
         if (result.status === 'success') {
-            toast.success("delete sentence success");
             setStateReload(current => current + 1)
         } else {
-            toast.error("delete sentence failed");
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
         }
     }
 
@@ -44,10 +46,13 @@ export default function Page({ user_id }: Props) {
         });
         if (result.status === 'success') {
             setStateNew("");
-            toast.success("added text successfully!");
             setStateReload(current => current + 1)
         } else {
-            toast.error("save text failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -59,8 +64,11 @@ export default function Page({ user_id }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }

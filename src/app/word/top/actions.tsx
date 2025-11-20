@@ -3,10 +3,9 @@
 import { trashWord } from '@/app/actions/word';
 import { saveCard, saveCardTag, getTagAll, createTag } from '@/app/actions/card';
 import { getUUID } from '@/lib/utils';
-import { Button, ButtonGroup, Link, Tooltip, useDisclosure } from "@heroui/react"
+import { addToast, Button, ButtonGroup, Link, Tooltip, useDisclosure } from "@heroui/react"
 import { qsa_tag } from '@prisma/client';
 import React, { useState } from 'react';
-import { toast } from 'react-toastify';
 import CardModal from './modal';
 import { card_ext, topword } from '@/lib/types';
 import { BiLinkExternal, BiPlus, BiSolidBolt, BiTrash } from 'react-icons/bi';
@@ -37,9 +36,16 @@ export default function Page({ word, language, email }: Props) {
         })
         if (result.status === 'success') {
             setStateDisabled(true)
-            toast.success(`added ${word.word}`)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
         } else {
-            toast.error(`add ${word.word} failed`)
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
 
         const tag_uuid = `word_${language}_by_system`
@@ -57,9 +63,16 @@ export default function Page({ word, language, email }: Props) {
             tag_list_new: [tag_uuid],
         })
         if (result_tag.status === 'success') {
-            toast.success(`add tag successfully`)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
         } else {
-            toast.error(`add tag failed`)
+            console.log(result_tag.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
     }
 
@@ -79,9 +92,16 @@ export default function Page({ word, language, email }: Props) {
         })
         if (result.status === 'success') {
             setStateDisabled(true)
-            toast.success(`saved ${formData.question}`)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
         } else {
-            toast.error(`save ${formData.question} failed`)
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
 
         const tag_uuid = `word_${language}_by_system`
@@ -105,9 +125,16 @@ export default function Page({ word, language, email }: Props) {
             tag_list_new: formData.tag_list_new,
         })
         if (result_tag.status === 'success') {
-            toast.success(`save tag successfully`)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
         } else {
-            toast.error(`save tag failed`)
+            console.log(result_tag.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
     }
 
@@ -115,9 +142,16 @@ export default function Page({ word, language, email }: Props) {
         const result = await trashWord(word.word!, email!)
         if (result.status === 'success') {
             setStateDisabled(true)
-            toast.success(`moved ${word.word} to trash`)
+            addToast({
+                title: "trash data success",
+                color: "success",
+            });
         } else {
-            toast.error(`move ${word.word} to trash failed`)
+            console.log(result.error);
+            addToast({
+                title: "trash data error",
+                color: "danger",
+            });
         }
     }
 

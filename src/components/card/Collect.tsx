@@ -2,11 +2,10 @@
 
 import { getTagAll, saveCard, saveCardTag } from '@/app/actions/card';
 import { getUUID } from '@/lib/utils';
-import { Checkbox, CheckboxGroup, Link } from "@heroui/react"
+import { addToast, Checkbox, CheckboxGroup, Link } from "@heroui/react"
 import { qsa_card, qsa_tag } from '@prisma/client';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { toast } from 'react-toastify';
 
 type Props = {
     user_id: string;
@@ -41,9 +40,16 @@ export default function Collect({ user_id, card }: Props) {
         }
         const result1 = await saveCard(new_card)
         if (result1.status === 'success') {
-            toast.success(`save card successfully`)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
         } else {
-            toast.error(`save card failed`)
+            console.log(result1.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             return
         }
 
@@ -52,9 +58,16 @@ export default function Collect({ user_id, card }: Props) {
             tag_list_new: stateSelected,
         })
         if (result2.status === 'success') {
-            toast.success(`save tag successfully`)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
         } else {
-            toast.error(`save tag failed`)
+            console.log(result2.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
     }
 

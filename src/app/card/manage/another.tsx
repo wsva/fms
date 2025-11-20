@@ -1,12 +1,11 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Button, CircularProgress, Pagination, Select, SelectItem } from "@heroui/react"
+import { addToast, Button, CircularProgress, Pagination, Select, SelectItem } from "@heroui/react"
 import { qsa_card, qsa_tag } from '@prisma/client';
 import CardList from '@/components/card/CardList';
 import { getCardAll, getTagAll } from '@/app/actions/card';
 import { FilterType } from '@/lib/card';
-import { toast } from 'react-toastify';
 import { copyCardsByTag } from '@/app/actions/manage';
 
 type Props = {
@@ -33,8 +32,11 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
             if (result.status === "success") {
                 setStateMyTags(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }
@@ -45,8 +47,11 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
             if (result.status === "success") {
                 setStateTagsOfAnother(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }
@@ -58,7 +63,11 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                 setStateData(result.data)
                 setStateTotalPages(result.total_pages || 0)
             } else {
-                toast.error(result.error as string)
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }
@@ -97,11 +106,17 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                                 setStateSaving(true)
                                 const result = await copyCardsByTag(user_id_another, stateTagUUIDOfAnother, user_id_my, stateMyTagUUID);
                                 if (result.status === "success") {
-                                    toast.success("clear data success")
+                                    addToast({
+                                        title: "clear data success",
+                                        color: "success",
+                                    });
                                     setStateReload(current => current + 1)
                                 } else {
-                                    console.log(result.error)
-                                    toast.error("clear data failed")
+                                    console.log(result.error);
+                                    addToast({
+                                        title: "clear data error",
+                                        color: "danger",
+                                    });
                                 }
                                 setStateSaving(false)
                             }

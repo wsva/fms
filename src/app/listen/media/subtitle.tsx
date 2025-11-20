@@ -1,11 +1,10 @@
 "use client"
 
 import { buildVTT, Cue, parseSRT, parseVTT } from "@/lib/listen/subtitle";
-import { Button, Select, SelectItem, Textarea } from "@heroui/react";
+import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import { listen_subtitle } from "@prisma/client";
-import { toast } from "react-toastify";
 import { languageOptions } from "@/lib/language";
 import SubtitleCorrect from './subtitle_correct'
 import { removeSubtitle, saveSubtitle } from "@/app/actions/listen";
@@ -35,7 +34,10 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                     cue_list = parseSRT(subtitle.subtitle, false);
                     break;
                 default:
-                    toast.error("invalid subtitle format");
+                    addToast({
+                        title: "invalid subtitle format",
+                        color: "danger",
+                    });
             }
             updateStateCues((draft) => {
                 draft.length = 0;
@@ -61,7 +63,10 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                     cue_list = parseSRT(subtitle.subtitle, false);
                     break;
                 default:
-                    toast.error("invalid subtitle format");
+                    addToast({
+                        title: "invalid subtitle format",
+                        color: "danger",
+                    });
             }
             updateStateCues((draft) => {
                 draft.length = 0;
@@ -142,7 +147,11 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                                     if (result.status === "success") {
                                         setStateReloadSubtitle(current => current + 1);
                                     } else {
-                                        toast.error(result.error as string);
+                                        console.log(result.error);
+                                        addToast({
+                                            title: "save data error",
+                                            color: "danger",
+                                        });
                                     }
                                 }}
                             >
@@ -159,7 +168,11 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                                 if (result.status === "success") {
                                     setStateReloadSubtitle(current => current + 1);
                                 } else {
-                                    toast.error(result.error as string);
+                                    console.log(result.error);
+                                    addToast({
+                                        title: "remove data error",
+                                        color: "danger",
+                                    });
                                 }
                             }}
                         >

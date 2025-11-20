@@ -1,9 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Button, Input, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { addToast, Button, Input, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
-import { toast } from 'react-toastify';
 import { ask_question } from '@prisma/client';
 import { getQuestionAll, removeQuestion, saveQuestion } from '@/app/actions/ask';
 import { EngineList, toggleRecording } from '@/lib/recording';
@@ -39,7 +38,10 @@ export default function Page({ user_id }: Props) {
             const result = await removeAudio("ask", `${item.uuid}.wav`)
             if (result.status === "error") {
                 console.log(result.error);
-                toast.error("delete failed");
+                addToast({
+                    title: "remove data error",
+                    color: "danger",
+                });
                 return
             }
         }
@@ -47,16 +49,22 @@ export default function Page({ user_id }: Props) {
             const result = await removeAudio("ask", `${item.uuid}.mp4`)
             if (result.status === "error") {
                 console.log(result.error);
-                toast.error("delete failed");
+                addToast({
+                    title: "remove data error",
+                    color: "danger",
+                });
                 return
             }
         }
         const result = await removeQuestion(item.uuid);
         if (result.status === 'success') {
-            toast.success("delete success");
             setStateReload(current => current + 1)
         } else {
-            toast.error("delete failed");
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
         }
     }
 
@@ -80,7 +88,11 @@ export default function Page({ user_id }: Props) {
         if (!!stateNewVideo) {
             const result = await saveAudio(stateNewVideo.data, "ask", `${uuid}.mp4`);
             if (result.status === "error") {
-                toast.error("save video failed");
+                console.log(result.error);
+                addToast({
+                    title: "save data error",
+                    color: "danger",
+                });
                 setStateSaving(false)
                 return
             }
@@ -89,7 +101,11 @@ export default function Page({ user_id }: Props) {
         if (!!stateNewAudio) {
             const result = await saveAudio(stateNewAudio.data, "ask", `${uuid}.wav`);
             if (result.status === "error") {
-                toast.error("save audio failed");
+                console.log(result.error);
+                addToast({
+                    title: "save data error",
+                    color: "danger",
+                });
                 setStateSaving(false)
                 return
             }
@@ -107,7 +123,6 @@ export default function Page({ user_id }: Props) {
             updated_at: new Date(),
         });
         if (result.status === 'success') {
-            toast.success("add success");
             setStateNewTitle("");
             setStateNewContent("");
             if (!!stateNewVideo) {
@@ -120,7 +135,11 @@ export default function Page({ user_id }: Props) {
             }
             setStateReload(current => current + 1)
         } else {
-            toast.error("add failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -149,7 +168,10 @@ export default function Page({ user_id }: Props) {
             });
             setStateNewContent(result.status === 'success' ? result.data : "")
             if (result.status === 'error') {
-                toast.error(result.error as string)
+                addToast({
+                    title: result.error as string,
+                    color: "danger",
+                });
             }
         }
 
@@ -175,8 +197,11 @@ export default function Page({ user_id }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }

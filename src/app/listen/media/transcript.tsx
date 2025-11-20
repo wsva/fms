@@ -2,10 +2,9 @@
 
 import { removeTranscript, saveTranscript } from "@/app/actions/listen";
 import { languageOptions } from "@/lib/language";
-import { Button, Select, SelectItem, Textarea } from "@heroui/react";
+import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
 import { listen_transcript } from "@prisma/client";
 import React, { useState } from "react";
-import { toast } from "react-toastify";
 
 type Props = {
     item: listen_transcript;
@@ -43,7 +42,11 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                             if (result.status === "success") {
                                 setStateReloadTranscript(current => current + 1);
                             } else {
-                                toast.error(result.error as string);
+                                console.log(result.error);
+                                addToast({
+                                    title: "save data error",
+                                    color: "danger",
+                                });
                             }
                         }}
                     >
@@ -58,7 +61,11 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                                 if (result.status === "success") {
                                     setStateReloadTranscript(current => current + 1);
                                 } else {
-                                    toast.error(result.error as string);
+                                    console.log(result.error);
+                                    addToast({
+                                        title: "remove data error",
+                                        color: "danger",
+                                    });
                                 }
                             }}
                         >

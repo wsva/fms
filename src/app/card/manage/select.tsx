@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { CircularProgress, Select, SelectItem } from "@heroui/react"
-import { toast } from 'react-toastify';
+import { addToast, CircularProgress, Select, SelectItem } from "@heroui/react"
 import { getUserIDAll } from '@/app/actions/manage';
 import { useRouter } from "next/navigation";
 
@@ -23,8 +22,11 @@ export default function Page({ user_id_my }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }

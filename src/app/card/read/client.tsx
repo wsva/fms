@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useImmer } from 'use-immer'
-import { Button, CircularProgress, Pagination, Spinner, Textarea, Tooltip } from "@heroui/react";
+import { addToast, Button, CircularProgress, Pagination, Spinner, Textarea, Tooltip } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
 import Book from '@/app/speak/read/book';
 import Chapter from '@/app/speak/read/chapter';
-import { toast } from 'react-toastify';
 import { qsa_card } from '@prisma/client';
 import { MdDelete } from 'react-icons/md';
 import { getCardAll, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
@@ -105,7 +104,11 @@ export default function Page({ user_id }: Props) {
     const handleUpdate = async (new_item: qsa_card) => {
         const result = await saveCard(new_item);
         if (result.status !== "success") {
-            toast.error("delete card failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             return
         }
         updateStateData(draft => {
@@ -119,7 +122,11 @@ export default function Page({ user_id }: Props) {
     const handleDelete = async (item: qsa_card) => {
         const result = await removeCard(item.uuid);
         if (result.status !== "success") {
-            toast.error("delete card failed");
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
             return
         }
         updateStateData(draft => {
@@ -128,7 +135,10 @@ export default function Page({ user_id }: Props) {
                 draft.splice(index, 1);
             }
         });
-        toast.error("delete card success");
+        addToast({
+            title: "remove data success",
+            color: "success",
+        });
     }
 
     const handleAddAndSave = async () => {
@@ -149,14 +159,22 @@ export default function Page({ user_id }: Props) {
 
         const result = await saveCard(new_item);
         if (result.status === "error") {
-            toast.error("save card failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
 
         const resultCardTag = await saveCardTag({ ...new_item, tag_list_new: [stateChapter] });
         if (resultCardTag.status === "error") {
-            toast.error("save card tag failed");
+            console.log(resultCardTag.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
             setStateSaving(false)
             return
         }
@@ -166,7 +184,10 @@ export default function Page({ user_id }: Props) {
         });
         setStateCurrent(undefined);
 
-        toast.success("added and saved successfully!");
+        addToast({
+            title: "save data success",
+            color: "success",
+        });
         setStateSaving(false)
     }
 

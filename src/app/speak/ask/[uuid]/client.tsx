@@ -1,9 +1,8 @@
 'use client'
 
 import { getUUID } from '@/lib/utils';
-import { Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { addToast, Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import React, { useEffect, useRef, useState } from 'react'
-import { toast } from 'react-toastify';
 import { ask_answer, ask_question } from '@prisma/client';
 import { ActionResult } from '@/lib/types';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
@@ -39,7 +38,10 @@ export default function Item({ question_uuid, user_id }: Props) {
             const result = await removeAudio("ask", `${item.uuid}.wav`)
             if (result.status === "error") {
                 console.log(result.error);
-                toast.error("delete failed");
+                addToast({
+                    title: "remove data error",
+                    color: "danger",
+                });
                 return
             }
         }
@@ -47,16 +49,22 @@ export default function Item({ question_uuid, user_id }: Props) {
             const result = await removeAudio("ask", `${item.uuid}.mp4`)
             if (result.status === "error") {
                 console.log(result.error);
-                toast.error("delete failed");
+                addToast({
+                    title: "remove data error",
+                    color: "danger",
+                });
                 return
             }
         }
         const result = await removeAnswer(item.uuid);
         if (result.status === 'success') {
-            toast.success("delete success");
             setStateReload(current => current + 1)
         } else {
-            toast.error("delete failed");
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
         }
     }
 
@@ -76,7 +84,11 @@ export default function Item({ question_uuid, user_id }: Props) {
         if (!!stateNewVideo) {
             const result = await saveAudio(stateNewVideo.data, "ask", `${answer_uuid}.mp4`);
             if (result.status === "error") {
-                toast.error("save video failed");
+                console.log(result.error);
+                addToast({
+                    title: "save data error",
+                    color: "danger",
+                });
                 setStateSaving(false)
                 return
             }
@@ -85,7 +97,11 @@ export default function Item({ question_uuid, user_id }: Props) {
         if (!!stateNewAudio) {
             const result = await saveAudio(stateNewAudio.data, "ask", `${answer_uuid}.wav`);
             if (result.status === "error") {
-                toast.error("save audio failed");
+                console.log(result.error);
+                addToast({
+                    title: "save data error",
+                    color: "danger",
+                });
                 setStateSaving(false)
                 return
             }
@@ -103,7 +119,6 @@ export default function Item({ question_uuid, user_id }: Props) {
             updated_at: new Date(),
         });
         if (result.status === 'success') {
-            toast.success("add success");
             setStateNewContent("");
             if (!!stateNewVideo) {
                 URL.revokeObjectURL(stateNewVideo.url)
@@ -115,7 +130,11 @@ export default function Item({ question_uuid, user_id }: Props) {
             }
             setStateReload(current => current + 1)
         } else {
-            toast.error("add failed");
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
         setStateSaving(false)
     }
@@ -144,7 +163,10 @@ export default function Item({ question_uuid, user_id }: Props) {
             });
             setStateNewContent(result.status === 'success' ? result.data : "")
             if (result.status === 'error') {
-                toast.error(result.error as string)
+                addToast({
+                    title: result.error as string,
+                    color: "danger",
+                });
             }
         }
 
@@ -170,8 +192,11 @@ export default function Item({ question_uuid, user_id }: Props) {
             if (result.status === "success") {
                 setStateQuestion(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }
@@ -182,8 +207,11 @@ export default function Item({ question_uuid, user_id }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false)
         }

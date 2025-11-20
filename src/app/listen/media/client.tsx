@@ -1,12 +1,11 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Button, Checkbox, CheckboxGroup, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
+import { addToast, Button, Checkbox, CheckboxGroup, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_tag, listen_transcript } from '@prisma/client'
-import { toast } from 'react-toastify'
-import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNote, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia, saveSubtitle } from '@/app/actions/listen'
+import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia } from '@/app/actions/listen'
 import { listen_media_ext } from '@/lib/types'
-import { getUUID, toExactType } from '@/lib/utils'
+import { getUUID } from '@/lib/utils'
 import { MdFileUpload, MdMoveDown, MdMoveUp } from 'react-icons/md'
 import HlsPlayer from '@/components/HlsPlayer'
 import { Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
@@ -97,7 +96,10 @@ export default function Page({ user_id, uuid }: Props) {
                 setStateMedia(result.data);
             } else {
                 console.log(result.error);
-                toast.error("load data error");
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false);
         }
@@ -148,7 +150,10 @@ export default function Page({ user_id, uuid }: Props) {
                 setStateTagList(result.data);
             } else {
                 console.log(result.error);
-                toast.error("load data error");
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false);
         }
@@ -180,7 +185,11 @@ export default function Page({ user_id, uuid }: Props) {
             if (result.status === 'success') {
                 setStateMediaList(result.data);
             } else {
-                toast.error(result.error as string);
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
             setStateLoading(false);
         }
@@ -219,7 +228,10 @@ export default function Page({ user_id, uuid }: Props) {
                     cue_list = parseSRT(stateSubtitle.subtitle, false);
                     break
                 default:
-                    toast.error("invalid subtitle format");
+                    addToast({
+                        title: "invalid subtitle format",
+                        color: "danger",
+                    });
             }
             updateStateCues((draft) => {
                 draft.length = 0;
@@ -338,9 +350,16 @@ export default function Page({ user_id, uuid }: Props) {
                                     isDisabled={stateSaving} onPress={async () => {
                                         const result = await saveMedia(stateMedia.media)
                                         if (result.status === "success") {
-                                            toast.success("save media success")
+                                            addToast({
+                                                title: "save data success",
+                                                color: "success",
+                                            });
                                         } else {
-                                            toast.error("save media failed")
+                                            console.log(result.error);
+                                            addToast({
+                                                title: "save data error",
+                                                color: "danger",
+                                            });
                                         }
                                     }}
                                 >
@@ -354,9 +373,16 @@ export default function Page({ user_id, uuid }: Props) {
 
                                         const result = await removeMedia(uuid)
                                         if (result.status === "success") {
-                                            toast.success("remove media success")
+                                            addToast({
+                                                title: "remove data success",
+                                                color: "success",
+                                            });
                                         } else {
-                                            toast.error("remove media failed")
+                                            console.log(result.error);
+                                            addToast({
+                                                title: "remove data error",
+                                                color: "danger",
+                                            });
                                         }
                                     }}
                                 >

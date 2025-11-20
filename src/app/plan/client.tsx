@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Button, Select, SelectItem, Textarea } from "@heroui/react";
-import { toast } from 'react-toastify';
+import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
 import Plan from './plan';
 import { getUUID } from '@/lib/utils';
@@ -22,10 +21,13 @@ export default function Client({ user_id }: Props) {
     const handleDelete = async (item: plan_plan) => {
         const result = await removePlan(item.uuid);
         if (result.status === "success") {
-            toast.success("delete plan success");
             setStateReload(current => current + 1)
         } else {
-            toast.error("delete plan failed");
+            console.log(result.error);
+            addToast({
+                title: "remove data error",
+                color: "danger",
+            });
         }
     }
 
@@ -34,14 +36,21 @@ export default function Client({ user_id }: Props) {
         if (result.status === 'success') {
             setStateReload(current => current + 1)
         } else {
-            toast.error('update failed');
+            console.log(result.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
         }
     }
 
     const handleAdd = async () => {
         const content = statePlanContent.trim();
         if (!content) {
-            toast.error("Plan content cannot be empty");
+            addToast({
+                title: "content is empty",
+                color: "danger",
+            });
             return;
         }
         try {
@@ -56,11 +65,14 @@ export default function Client({ user_id }: Props) {
                 updated_at: new Date(),
             })
             if (result.status === "success") {
-                toast.success("Plan added");
                 setStatePlanContent("");
                 setStateReload(current => current + 1)
             } else {
-                toast.error(String(result.error))
+                console.log(result.error);
+                addToast({
+                    title: "save data error",
+                    color: "danger",
+                });
             }
         } finally {
             setStateSaving(false)
@@ -73,8 +85,11 @@ export default function Client({ user_id }: Props) {
             if (result.status === "success") {
                 setStateData(result.data)
             } else {
-                console.log(result.error)
-                toast.error("load data error")
+                console.log(result.error);
+                addToast({
+                    title: "load data error",
+                    color: "danger",
+                });
             }
         }
         loadData()

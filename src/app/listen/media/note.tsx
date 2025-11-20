@@ -1,10 +1,9 @@
 'use client'
 
 import { removeNote, saveNote } from "@/app/actions/listen";
-import { Button, Textarea } from "@heroui/react";
+import { addToast, Button, Textarea } from "@heroui/react";
 import { listen_note } from "@prisma/client";
 import React, { useState } from "react";
-import { toast } from "react-toastify";
 
 type Props = {
     item: listen_note;
@@ -33,7 +32,11 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
                             if (result.status === "success") {
                                 setStateReloadNote(current => current + 1);
                             } else {
-                                toast.error(result.error as string);
+                                console.log(result.error);
+                                addToast({
+                                    title: "save data error",
+                                    color: "danger",
+                                });
                             }
                         }}
                     >
@@ -48,7 +51,11 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
                                 if (result.status === "success") {
                                     setStateReloadNote(current => current + 1);
                                 } else {
-                                    toast.error(result.error as string);
+                                    console.log(result.error);
+                                    addToast({
+                                        title: "remove data error",
+                                        color: "danger",
+                                    });
                                 }
                             }}
                         >

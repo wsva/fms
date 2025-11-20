@@ -1,11 +1,10 @@
 'use client'
 
 import { getHTML, getProperty, getUUID } from '@/lib/utils';
-import { Button, ButtonGroup, Checkbox, CheckboxGroup, Divider, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
+import { addToast, Button, ButtonGroup, Checkbox, CheckboxGroup, Divider, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
 import React, { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
-import { toast } from 'react-toastify';
 import { qsa_card, qsa_tag } from '@prisma/client';
 import { getCardTag, getTagAll, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
 import '@/lib/Markdown.css';
@@ -142,7 +141,10 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
     const onSubmit = async (formData: qsa_card) => {
         if (!stateCard) {
-            toast.error("loading")
+            addToast({
+                title: "loading",
+                color: "danger",
+            });
             return
         }
         if (!formData.familiarity) {
@@ -158,10 +160,12 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             created_at: !!stateCard?.created_at ? stateCard.created_at : new Date(),
             updated_at: new Date(),
         })
-        if (result_card.status === 'success') {
-            toast.success('save card success')
-        } else {
-            toast.error('save card failed')
+        if (result_card.status !== 'success') {
+            console.log(result_card.error);
+            addToast({
+                title: "save card error",
+                color: "danger",
+            });
             return
         }
 
@@ -171,10 +175,13 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             tag_list_remove: stateTagAdded.filter((v) => !stateTagSelected.includes(v)),
         })
         if (result_tag.status === 'success') {
-            toast.success(`save tag successfully`)
             setStateTagAdded(stateTagSelected)
         } else {
-            toast.error(`save tag failed`)
+            console.log(result_tag.error);
+            addToast({
+                title: "save tag error",
+                color: "danger",
+            });
             return
         }
 
@@ -183,6 +190,11 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                 window.location.reload();
             }, 1000);
         }
+
+        addToast({
+            title: "save data success",
+            color: "success",
+        });
     }
 
     return (
@@ -215,9 +227,16 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             }
                             const result = await removeCard(stateCard.uuid)
                             if (result.status == "success") {
-                                toast.error("remove card successfully")
+                                addToast({
+                                    title: "remove data success",
+                                    color: "success",
+                                });
                             } else {
-                                toast.error("remove card failed")
+                                console.log(result.error);
+                                addToast({
+                                    title: "remove data error",
+                                    color: "danger",
+                                });
                             }
                         }}
                     >

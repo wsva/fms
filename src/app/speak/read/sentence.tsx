@@ -1,11 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Button, Textarea, Tooltip } from "@heroui/react";
+import { addToast, Button, Textarea, Tooltip } from "@heroui/react";
 import { MdArrowDownward, MdArrowUpward, MdDelete, MdMic, MdMicOff, MdOutlineKeyboardDoubleArrowDown, MdOutlineKeyboardDoubleArrowUp, MdPlayCircle } from 'react-icons/md'
 import { ActionResult, read_sentence_browser } from '@/lib/types';
 import { toggleRecording } from '@/lib/recording';
-import { toast } from 'react-toastify';
 import { callTTS } from '@/app/actions/ai_gemini';
 import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store";
 import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache";
@@ -38,7 +37,10 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
                 };
                 handleUpdate(new_item);
             } else {
-                toast.error(result.error as string)
+                addToast({
+                    title: result.error as string,
+                    color: "danger",
+                });
             }
         }
 
@@ -94,7 +96,10 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
                                                 if (audioBlob) {
                                                     cacheBlobInMemory(item.uuid, audioBlob);
                                                 } else {
-                                                    toast.error(`Blob of audio not found`);
+                                                    addToast({
+                                                        title: "Blob of audio not found",
+                                                        color: "danger",
+                                                    });
                                                 }
                                             }
                                             if (audioBlob) {
