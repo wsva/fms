@@ -7,7 +7,6 @@ import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
 import { qsa_card, qsa_tag } from '@prisma/client';
 import { getCardTag, getTagAll, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
-import '@/lib/Markdown.css';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
 import Markdown2Html from '@/components/markdown/markdown';

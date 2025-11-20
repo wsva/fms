@@ -6,7 +6,6 @@ import { BiCaretDown } from 'react-icons/bi';
 import { card_review } from '@/lib/types';
 import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
-import '@/lib/Markdown.css';
 import { searchExample } from "@/app/actions/word";
 import { qsa_tag } from "@prisma/client";
 import Markdown2Html from '@/components/markdown/markdown';
