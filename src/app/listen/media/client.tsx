@@ -40,7 +40,6 @@ type Props = {
 
 export default function Page({ user_id, uuid }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false);
-    const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateTagList, setStateTagList] = useState<listen_tag[]>([]);
     const [stateMediaList, setStateMediaList] = useState<listen_media[]>([]);
     const [stateTagUUID, setStateTagUUID] = useState<string>("");
@@ -64,24 +63,6 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateReloadNote, setStateReloadNote] = useState<number>(1);
 
     const videoRef = useRef<HTMLVideoElement>(null)
-
-    const handleSave = async () => {
-        if (!stateMedia) return
-
-        setStateSaving(true)
-        /** save media */
-
-        /** save transcript */
-
-        /** save subtitle */
-
-        /** save note */
-
-        /** save tag */
-
-
-        setStateSaving(false)
-    }
 
     useEffect(() => {
         const loadMedia = async () => {
@@ -198,15 +179,13 @@ export default function Page({ user_id, uuid }: Props) {
 
     useEffect(() => {
         setStateSubtitle(undefined)
-        if (!!stateMedia) {
-            const my_list = stateSubtitleList.filter((v) => v.user_id === user_id);
-            if (my_list.length > 0) {
-                setStateSubtitle(my_list[0])
-                return
-            } else {
-                if (stateSubtitleList.length > 0) {
-                    setStateSubtitle(stateSubtitleList[0])
-                }
+        const my_list = stateSubtitleList.filter((v) => v.user_id === user_id);
+        if (my_list.length > 0) {
+            setStateSubtitle(my_list[0])
+            return
+        } else {
+            if (stateSubtitleList.length > 0) {
+                setStateSubtitle(stateSubtitleList[0])
             }
         }
     }, [stateSubtitleList, user_id]);
@@ -347,7 +326,7 @@ export default function Page({ user_id, uuid }: Props) {
                         <div className='flex flex-row items-center justify-end w-full gap-2'>
                             {stateMedia.media.user_id === user_id && (
                                 <Button color="primary" variant="solid" size='sm'
-                                    isDisabled={stateSaving} onPress={async () => {
+                                    onPress={async () => {
                                         const result = await saveMedia(stateMedia.media)
                                         if (result.status === "success") {
                                             addToast({

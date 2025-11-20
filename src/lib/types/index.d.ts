@@ -1,4 +1,4 @@
-import { qsa_card, qsa_card_review, listen_media, listen_transcript, listen_subtitle, listen_note } from "@prisma/client";
+import { qsa_card, qsa_card_review, listen_media } from "@prisma/client";
 import { ZodIssue } from "zod";
 
 type ActionResult<T> = {
