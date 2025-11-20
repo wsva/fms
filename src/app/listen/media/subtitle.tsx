@@ -23,16 +23,16 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
     const [stateMode, setStateMode] = useState<"edit" | "correct">("edit");
     const [stateSaving, setStateSaving] = useState<boolean>(false);
 
-    // load Cues on init
+    // reload Cues only when switch to correct mode
     useEffect(() => {
-        const loadCues = (subtitle: listen_subtitle) => {
+        const loadCues = () => {
             let cue_list: Cue[] = [];
-            switch (subtitle.format) {
+            switch (stateData.format) {
                 case "vtt":
-                    cue_list = parseVTT(subtitle.subtitle, false);
+                    cue_list = parseVTT(stateData.subtitle, false);
                     break;
                 case "srt":
-                    cue_list = parseSRT(subtitle.subtitle, false);
+                    cue_list = parseSRT(stateData.subtitle, false);
                     break;
                 default:
                     addToast({
@@ -49,43 +49,14 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                 }
             });
         };
-        loadCues(item);
-    }, [item, updateStateCues]);
-
-    // reload Cues only when edit in text mode
-    useEffect(() => {
-        const loadCues = (subtitle: listen_subtitle) => {
-            let cue_list: Cue[] = [];
-            switch (subtitle.format) {
-                case "vtt":
-                    cue_list = parseVTT(subtitle.subtitle, false);
-                    break;
-                case "srt":
-                    cue_list = parseSRT(subtitle.subtitle, false);
-                    break;
-                default:
-                    addToast({
-                        title: "invalid subtitle format",
-                        color: "danger",
-                    });
-            }
-            updateStateCues((draft) => {
-                draft.length = 0;
-                let index = 1;
-                for (const item of cue_list) {
-                    draft.push({ ...item, index: index });
-                    index++;
-                }
-            });
-        };
-        if (stateMode === "edit") {
-            loadCues(stateData);
+        if (stateMode === "correct") {
+            loadCues();
         }
     }, [stateData, updateStateCues, stateMode]);
 
-    // update stateData on when in correct mode
+    // update stateData only when switch to edit mode
     useEffect(() => {
-        if (stateMode === "correct") {
+        if (stateMode === "edit") {
             setStateData(current => {
                 return {
                     ...current,
@@ -146,7 +117,11 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                                 isDisabled={stateSaving}
                                 onPress={async () => {
                                     setStateSaving(true);
-                                    const result = await saveSubtitle({ ...stateData, updated_at: new Date() });
+                                    const result = await saveSubtitle({
+                                        ...stateData,
+                                        subtitle: stateMode === "edit" ? stateData.subtitle : buildVTT(stateCues),
+                                        updated_at: new Date(),
+                                    });
                                     if (result.status === "success") {
                                         addToast({
                                             title: "save data success",

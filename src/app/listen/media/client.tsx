@@ -63,7 +63,7 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateNoteList, setStateNoteList] = useState<listen_note[]>([]);
     const [stateReloadNote, setStateReloadNote] = useState<number>(1);
 
-    const videoRef = useRef<HTMLVideoElement>(null)
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
         const loadMedia = async () => {
@@ -90,6 +90,9 @@ export default function Page({ user_id, uuid }: Props) {
 
     useEffect(() => {
         const loadSubtitle = async () => {
+            if (!stateMediaUUID) {
+                return
+            }
             setStateLoading(true);
             const result = await getSubtitleAll(stateMediaUUID);
             if (result.status === 'success') {
@@ -97,11 +100,17 @@ export default function Page({ user_id, uuid }: Props) {
             }
             setStateLoading(false);
         }
+        setStateSubtitleList([]);
+        setStateSubtitle(undefined);
         loadSubtitle();
     }, [stateMediaUUID, stateReloadSubtitle]);
 
     useEffect(() => {
         const loadTranscript = async () => {
+            if (!stateMediaUUID) {
+                setStateTranscriptList([]);
+                return
+            }
             setStateLoading(true);
             const result = await getTranscriptAll(stateMediaUUID);
             if (result.status === 'success') {
@@ -114,6 +123,10 @@ export default function Page({ user_id, uuid }: Props) {
 
     useEffect(() => {
         const loadNote = async () => {
+            if (!stateMediaUUID) {
+                setStateNoteList([]);
+                return
+            }
             setStateLoading(true);
             const result = await getNoteAll(stateMediaUUID);
             if (result.status === 'success') {
@@ -180,11 +193,10 @@ export default function Page({ user_id, uuid }: Props) {
     }, [user_id, stateTagUUID]);
 
     useEffect(() => {
-        setStateSubtitle(undefined)
+        setStateSubtitle(undefined);
         const my_list = stateSubtitleList.filter((v) => v.user_id === user_id);
         if (my_list.length > 0) {
             setStateSubtitle(my_list[0])
-            return
         } else {
             if (stateSubtitleList.length > 0) {
                 setStateSubtitle(stateSubtitleList[0])
@@ -249,7 +261,7 @@ export default function Page({ user_id, uuid }: Props) {
         videoEl.addEventListener("timeupdate", onTimeUpdate)
 
         return () => videoEl.removeEventListener("timeupdate", onTimeUpdate)
-    }, [stateCues, updateStateCues])
+    }, [stateCues, updateStateCues]);
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
