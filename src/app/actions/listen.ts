@@ -13,24 +13,12 @@ export async function getMedia(uuid: string): Promise<ActionResult<listen_media_
         if (!resultMedia) {
             return { status: 'error', error: 'no data found' }
         }
-        const resultTranscript = await prisma.listen_transcript.findMany({
-            where: { media_uuid: resultMedia.uuid }
-        })
-        const resultSubtitle = await prisma.listen_subtitle.findMany({
-            where: { media_uuid: resultMedia.uuid }
-        })
-        const resultNote = await prisma.listen_note.findMany({
-            where: { media_uuid: resultMedia.uuid }
-        })
         const resultTag = await prisma.listen_media_tag.findMany({
             where: { media_uuid: resultMedia.uuid }
         })
         return {
             status: "success", data: {
                 media: resultMedia,
-                transcript_list: resultTranscript,
-                subtitle_list: resultSubtitle,
-                note_list: resultNote,
                 tag_list_added: resultTag.map((v) => v.tag_uuid),
                 tag_list_selected: resultTag.map((v) => v.tag_uuid),
                 tag_list_new: [],
@@ -170,10 +158,10 @@ export async function getTranscript(uuid: string): Promise<ActionResult<listen_t
     }
 }
 
-export async function getTranscriptAll(user_id: string, media_uuid: string): Promise<ActionResult<listen_transcript[]>> {
+export async function getTranscriptAll(media_uuid: string): Promise<ActionResult<listen_transcript[]>> {
     try {
         const result = await prisma.listen_transcript.findMany({
-            where: { user_id, media_uuid },
+            where: { media_uuid },
         })
         return { status: "success", data: result }
     } catch (error) {
@@ -244,10 +232,10 @@ export async function getSubtitle(uuid: string): Promise<ActionResult<listen_sub
     }
 }
 
-export async function getSubtitleAll(user_id: string, media_uuid: string): Promise<ActionResult<listen_subtitle[]>> {
+export async function getSubtitleAll(media_uuid: string): Promise<ActionResult<listen_subtitle[]>> {
     try {
         const result = await prisma.listen_subtitle.findMany({
-            where: { user_id, media_uuid },
+            where: { media_uuid },
         })
         return { status: "success", data: result }
     } catch (error) {
@@ -319,10 +307,10 @@ export async function getNote(uuid: string): Promise<ActionResult<listen_note>> 
     }
 }
 
-export async function getNoteAll(user_id: string, media_uuid: string): Promise<ActionResult<listen_note[]>> {
+export async function getNoteAll(media_uuid: string): Promise<ActionResult<listen_note[]>> {
     try {
         const result = await prisma.listen_note.findMany({
-            where: { user_id, media_uuid },
+            where: { media_uuid },
         })
         return { status: "success", data: result }
     } catch (error) {

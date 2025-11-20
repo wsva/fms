@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Button, Checkbox, CheckboxGroup, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_tag, listen_transcript } from '@prisma/client'
 import { toast } from 'react-toastify'
-import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getTagAll, removeMedia, saveMedia, saveSubtitle } from '@/app/actions/listen'
+import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNote, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia, saveSubtitle } from '@/app/actions/listen'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID, toExactType } from '@/lib/utils'
 import { MdFileUpload, MdMoveDown, MdMoveUp } from 'react-icons/md'
@@ -26,17 +26,11 @@ const newMedia = (user_id: string): listen_media_ext => {
             note: "",
             created_at: new Date(),
             updated_at: new Date(),
-            need_save: true,
-            need_save_fs: false,
         },
-        transcript_list: [],
-        subtitle_list: [],
-        note_list: [],
         tag_list_added: [],
         tag_list_selected: [],
         tag_list_new: [],
         tag_list_remove: [],
-        need_save: true,
     }
 }
 
@@ -47,18 +41,28 @@ type Props = {
 
 export default function Page({ user_id, uuid }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false);
+    const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateTagList, setStateTagList] = useState<listen_tag[]>([]);
     const [stateMediaList, setStateMediaList] = useState<listen_media[]>([]);
     const [stateTagUUID, setStateTagUUID] = useState<string>("");
+
     const [stateMediaUUID, setStateMediaUUID] = useState<string>(uuid);
     const [stateMediaFile, setStateMediaFile] = useState<File>();
     const [stateVideoPosition, setStateVideoPosition] = useState<string>("bottom");
+    const [stateMedia, setStateMedia] = useState<listen_media_ext>(newMedia(user_id));
+
+    const [stateSubtitleList, setStateSubtitleList] = useState<listen_subtitle[]>([]);
+    const [stateReloadSubtitle, setStateReloadSubtitle] = useState<number>(1);
     const [stateSubtitle, setStateSubtitle] = useState<listen_subtitle>();
     const [stateCues, updateStateCues] = useImmer<Cue[]>([]);
     const [stateActiveCue, setStateActiveCue] = useState<string>("");
     const [stateDictation, setStateDictation] = useState<boolean>(false);
-    const [stateSaving, setStateSaving] = useState<boolean>(false);
-    const [stateMedia, setStateMedia] = useState<listen_media_ext>(newMedia(user_id));
+
+    const [stateTranscriptList, setStateTranscriptList] = useState<listen_transcript[]>([]);
+    const [stateReloadTranscript, setStateReloadTranscript] = useState<number>(1);
+
+    const [stateNoteList, setStateNoteList] = useState<listen_note[]>([]);
+    const [stateReloadNote, setStateReloadNote] = useState<number>(1);
 
     const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -71,19 +75,6 @@ export default function Page({ user_id, uuid }: Props) {
         /** save transcript */
 
         /** save subtitle */
-        for (const v of stateMedia.subtitle_list) {
-            if (v.need_save) {
-                const result = await saveSubtitle({
-                    ...toExactType<listen_subtitle>(v),
-                    updated_at: new Date(),
-                })
-                if (result.status === "error") {
-                    toast.error("save subtitle failed")
-                    setStateSaving(false)
-                    return
-                }
-            }
-        }
 
         /** save note */
 
@@ -112,6 +103,42 @@ export default function Page({ user_id, uuid }: Props) {
         }
         loadMedia();
     }, [user_id, stateMediaUUID]);
+
+    useEffect(() => {
+        const loadSubtitle = async () => {
+            setStateLoading(true);
+            const result = await getSubtitleAll(stateMediaUUID);
+            if (result.status === 'success') {
+                setStateSubtitleList(result.data);
+            }
+            setStateLoading(false);
+        }
+        loadSubtitle();
+    }, [stateMediaUUID, stateReloadSubtitle]);
+
+    useEffect(() => {
+        const loadTranscript = async () => {
+            setStateLoading(true);
+            const result = await getTranscriptAll(stateMediaUUID);
+            if (result.status === 'success') {
+                setStateTranscriptList(result.data);
+            }
+            setStateLoading(false);
+        }
+        loadTranscript();
+    }, [stateMediaUUID, stateReloadTranscript]);
+
+    useEffect(() => {
+        const loadNote = async () => {
+            setStateLoading(true);
+            const result = await getNoteAll(stateMediaUUID);
+            if (result.status === 'success') {
+                setStateNoteList(result.data);
+            }
+            setStateLoading(false);
+        }
+        loadNote();
+    }, [stateMediaUUID, stateReloadNote]);
 
     useEffect(() => {
         const loadTagList = async () => {
@@ -163,17 +190,17 @@ export default function Page({ user_id, uuid }: Props) {
     useEffect(() => {
         setStateSubtitle(undefined)
         if (!!stateMedia) {
-            const my_list = stateMedia.subtitle_list.filter((v) => v.user_id === user_id);
+            const my_list = stateSubtitleList.filter((v) => v.user_id === user_id);
             if (my_list.length > 0) {
                 setStateSubtitle(my_list[0])
                 return
             } else {
-                if (stateMedia.subtitle_list.length > 0) {
-                    setStateSubtitle(stateMedia.subtitle_list[0])
+                if (stateSubtitleList.length > 0) {
+                    setStateSubtitle(stateSubtitleList[0])
                 }
             }
         }
-    }, [stateMedia, user_id]);
+    }, [stateSubtitleList, user_id]);
 
     useEffect(() => {
         const loadCues = () => {
@@ -309,8 +336,6 @@ export default function Page({ user_id, uuid }: Props) {
                             {stateMedia.media.user_id === user_id && (
                                 <Button color="primary" variant="solid" size='sm'
                                     isDisabled={stateSaving} onPress={async () => {
-                                        if (!stateMedia) return
-
                                         const result = await saveMedia(stateMedia.media)
                                         if (result.status === "success") {
                                             toast.success("save media success")
@@ -347,7 +372,6 @@ export default function Page({ user_id, uuid }: Props) {
                                 media: {
                                     ...stateMedia.media,
                                     title: e.target.value,
-                                    need_save: true,
                                 },
                             })}
                         />
@@ -357,7 +381,6 @@ export default function Page({ user_id, uuid }: Props) {
                             onValueChange={(v) => setStateMedia({
                                 ...stateMedia,
                                 tag_list_selected: v,
-                                need_save: true,
                             })}
                             orientation="horizontal"
                         >
@@ -373,7 +396,6 @@ export default function Page({ user_id, uuid }: Props) {
                                 media: {
                                     ...stateMedia.media,
                                     source: e.target.value,
-                                    need_save: true,
                                 },
                             })}
                             endContent={
@@ -395,8 +417,6 @@ export default function Page({ user_id, uuid }: Props) {
                                                     media: {
                                                         ...stateMedia.media,
                                                         source: `/api/data/listen/media/${stateMedia.media.uuid}.${ext}`,
-                                                        need_save: true,
-                                                        need_save_fs: true,
                                                     }
                                                 });
                                                 e.target.value = "";
@@ -415,7 +435,6 @@ export default function Page({ user_id, uuid }: Props) {
                                 media: {
                                     ...stateMedia.media,
                                     note: e.target.value,
-                                    need_save: true,
                                 },
                             })}
                         />
@@ -428,11 +447,11 @@ export default function Page({ user_id, uuid }: Props) {
                             <Select aria-label="Select subtitle" size='sm'
                                 selectedKeys={stateSubtitle ? [stateSubtitle.uuid] : []}
                                 onChange={(e) => {
-                                    const item = stateMedia.subtitle_list.find((v) => v.uuid === e.target.value);
+                                    const item = stateSubtitleList.find((v) => v.uuid === e.target.value);
                                     setStateSubtitle(item)
                                 }}
                             >
-                                {stateMedia.subtitle_list.map((v) => (
+                                {stateSubtitleList.map((v) => (
                                     <SelectItem key={v.uuid} textValue={`${v.language} (${v.user_id})`}>{`${v.language} (${v.user_id})`}</SelectItem>
                                 ))}
                             </Select>
@@ -450,13 +469,7 @@ export default function Page({ user_id, uuid }: Props) {
                                         updated_at: new Date(),
                                     };
                                     setStateSubtitle(new_subtitle);
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        subtitle_list: [
-                                            ...stateMedia.subtitle_list,
-                                            { ...new_subtitle, need_save: true },
-                                        ],
-                                    });
+                                    setStateSubtitleList(current => [new_subtitle, ...current]);
                                 }}
                             >
                                 New
@@ -468,28 +481,7 @@ export default function Page({ user_id, uuid }: Props) {
                                 item={stateSubtitle}
                                 user_id={user_id}
                                 media={videoRef.current}
-                                handleUpdate={(new_item: listen_subtitle) => {
-                                    setStateSubtitle(new_item)
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        subtitle_list: stateMedia.subtitle_list.map((v) => {
-                                            // the uuid in new_item maybe changed
-                                            return v.uuid === stateSubtitle.uuid ? {
-                                                ...new_item,
-                                                media_uuid: stateMedia.media.uuid,
-                                                need_save: true,
-                                            } : v
-                                        }),
-                                    })
-                                }}
-                                handleDelete={(item: listen_subtitle) => {
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        subtitle_list: stateMedia.subtitle_list.map((v) => {
-                                            return v.uuid === item.uuid ? { ...v, need_delete: true } : v;
-                                        }),
-                                    })
-                                }}
+                                setStateReloadSubtitle={setStateReloadSubtitle}
                             />
                         )}
                     </Tab>
@@ -500,11 +492,11 @@ export default function Page({ user_id, uuid }: Props) {
                         <Select label="Select subtitle" labelPlacement='outside-left' size='sm'
                             selectedKeys={stateSubtitle ? [stateSubtitle.uuid] : []}
                             onChange={(e) => {
-                                const item = stateMedia.subtitle_list.find((v) => v.uuid === e.target.value);
+                                const item = stateSubtitleList.find((v) => v.uuid === e.target.value);
                                 setStateSubtitle(item)
                             }}
                         >
-                            {stateMedia.subtitle_list.map((v) => (
+                            {stateSubtitleList.map((v) => (
                                 <SelectItem key={v.uuid} textValue={`${v.language} (${v.user_id})`}>{`${v.language} (${v.user_id})`}</SelectItem>
                             ))}
                         </Select>
@@ -529,44 +521,19 @@ export default function Page({ user_id, uuid }: Props) {
                                         created_at: new Date(),
                                         updated_at: new Date(),
                                     }
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        transcript_list: [
-                                            ...stateMedia.transcript_list,
-                                            { ...new_transcript, need_save: true },
-                                        ],
-                                    })
+                                    setStateTranscriptList(current => [new_transcript, ...current])
                                 }}
                             >
                                 New
                             </Button>
                         </div>
 
-                        {stateMedia.transcript_list.map((v) => (
+                        {stateTranscriptList.map((v) => (
                             <Transcript
                                 key={v.uuid}
                                 item={v}
                                 user_id={user_id}
-                                handleUpdate={(new_item: listen_transcript) => {
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        transcript_list: stateMedia.transcript_list.map((v) => {
-                                            return v.uuid === new_item.uuid ? {
-                                                ...new_item,
-                                                media_uuid: stateMedia.media.uuid,
-                                                need_save: true,
-                                            } : v;
-                                        }),
-                                    })
-                                }}
-                                handleDelete={(item: listen_transcript) => {
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        transcript_list: stateMedia.transcript_list.map((v) => {
-                                            return v.uuid === item.uuid ? { ...v, need_delete: true } : v;
-                                        }),
-                                    })
-                                }}
+                                setStateReloadTranscript={setStateReloadTranscript}
                             />
                         ))}
                     </Tab>
@@ -583,40 +550,19 @@ export default function Page({ user_id, uuid }: Props) {
                                         created_at: new Date(),
                                         updated_at: new Date(),
                                     }
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        note_list: [
-                                            ...stateMedia.note_list,
-                                            { ...new_note, need_save: true },
-                                        ],
-                                    })
+                                    setStateNoteList(current => [new_note, ...current])
                                 }}
                             >
                                 New
                             </Button>
                         </div>
 
-                        {stateMedia.note_list.map((v, i) => (
+                        {stateNoteList.map((v, i) => (
                             <Note
                                 key={i}
                                 item={v}
                                 user_id={user_id}
-                                handleUpdate={(new_item: listen_note) => {
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        note_list: stateMedia.note_list.map((v) => {
-                                            return v.uuid === new_item.uuid ? { ...new_item, need_save: true } : v;
-                                        }),
-                                    })
-                                }}
-                                handleDelete={(item: listen_note) => {
-                                    setStateMedia({
-                                        ...stateMedia,
-                                        note_list: stateMedia.note_list.map((v) => {
-                                            return v.uuid === item.uuid ? { ...v, need_delete: true } : v;
-                                        }),
-                                    })
-                                }}
+                                setStateReloadNote={setStateReloadNote}
                             />
                         ))}
                     </Tab>

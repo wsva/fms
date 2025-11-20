@@ -32,30 +32,11 @@ type card_review = qsa_card_review & {
 }
 
 type listen_media_ext = {
-    media: listen_media & {
-        need_save?: boolean;
-        need_delete?: boolean;
-        need_save_fs?: boolean;
-        need_delete_fs?: boolean;
-    };
-    transcript_list: (listen_transcript & {
-        need_save?: boolean;
-        need_delete?: boolean;
-    })[];
-    subtitle_list: (listen_subtitle & {
-        need_save?: boolean;
-        need_delete?: boolean;
-    })[];
-    note_list: (listen_note & {
-        need_save?: boolean;
-        need_delete?: boolean;
-    })[];
-
+    media: listen_media;
     tag_list_added: string[];
     tag_list_selected: string[];
     tag_list_new: string[];
     tag_list_remove: string[];
-    need_save?: boolean;
 }
 
 type read_sentence_browser = {

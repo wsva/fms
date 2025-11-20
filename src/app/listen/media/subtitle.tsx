@@ -8,21 +8,22 @@ import { listen_subtitle } from "@prisma/client";
 import { toast } from "react-toastify";
 import { languageOptions } from "@/lib/language";
 import SubtitleCorrect from './subtitle_correct'
+import { removeSubtitle, saveSubtitle } from "@/app/actions/listen";
 
 type Props = {
     item: listen_subtitle;
     user_id: string;
     media: HTMLMediaElement | null;
-    handleUpdate: (new_item: listen_subtitle) => void;
-    handleDelete: (item: listen_subtitle) => void;
+    setStateReloadSubtitle: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export default function Page({ item, user_id, media, handleUpdate, handleDelete }: Props) {
-    const [stateSubtitle, setStateSubtitle] = useState<listen_subtitle>(item);
+export default function Page({ item, user_id, media, setStateReloadSubtitle }: Props) {
+    const [stateData, setStateData] = useState<listen_subtitle>(item);
     const [stateCues, updateStateCues] = useImmer<Cue[]>([]);
     const [stateEdit, setStateEdit] = useState<boolean>(false);
     const [stateMode, setStateMode] = useState<"edit" | "correct">("edit");
 
+    // load Cues on init
     useEffect(() => {
         const loadCues = (subtitle: listen_subtitle) => {
             let cue_list: Cue[] = [];
@@ -45,33 +46,64 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
                 }
             });
         };
-        loadCues(stateSubtitle);
-    }, [stateSubtitle, updateStateCues]);
+        loadCues(item);
+    }, [item, updateStateCues]);
 
+    // reload Cues only when edit in text mode
     useEffect(() => {
-        setStateSubtitle(current => {
-            return {
-                ...current,
-                subtitle: buildVTT(stateCues),
-                format: "vtt",
+        const loadCues = (subtitle: listen_subtitle) => {
+            let cue_list: Cue[] = [];
+            switch (subtitle.format) {
+                case "vtt":
+                    cue_list = parseVTT(subtitle.subtitle, false);
+                    break;
+                case "srt":
+                    cue_list = parseSRT(subtitle.subtitle, false);
+                    break;
+                default:
+                    toast.error("invalid subtitle format");
             }
-        });
-    }, [stateCues]);
+            updateStateCues((draft) => {
+                draft.length = 0;
+                let index = 1;
+                for (const item of cue_list) {
+                    draft.push({ ...item, index: index });
+                    index++;
+                }
+            });
+        };
+        if (stateMode === "edit") {
+            loadCues(stateData);
+        }
+    }, [stateData, updateStateCues, stateMode]);
+
+    // update stateData on when in correct mode
+    useEffect(() => {
+        if (stateMode === "correct") {
+            setStateData(current => {
+                return {
+                    ...current,
+                    subtitle: buildVTT(stateCues),
+                    format: "vtt",
+                }
+            });
+        }
+    }, [stateCues, stateMode]);
 
     return (
         <div className='flex flex-col items-center justify-start w-full my-2 gap-1'>
             <div className='flex flex-row items-center justify-end w-full gap-2'>
                 <Select aria-label="Select language" size="sm" className="max-w-xs"
-                    selectedKeys={[stateSubtitle.language]}
-                    onChange={(e) => setStateSubtitle({ ...stateSubtitle, language: e.target.value })}
+                    selectedKeys={[stateData.language]}
+                    onChange={(e) => setStateData({ ...stateData, language: e.target.value })}
                 >
                     {languageOptions.map((v) => (
                         <SelectItem key={v.key} textValue={`${v.key} (${v.value})`}>{`${v.key} (${v.value})`}</SelectItem>
                     ))}
                 </Select>
                 <Select aria-label="Select format" size="sm" className="max-w-xs"
-                    selectedKeys={[stateSubtitle.format]}
-                    onChange={(e) => setStateSubtitle({ ...stateSubtitle, format: e.target.value })}
+                    selectedKeys={[stateData.format]}
+                    onChange={(e) => setStateData({ ...stateData, format: e.target.value })}
                 >
                     <SelectItem key="vtt" textValue="vtt">vtt</SelectItem>
                     <SelectItem key="srt" textValue="srt">srt</SelectItem>
@@ -103,17 +135,33 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
                             Correct with media
                         </Button>
 
-                        <Button variant='solid' size='sm' color="primary"
-                            onPress={() => handleUpdate(stateSubtitle)}
-                        >
-                            Finish
-                        </Button>
+                        {stateEdit && (
+                            <Button variant='solid' size="sm" color="secondary"
+                                onPress={async () => {
+                                    const result = await saveSubtitle({ ...stateData, updated_at: new Date() });
+                                    if (result.status === "success") {
+                                        setStateReloadSubtitle(current => current + 1);
+                                    } else {
+                                        toast.error(result.error as string);
+                                    }
+                                }}
+                            >
+                                Save
+                            </Button>
+                        )}
                     </div>
                 )}
                 {item.user_id === user_id && (
                     <div className="flex flex-row items-center justify-center gap-2">
-                        <Button size="sm" color="danger"
-                            onPress={() => handleDelete(item)}
+                        <Button variant='solid' size="sm" color="danger"
+                            onPress={async () => {
+                                const result = await removeSubtitle(item.uuid);
+                                if (result.status === "success") {
+                                    setStateReloadSubtitle(current => current + 1);
+                                } else {
+                                    toast.error(result.error as string);
+                                }
+                            }}
                         >
                             Delete
                         </Button>
@@ -128,7 +176,7 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
                             classNames={{
                                 "input": 'text-xl leading-tight font-roboto',
                             }}
-                            value={stateSubtitle.subtitle}
+                            value={stateData.subtitle}
                             minRows={10}
                             maxRows={30}
                             autoComplete='off'
@@ -136,10 +184,10 @@ export default function Page({ item, user_id, media, handleUpdate, handleDelete 
                             spellCheck='false'
                             onChange={(e) => {
                                 const new_subtitle = {
-                                    ...stateSubtitle,
+                                    ...stateData,
                                     subtitle: e.target.value,
                                 };
-                                setStateSubtitle(new_subtitle);
+                                setStateData(new_subtitle);
                             }}
                         />
                     )}

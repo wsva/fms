@@ -1,33 +1,56 @@
 'use client'
 
+import { removeNote, saveNote } from "@/app/actions/listen";
 import { Button, Textarea } from "@heroui/react";
 import { listen_note } from "@prisma/client";
 import React, { useState } from "react";
+import { toast } from "react-toastify";
 
 type Props = {
-    item: listen_note
-    user_id: string
-    handleUpdate: (new_item: listen_note) => void
-    handleDelete: (item: listen_note) => void
+    item: listen_note;
+    user_id: string;
+    setStateReloadNote: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export default function Page({ item, user_id, handleUpdate, handleDelete }: Props) {
+export default function Page({ item, user_id, setStateReloadNote }: Props) {
     const [stateEdit, setStateEdit] = useState<boolean>(false);
+    const [stateData, setStateData] = useState<listen_note>(item);
 
     return (
         <div className='flex flex-col items-center justify-start w-full my-2'>
             <div className='flex flex-row items-center justify-end w-full gap-2'>
                 {item.user_id === user_id && (
-                    <Button variant='light' size="sm"
+                    <Button variant='solid' size="sm" color="secondary"
                         onPress={() => setStateEdit(!stateEdit)}
                     >
                         {stateEdit ? "View" : "Edit"}
                     </Button>
                 )}
+                {stateEdit && (
+                    <Button variant='solid' size="sm" color="secondary"
+                        onPress={async () => {
+                            const result = await saveNote({ ...stateData, updated_at: new Date() });
+                            if (result.status === "success") {
+                                setStateReloadNote(current => current + 1);
+                            } else {
+                                toast.error(result.error as string);
+                            }
+                        }}
+                    >
+                        Save
+                    </Button>
+                )}
                 {item.user_id === user_id && (
                     <div className="flex flex-row items-center justify-center gap-2">
-                        <Button size="sm" color="danger"
-                            onPress={() => handleDelete(item)}
+                        <Button variant='solid' size="sm" color="danger"
+                            onPress={async () => {
+                                const result = await removeNote(item.uuid);
+                                if (result.status === "success") {
+                                    setStateReloadNote(current => current + 1);
+                                } else {
+                                    toast.error(result.error as string);
+                                }
+                            }}
                         >
                             Delete
                         </Button>
@@ -46,7 +69,7 @@ export default function Page({ item, user_id, handleUpdate, handleDelete }: Prop
                     autoCorrect='off'
                     spellCheck='false'
                     onChange={(e) => {
-                        handleUpdate({ ...item, note: e.target.value })
+                        setStateData({ ...item, note: e.target.value })
                     }}
                 />
             ) : (
