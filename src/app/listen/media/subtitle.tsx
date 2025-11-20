@@ -23,7 +23,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
     const [stateMode, setStateMode] = useState<"edit" | "correct">("edit");
     const [stateSaving, setStateSaving] = useState<boolean>(false);
 
-    // reload Cues only when switch to correct mode
+    // reload Cues only when switch to correct mode, or on the first time
     useEffect(() => {
         const loadCues = () => {
             let cue_list: Cue[] = [];
@@ -49,14 +49,14 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                 }
             });
         };
-        if (stateMode === "correct") {
+        if (stateMode === "correct" || stateCues.length === 0) {
             loadCues();
         }
     }, [stateData, updateStateCues, stateMode]);
 
-    // update stateData only when switch to edit mode
+    // update stateData only when switch to edit mode and ignore the first time
     useEffect(() => {
-        if (stateMode === "edit") {
+        if (stateMode === "edit" && stateCues.length > 0) {
             setStateData(current => {
                 return {
                     ...current,
