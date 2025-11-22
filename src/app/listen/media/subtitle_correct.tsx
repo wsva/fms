@@ -4,7 +4,7 @@ import { Cue, formatVttTime, parseVttTime, validateVttTime } from "@/lib/listen/
 import { Button, Input, Textarea, Tooltip } from "@heroui/react";
 import React, { useState } from "react";
 import { playMediaPart } from "@/lib/listen/utils";
-import { MdContentCopy, MdDelete, MdOutlinePlayCircle, MdOutlinePlaylistAdd, MdPlaylistAdd } from "react-icons/md";
+import { MdContentCopy, MdDelete, MdOutlinePlayCircle } from "react-icons/md";
 import { Updater } from "use-immer";
 
 type ItemProps = {
@@ -13,9 +13,12 @@ type ItemProps = {
     handleUpdate: (new_item: Cue) => void;
     handleDelete: (item: Cue) => void;
     handleInsert: (index: number) => void;
+    handleExpandStart: (item: Cue) => void;
+    handleExpandEnd: (item: Cue) => void;
+    handleMergeNext: (item: Cue) => void;
 }
 
-const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProps) => {
+const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert, handleExpandStart, handleExpandEnd, handleMergeNext }: ItemProps) => {
     const [stateStart, setStateStart] = useState<string>(formatVttTime(cue.start_ms))
     const [stateEnd, setStateEnd] = useState<string>(formatVttTime(cue.end_ms))
 
@@ -42,11 +45,10 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
                         "inputWrapper": "bg-sand-400",
                     }}
                     value={stateStart}
-                    onChange={(e) => {
-                        const timeStr = e.target.value
-                        setStateStart(timeStr)
-                        if (validateVttTime(timeStr)) {
-                            handleUpdate({ ...cue, start_ms: parseVttTime(timeStr) })
+                    onChange={(e) => setStateStart(e.target.value)}
+                    onBlur={() => {
+                        if (validateVttTime(stateStart)) {
+                            handleUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
                         }
                     }}
                 />
@@ -57,11 +59,10 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
                         "inputWrapper": "bg-sand-400",
                     }}
                     value={stateEnd}
-                    onChange={(e) => {
-                        const timeStr = e.target.value
-                        setStateEnd(timeStr)
-                        if (validateVttTime(timeStr)) {
-                            handleUpdate({ ...cue, end_ms: parseVttTime(timeStr) })
+                    onChange={(e) => setStateEnd(e.target.value)}
+                    onBlur={() => {
+                        if (validateVttTime(stateEnd)) {
+                            handleUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
                         }
                     }}
                 />
@@ -88,18 +89,39 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert }: ItemProp
                 >
                     <MdOutlinePlayCircle size={24} />
                 </Button>
-                <Tooltip placement="bottom" content="insert new before">
+                <Tooltip placement="bottom" content="insert before">
                     <Button isIconOnly variant='light' tabIndex={-1} size="sm"
                         onPress={() => handleInsert(cue.index - 1)}
                     >
-                        <MdPlaylistAdd size={24} />
+                        <div className="text-lg">#1</div>
                     </Button>
                 </Tooltip>
-                <Tooltip placement="bottom" content="insert new after">
+                <Tooltip placement="bottom" content="insert after">
                     <Button isIconOnly variant='light' tabIndex={-1} size="sm"
                         onPress={() => handleInsert(cue.index + 1)}
                     >
-                        <MdOutlinePlaylistAdd size={24} />
+                        <div className="text-lg">#2</div>
+                    </Button>
+                </Tooltip>
+                <Tooltip placement="bottom" content="expand start">
+                    <Button isIconOnly variant='light' tabIndex={-1} size="sm"
+                        onPress={() => handleExpandStart(cue)}
+                    >
+                        <div className="text-lg">#3</div>
+                    </Button>
+                </Tooltip>
+                <Tooltip placement="bottom" content="expand end">
+                    <Button isIconOnly variant='light' tabIndex={-1} size="sm"
+                        onPress={() => handleExpandEnd(cue)}
+                    >
+                        <div className="text-lg">#4</div>
+                    </Button>
+                </Tooltip>
+                <Tooltip placement="bottom" content="merge next">
+                    <Button isIconOnly variant='light' tabIndex={-1} size="sm"
+                        onPress={() => handleMergeNext(cue)}
+                    >
+                        <div className="text-lg">#5</div>
                     </Button>
                 </Tooltip>
                 <Button isIconOnly variant='light' tabIndex={-1} color="danger" size="sm"
@@ -135,6 +157,49 @@ export default function Page({ stateCues, updateStateCues, media }: Props) {
             const index = draft.findIndex(i => i.index === new_item.index);
             if (index !== -1) {
                 draft[index] = new_item;
+            }
+        });
+    }
+
+    const handleExpandStart = (item: Cue) => {
+        updateStateCues(draft => {
+            const index = draft.findIndex(i => i.index === item.index);
+            if (index === 0) {
+                draft[index] = { ...item, start_ms: 1 };
+            }
+            if (index > 0) {
+                draft[index] = { ...item, start_ms: draft[index - 1].end_ms + 1 };
+            }
+        });
+    }
+
+    const handleExpandEnd = (item: Cue) => {
+        updateStateCues(draft => {
+            const index = draft.findIndex(i => i.index === item.index);
+            if (index === draft.length - 1) {
+                draft[index] = { ...item, end_ms: draft[index].start_ms + 3600000 };
+            }
+            if (index >= 0 && index < draft.length - 1) {
+                draft[index] = { ...item, end_ms: draft[index + 1].start_ms - 1 };
+            }
+        });
+    }
+
+    const handleMergeNext = (item: Cue) => {
+        updateStateCues(draft => {
+            const index = draft.findIndex(i => i.index === item.index);
+            if (index >= 0 && index < draft.length - 1) {
+                if (draft[index].text.length === 1 && draft[index + 1].text.length === 1) {
+                    draft[index].text = [draft[index].text[0] + " " + draft[index + 1].text[0]];
+                } else {
+                    draft[index].text.push(...draft[index + 1].text);
+                }
+                draft[index].end_ms = draft[index + 1].end_ms;
+                draft.splice(index + 1, 1);
+
+                draft.forEach((item, i) => {
+                    item.index = i + 1;
+                });
             }
         });
     }
@@ -189,6 +254,9 @@ export default function Page({ stateCues, updateStateCues, media }: Props) {
                             handleUpdate={handleUpdateCue}
                             handleDelete={handleDelete}
                             handleInsert={handleInsert}
+                            handleExpandStart={handleExpandStart}
+                            handleExpandEnd={handleExpandEnd}
+                            handleMergeNext={handleMergeNext}
                         />
                     ))
                 )}

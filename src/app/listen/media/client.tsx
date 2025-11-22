@@ -301,12 +301,6 @@ export default function Page({ user_id, uuid }: Props) {
                 </div>
             )}
 
-            {stateLoading && (
-                <div className='flex flex-row w-full items-center justify-center gap-4'>
-                    <CircularProgress label="Loading..." />
-                </div >
-            )}
-
             {!!stateMedia && (!!stateMedia.media.source || !!stateMediaFile) && (
                 <div className={`flex flex-row items-end justify-end fixed ${stateVideoPosition}-0 end-0 p-4 z-50`}>
                     <Button isIconOnly variant='light' tabIndex={-1} size="sm"
