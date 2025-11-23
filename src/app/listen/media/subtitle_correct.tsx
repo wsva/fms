@@ -4,7 +4,7 @@ import { Cue, formatVttTime, parseVttTime, validateVttTime } from "@/lib/listen/
 import { Button, Input, Textarea, Tooltip } from "@heroui/react";
 import React, { useState } from "react";
 import { playMediaPart } from "@/lib/listen/utils";
-import { MdContentCopy, MdDelete, MdOutlinePlayCircle } from "react-icons/md";
+import { MdContentCopy, MdDelete, MdExpand, MdOutlinePlayCircle } from "react-icons/md";
 import { Updater } from "use-immer";
 
 type ItemProps = {
@@ -51,6 +51,15 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert, handleExpa
                             handleUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
                         }
                     }}
+                    endContent={
+                        <Tooltip placement="bottom" content="expand">
+                            <Button isIconOnly variant='light' tabIndex={-1} size="sm"
+                                onPress={() => handleExpandStart(cue)}
+                            >
+                                <MdExpand size={24} />
+                            </Button>
+                        </Tooltip>
+                    }
                 />
                 <div>{"-->"}</div>
                 <Input aria-label="end time" className="w-fit" size="sm"
@@ -65,6 +74,15 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert, handleExpa
                             handleUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
                         }
                     }}
+                    endContent={
+                        <Tooltip placement="bottom" content="expand">
+                            <Button isIconOnly variant='light' tabIndex={-1} size="sm"
+                                onPress={() => handleExpandEnd(cue)}
+                            >
+                                <MdExpand size={24} />
+                            </Button>
+                        </Tooltip>
+                    }
                 />
                 <Tooltip placement="bottom" content="copy current time">
                     <Button isIconOnly variant='light' tabIndex={-1} size="sm"
@@ -103,25 +121,12 @@ const Item = ({ cue, media, handleUpdate, handleDelete, handleInsert, handleExpa
                         <div className="text-lg">#2</div>
                     </Button>
                 </Tooltip>
-                <Tooltip placement="bottom" content="expand start">
-                    <Button isIconOnly variant='light' tabIndex={-1} size="sm"
-                        onPress={() => handleExpandStart(cue)}
-                    >
-                        <div className="text-lg">#3</div>
-                    </Button>
-                </Tooltip>
-                <Tooltip placement="bottom" content="expand end">
-                    <Button isIconOnly variant='light' tabIndex={-1} size="sm"
-                        onPress={() => handleExpandEnd(cue)}
-                    >
-                        <div className="text-lg">#4</div>
-                    </Button>
-                </Tooltip>
+
                 <Tooltip placement="bottom" content="merge next">
                     <Button isIconOnly variant='light' tabIndex={-1} size="sm"
                         onPress={() => handleMergeNext(cue)}
                     >
-                        <div className="text-lg">#5</div>
+                        <div className="text-lg">#3</div>
                     </Button>
                 </Tooltip>
                 <Button isIconOnly variant='light' tabIndex={-1} color="danger" size="sm"
