@@ -189,3 +189,11 @@
     min-width: 8%;
     max-width: 15%;
 }
+
+ol li {
+    font-size: 100%;      /* 原来 16px */
+    font-weight: 600;
+    color: #1e90ff;
+    margin: 0.4em 0 0.2em 0;
+    line-height: 1.3;
+}

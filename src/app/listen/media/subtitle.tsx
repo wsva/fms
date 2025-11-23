@@ -65,7 +65,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                 }
             });
         }
-    }, [stateCues, stateMode]);
+    }, [stateCues, stateCues.length, stateMode]);
 
     return (
         <div className='flex flex-col items-center justify-start w-full my-2 gap-1'>
