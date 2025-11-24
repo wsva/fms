@@ -49,14 +49,16 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                 }
             });
         };
-        if (stateMode === "correct" || stateCues.length === 0) {
+        // stateCues.length === 0 会有 warning: 依赖 stateCues.length
+        // 但是又不能添加 stateCues.length 这个依赖，否则编辑时无法添加或删除行
+        if (stateMode === "correct" || stateCues.at(0) === undefined) {
             loadCues();
         }
-    }, [stateData, updateStateCues, stateCues.length, stateMode]);
+    }, [stateData, updateStateCues, stateMode]);
 
     // update stateData only when switch to edit mode and ignore the first time
     useEffect(() => {
-        if (stateMode === "edit" && stateCues.length > 0) {
+        if (stateMode === "edit" && stateCues.at(0) !== undefined) {
             setStateData(current => {
                 return {
                     ...current,
@@ -65,7 +67,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                 }
             });
         }
-    }, [stateCues, stateCues.length, stateMode]);
+    }, [stateCues, stateMode]);
 
     return (
         <div className='flex flex-col items-center justify-start w-full my-2 gap-1'>
