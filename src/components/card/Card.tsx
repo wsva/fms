@@ -16,6 +16,7 @@ type Props = {
 
 export default function Card({ user_id, card, tag_list }: Props) {
     const [stateFamiliarity, setStateFamiliarity] = useState<number>(card.familiarity);
+    const [stateOpenTag, setStateOpenTag] = useState<boolean>(false);
 
     const isOwner = card.user_id === user_id
 
@@ -97,12 +98,14 @@ export default function Card({ user_id, card, tag_list }: Props) {
                     </Tooltip>)
                 )}
                 {isOwner && (
-                    <Popover placement='left' classNames={{ content: 'bg-slate-200' }}>
+                    <Popover placement='left' classNames={{ content: 'bg-slate-200' }}
+                        isOpen={stateOpenTag} onOpenChange={(open) => setStateOpenTag(open)}
+                    >
                         <PopoverTrigger>
                             <Link as='button' isBlock className='text-xl'>edit tag</Link>
                         </PopoverTrigger>
                         <PopoverContent>
-                            <SetTag user_id={user_id} card={card} tag_list={tag_list} />
+                            <SetTag user_id={user_id} card={card} tag_list={tag_list} onSuccess={() => setStateOpenTag(false)} />
                         </PopoverContent>
                     </Popover>
                 )}

@@ -156,6 +156,7 @@ export default function Page({ user_id }: Props) {
             <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300'>
                 <div className='flex flex-row w-full items-center justify-start gap-4'>
                     <Input label='name' size='lg' className='w-full'
+                        value={stateNew.tag}
                         onChange={(e) => setStateNew({ ...stateNew, tag: e.target.value })}
                     />
                     <Button variant='solid' size="lg" color='primary'
@@ -166,6 +167,7 @@ export default function Page({ user_id }: Props) {
                 </div>
                 <Textarea label='description' size='lg' className='w-full'
                     placeholder='description'
+                    value={stateNew.description}
                     onChange={(e) => setStateNew({ ...stateNew, description: e.target.value })}
                 />
             </div>

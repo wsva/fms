@@ -294,7 +294,7 @@ export default function TopNav({ session }: Props) {
                     )}
                 </NavbarContent>
 
-                <NavbarMenu className="pt-4 pb-20">
+                <NavbarMenu className="pt-4 pb-20 bg-sand-200">
                     <div className="bg-sand-300 rounded-sm p-2 mb-5">
                         {session?.user ? (
                             <div className="flex flex-col w-full">
@@ -323,6 +323,13 @@ export default function TopNav({ session }: Props) {
                             </div>
                         )}
                     </div>
+                    <NavbarMenuItem className="my-1 pl-4">
+                        <Link className="w-full text-blue-600 underline font-bold" href={"/"}
+                            onPress={() => setIsMenuOpen(!isMenuOpen)}
+                        >
+                            Home
+                        </Link>
+                    </NavbarMenuItem>
                     {menuList.map((group) => (
                         <div key={group.name}>
                             <div className="select-none font-bold">{group.name}</div>

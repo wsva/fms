@@ -8,12 +8,13 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 type Props = {
-    user_id: string
-    card: qsa_card
-    tag_list: qsa_tag[]
+    user_id: string;
+    card: qsa_card;
+    tag_list: qsa_tag[];
+    onSuccess: () => void;
 }
 
-export default function SetTag({ user_id, card, tag_list }: Props) {
+export default function SetTag({ user_id, card, tag_list, onSuccess }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
     const [stateAdded, setStateAdded] = useState<string[]>([]);
     const [stateSelected, setStateSelected] = useState<string[]>([]);
@@ -53,6 +54,7 @@ export default function SetTag({ user_id, card, tag_list }: Props) {
                 title: "save data success",
                 color: "success",
             });
+            onSuccess();
         } else {
             console.log(result.error);
             addToast({
