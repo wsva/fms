@@ -323,7 +323,7 @@ export default function TopNav({ session }: Props) {
                             </div>
                         )}
                     </div>
-                    <NavbarMenuItem className="my-1 pl-4">
+                    <NavbarMenuItem className="my-1">
                         <Link className="w-full text-blue-600 underline font-bold" href={"/"}
                             onPress={() => setIsMenuOpen(!isMenuOpen)}
                         >

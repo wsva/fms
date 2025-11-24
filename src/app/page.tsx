@@ -6,8 +6,8 @@ export default async function Home() {
       <IndexItem href='/listen/dictation' label='Dictation'
         description='Upload audio and subtitle, and then do dictation.'
       />
-      <IndexItem href='https://yanansworkshop.site:1235/' label='Dictation(old)'
-        description='dictation in textbook'
+      <IndexItem href='/listen/media' label='My Media'
+        description='View or edit media. Dictation.'
       />
       <div className="m-4 col-span-full"></div>
 

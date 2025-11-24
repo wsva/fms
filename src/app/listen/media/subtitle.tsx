@@ -52,7 +52,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
         if (stateMode === "correct" || stateCues.length === 0) {
             loadCues();
         }
-    }, [stateData, updateStateCues, stateMode]);
+    }, [stateData, updateStateCues, stateCues.length, stateMode]);
 
     // update stateData only when switch to edit mode and ignore the first time
     useEffect(() => {
