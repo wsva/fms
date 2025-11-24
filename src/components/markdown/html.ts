@@ -1,6 +1,13 @@
 import { marked } from "marked";
 import { TOC } from "./toc";
 
+// Set options
+marked.use({
+    pedantic: false,
+    breaks: true,
+    gfm: true,
+});
+
 export function tableRemoveEmptyThead(body: string[]): string[] {
     return body.map(html => {
         // 全局替换所有 thead 块（不区分大小写、跨行匹配）
