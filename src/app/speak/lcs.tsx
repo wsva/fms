@@ -1,3 +1,5 @@
+import { JSX } from "react";
+
 function tokenize(s: string): string[] {
     s = s.replace(/\s+/g, ' ').trim();
     if (!s) return [];
@@ -20,16 +22,16 @@ function lcs(a: string[], b: string[]) {
     }
     let i = 0,
         j = 0;
-    const matchesB: number[] = [];
+    const matchesB2A: number[][] = [];
     while (i < n && j < m) {
         if (a[i] === b[j]) {
-            matchesB.push(j);
+            matchesB2A.push([j, i]);
             i++;
             j++;
         } else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
         else j++;
     }
-    return { matchesB };
+    return matchesB2A;
 }
 
 function escapeHtml(str: string): string {
@@ -42,14 +44,50 @@ function escapeHtml(str: string): string {
 export const highlightDifferences = (original: string, recognized: string) => {
     const originalTokens = tokenize(original);
     const recognizedTokens = tokenize(recognized);
-    const { matchesB } = lcs(originalTokens, recognizedTokens);
-    const matchSetB = new Set(matchesB);
 
-    return recognizedTokens.map((t, idx) => {
-        if (matchSetB.has(idx)) {
-            return <span key={idx}>{escapeHtml(t)}</span>;
+    // LCS 找出匹配关系
+    const matchesR2O = lcs(originalTokens, recognizedTokens);
+    // 构建 recIdx -> oriIdx 的映射
+    const matchMapR2O = new Map<number, number>(matchesR2O.map((v) => [v[0], v[1]]));
+
+    const result: JSX.Element[] = [];
+    let lastPosO = 0;
+    for (let rIdx = 0; rIdx < recognizedTokens.length; rIdx++) {
+        const oIdx = matchMapR2O.get(rIdx);
+
+        if (oIdx === undefined) {
+            // 在 original 中不存在
+            result.push(
+                <span key={`extra-${rIdx}`} style={{ background: "yellow" }}>
+                    {escapeHtml(recognizedTokens[rIdx])}
+                </span>
+            );
         } else {
-            return <span key={idx} style={{ "background": "#ffeb3b" }}>{escapeHtml(t)}</span>;
+            if (oIdx > lastPosO) {
+                // 在 original 中存在，但是中间有漏掉的
+                for (let i = lastPosO; i < oIdx; i++) {
+                    result.push(
+                        <span key={`missing-${i}`} style={{ background: "lightgreen" }} >
+                            {escapeHtml(originalTokens[i])}
+                        </span>
+                    );
+                }
+            }
+            result.push(
+                <span key={`match-${rIdx}`}>{escapeHtml(recognizedTokens[rIdx])}</span>
+            );
+            lastPosO = oIdx + 1;
         }
-    });
-}
+    }
+
+    // original 剩余多出来的部分
+    for (let i = lastPosO; i < originalTokens.length; i++) {
+        result.push(
+            <span key={`missing-${i}`} style={{ background: "red" }}>
+                {escapeHtml(originalTokens[i])}
+            </span>
+        );
+    }
+
+    return result;
+};
