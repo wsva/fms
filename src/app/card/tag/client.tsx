@@ -8,7 +8,7 @@ import { qsa_tag } from "@prisma/client";
 
 type PropsItem = {
     item: qsa_tag,
-    handleUpdate: (new_item: qsa_tag) => Promise<void>;
+    handleUpdate: (new_item: qsa_tag) => Promise<boolean>;
     handleDelete: (uuid: string) => Promise<void>;
 }
 
@@ -35,7 +35,12 @@ function Item({ item, handleUpdate, handleDelete }: PropsItem) {
                 </Button>
                 {stateEdit && (
                     <Button variant='solid' size="sm" color='primary'
-                        onPress={async () => { await handleUpdate(stateData) }}
+                        onPress={async () => {
+                            const success = await handleUpdate(stateData);
+                            if (success) {
+                                setStateEdit(false);
+                            }
+                        }}
                     >
                         Save
                     </Button>
@@ -102,14 +107,18 @@ export default function Page({ user_id }: Props) {
         setStateSaving(false)
     }
 
-    const handleUpdate = async (new_item: qsa_tag) => {
+    const handleUpdate = async (new_item: qsa_tag): Promise<boolean> => {
         setStateSaving(true)
         const result = await saveTag({
             ...new_item,
             updated_at: new Date(),
         });
         if (result.status === "success") {
-            setStateReload(current => current + 1)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
+            setStateReload(current => current + 1);
         } else {
             console.log(result.error);
             addToast({
@@ -117,7 +126,9 @@ export default function Page({ user_id }: Props) {
                 color: "danger",
             });
         }
-        setStateSaving(false)
+        setStateSaving(false);
+
+        return result.status === "success";
     }
 
     const handleDelete = async (uuid: string) => {

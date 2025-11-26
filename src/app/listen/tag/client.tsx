@@ -4,16 +4,16 @@ import { addToast, Button, Input, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { getTagAll, removeTag, saveTag } from '@/app/actions/listen';
 import { getUUID } from "@/lib/utils";
-import { listen_tag, qsa_tag } from "@prisma/client";
+import { qsa_tag } from "@prisma/client";
 
 type PropsItem = {
-    item: listen_tag,
-    handleUpdate: (new_item: listen_tag) => Promise<void>;
+    item: qsa_tag,
+    handleUpdate: (new_item: qsa_tag) => Promise<boolean>;
     handleDelete: (uuid: string) => Promise<void>;
 }
 
 function Item({ item, handleUpdate, handleDelete }: PropsItem) {
-    const [stateData, setStateData] = useState<listen_tag>(item);
+    const [stateData, setStateData] = useState<qsa_tag>(item);
     const [stateEdit, setStateEdit] = useState<boolean>(false);
 
     return (
@@ -35,7 +35,12 @@ function Item({ item, handleUpdate, handleDelete }: PropsItem) {
                 </Button>
                 {stateEdit && (
                     <Button variant='solid' size="sm" color='primary'
-                        onPress={async () => { await handleUpdate(stateData) }}
+                        onPress={async () => {
+                            const success = await handleUpdate(stateData);
+                            if (success) {
+                                setStateEdit(false);
+                            }
+                        }}
                     >
                         Save
                     </Button>
@@ -69,9 +74,9 @@ type Props = {
 }
 
 export default function Page({ user_id }: Props) {
-    const [stateData, setStateData] = useState<listen_tag[]>([]);
+    const [stateData, setStateData] = useState<qsa_tag[]>([]);
     const [stateReload, setStateReload] = useState<number>(1);
-    const [stateNew, setStateNew] = useState<Partial<listen_tag>>({});
+    const [stateNew, setStateNew] = useState<Partial<qsa_tag>>({});
     const [stateSaving, setStateSaving] = useState<boolean>(false);
 
     const handleAdd = async () => {
@@ -102,14 +107,18 @@ export default function Page({ user_id }: Props) {
         setStateSaving(false)
     }
 
-    const handleUpdate = async (new_item: qsa_tag) => {
+    const handleUpdate = async (new_item: qsa_tag): Promise<boolean> => {
         setStateSaving(true)
         const result = await saveTag({
             ...new_item,
             updated_at: new Date(),
         });
         if (result.status === "success") {
-            setStateReload(current => current + 1)
+            addToast({
+                title: "save data success",
+                color: "success",
+            });
+            setStateReload(current => current + 1);
         } else {
             console.log(result.error);
             addToast({
@@ -117,7 +126,9 @@ export default function Page({ user_id }: Props) {
                 color: "danger",
             });
         }
-        setStateSaving(false)
+        setStateSaving(false);
+
+        return result.status === "success";
     }
 
     const handleDelete = async (uuid: string) => {
@@ -156,7 +167,7 @@ export default function Page({ user_id }: Props) {
             <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300'>
                 <div className='flex flex-row w-full items-center justify-start gap-4'>
                     <Input label='name' size='lg' className='w-full'
-                    value={stateNew.tag}
+                        value={stateNew.tag}
                         onChange={(e) => setStateNew({ ...stateNew, tag: e.target.value })}
                     />
                     <Button variant='solid' size="lg" color='primary'
