@@ -3,7 +3,6 @@
     display: grid;
     grid-template-columns: 260px 1fr;
     gap: 24px;
-    display: flex;
 }
 
 /* 小屏幕下变成单列 */
