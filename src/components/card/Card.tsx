@@ -7,6 +7,7 @@ import { addToast, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownSe
 import Collect from './Collect';
 import SetTag from './SetTag';
 import { setCardFamiliarity } from '@/app/actions/card';
+import Markdown2Html from '@/components/markdown/markdown';
 
 type Props = {
     user_id: string
@@ -36,7 +37,7 @@ export default function Card({ user_id, card, tag_list }: Props) {
                 <Link target='_blank' className='text-2xl text-blue-600 hover:underline'
                     href={`/card/${card.uuid}`}
                 >
-                    <pre className='font-roboto leading-none text-wrap'>{card.question}</pre>
+                    <Markdown2Html content={card.question} />
                 </Link>
             </div>
             {!isOwner && (
