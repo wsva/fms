@@ -9,9 +9,10 @@ import './katex.min.css';
 type Props = {
     src?: string;
     content?: string;
+    withTOC?: boolean;
 }
 
-export default function Page({ src, content }: Props) {
+export default function Page({ src, content, withTOC = false }: Props) {
     const [stateContent, setStateContent] = useState<string>(content || "");
     const [stateTOC, setStateTOC] = useState<string>("");
     const [stateBody, setStateBody] = useState<string>("");
@@ -32,11 +33,13 @@ export default function Page({ src, content }: Props) {
     }, [stateContent]);
 
     return (
-        <div className="md-container text-xl bg-sand-300 rounded-md p-2">
-            <aside
-                className="md-toc"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateTOC) }}
-            />
+        <div className="md-container">
+            {withTOC && !!stateTOC && (
+                <aside
+                    className="md-toc"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateTOC) }}
+                />
+            )}
 
             <article
                 className="md-body"

@@ -150,6 +150,8 @@ export class TOC {
 
     html(): string {
         const tree = new TOCTree();
+        if (this.list.length === 0) return "";
+        
         for (const item of this.list) tree.add(item);
 
         return `

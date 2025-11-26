@@ -126,19 +126,15 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                             Next
                         </Button>
                     </div>
-                    <div className={`flex flex-row w-full items-center justify-center ${getColor(stateCard.familiarity)}`}>
-                        {stateCard.card.question.length < 30
-                            ? (<div className='my-5 font-bold text-2xl md:text-4xl lg:text-6xl xl:text-8xl'>
-                                <pre className='font-roboto leading-none whitespace-pre-wrap break-words max-w-full'>
-                                    {stateCard.card.question}
-                                </pre>
-                            </div>)
-                            : (<div className='my-5 font-bold text-base md:text-xl lg:text-2xl xl:text-4xl'>
-                                <pre className='font-roboto leading-none whitespace-pre-wrap break-words max-w-full'>
-                                    {stateCard.card.question}
-                                </pre>
-                            </div>)
-                        }
+                    <div className={`flex flex-row w-full items-center justify-center p-2 ${getColor(stateCard.familiarity)}`}>
+                        <div
+                            className={stateCard.card.question.length < 30
+                                ? "my-5 font-bold text-2xl md:text-4xl lg:text-6xl xl:text-8xl"
+                                : "y-5 font-bold text-base md:text-xl lg:text-2xl xl:text-4xl"
+                            }
+                        >
+                            <Markdown2Html content={stateCard.card.question} withTOC />
+                        </div>
                     </div>
                     <div className='flex flex-row my-5 items-center justify-center gap-4'>
                         {stateCard.card.suggestion.length > 0 ? (
@@ -214,7 +210,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                     {stateLoading && (
                         <div className='flex flex-row w-full items-center justify-center gap-4'>
                             <CircularProgress label="Loading..." />
-                        </div >
+                        </div>
                     )}
                     {stateSuggestion ? (
                         <Textarea isDisabled
@@ -223,7 +219,9 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                         />
                     ) : null}
                     {stateAnswer ? (
-                        <Markdown2Html content={stateCard.card.answer} />
+                        <div className='text-xl bg-sand-300 rounded-md p-2'>
+                            <Markdown2Html content={stateCard.card.answer} withTOC />
+                        </div>
                     ) : null}
                     {stateAnswer ? (
                         <Textarea isDisabled

@@ -114,7 +114,9 @@ export default function BlogForm({ item, email, edit_view }: Props) {
                         <div className='text-xl font-roboto'>
                             {watch('description', getDefault('description') as string | '')}
                         </div>
-                        <Markdown2Html content={watch('content', getDefault('content') as string)} />
+                        <div className='text-xl bg-sand-300 rounded-md p-2'>
+                            <Markdown2Html content={watch('content', getDefault('content') as string)} withTOC />
+                        </div>
                         <div>
                             TODO:
                             write commentar

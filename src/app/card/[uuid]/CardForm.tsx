@@ -341,9 +341,9 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                     </>
                 ) : (
                     <>
-                        <pre className='text-3xl leading-tight font-roboto font-bold text-wrap'>
-                            {watch('question', getDefault('question') as string || '')}
-                        </pre>
+                        <div className='text-xl bg-sand-300 rounded-md p-2'>
+                            <Markdown2Html content={watch('question', getDefault('question') as string)} />
+                        </div>
                         <Divider />
                         <Select aria-label='select familiarity'
                             selectionMode='single' isDisabled
@@ -372,7 +372,9 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             {watch('suggestion', getDefault('suggestion') as string || '')}
                         </div>
                         <Divider />
-                        <Markdown2Html content={watch('answer', getDefault('answer') as string)} />
+                        <div className='text-xl bg-sand-300 rounded-md p-2'>
+                            <Markdown2Html content={watch('answer', getDefault('answer') as string)} withTOC />
+                        </div>
                         <Divider />
                         <pre className='text-md font-roboto mx-8'>
                             {watch('note', getDefault('note') as string || '')}
