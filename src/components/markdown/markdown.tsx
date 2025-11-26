@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import DOMPurify from "isomorphic-dompurify";
 import { toHTML } from "./html";
 import './markdown.css';
+import './katex.min.css';
 
 type Props = {
     src?: string;

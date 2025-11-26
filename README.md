@@ -32,6 +32,7 @@ npx auth secret
 npm install uuid
 npm install -D @types/uuid
 npm install marked
+npm install marked-katex-extension
 
 # error: sanitize is not a function
 # npm install dompurify

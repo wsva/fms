@@ -1,12 +1,18 @@
 import { marked } from "marked";
+import markedKatex from "marked-katex-extension";
 import { TOC } from "./toc";
 
 // Set options
-marked.use({
-    pedantic: false,
-    breaks: true,
-    gfm: true,
-});
+marked.use(
+    {
+        pedantic: false,
+        breaks: true,
+        gfm: true,
+    },
+    markedKatex({
+        throwOnError: false
+    }),
+);
 
 export function tableRemoveEmptyThead(body: string[]): string[] {
     return body.map(html => {
