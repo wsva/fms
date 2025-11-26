@@ -33,18 +33,26 @@ export default function Page({ src, content, withTOC = false }: Props) {
     }, [stateContent]);
 
     return (
-        <div className="md-container">
-            {withTOC && !!stateTOC && (
-                <aside
-                    className="md-toc"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateTOC) }}
-                />
+        <>
+            {(withTOC && !!stateTOC) ? (
+                <div className="md-container">
+                    <aside
+                        className="md-toc"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateTOC) }}
+                    />
+                    <article
+                        className="md-body"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateBody) }}
+                    />
+                </div>
+            ) : (
+                <div>
+                    <article
+                        className="md-body"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateBody) }}
+                    />
+                </div>
             )}
-
-            <article
-                className="md-body"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateBody) }}
-            />
-        </div>
+        </>
     );
 };

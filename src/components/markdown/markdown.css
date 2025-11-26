@@ -61,7 +61,6 @@
 
 /* 文章区域 */
 .md-body {
-    width: 100%;
     min-width: 0; /* 防止内容撑出容器（重要） */
     line-height: 1.65;
 }
