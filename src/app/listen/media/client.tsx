@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { addToast, Button, Checkbox, CheckboxGroup, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_tag, listen_transcript } from '@prisma/client'
-import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia } from '@/app/actions/listen'
+import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia, saveMediaTag } from '@/app/actions/listen'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
 import { MdFileUpload, MdMoveDown, MdMoveUp } from 'react-icons/md'
@@ -347,6 +347,28 @@ export default function Page({ user_id, uuid }: Props) {
                                             console.log(result.error);
                                             addToast({
                                                 title: "save data error",
+                                                color: "danger",
+                                            });
+                                            setStateSaving(false);
+                                            return
+                                        }
+
+                                        const tag_list_added = stateMedia.tag_list_added;
+                                        const tag_list_selected = stateMedia.tag_list_selected;
+                                        const result_tag = await saveMediaTag({
+                                            ...stateMedia,
+                                            tag_list_new: stateMedia.tag_list_selected.filter(v => !tag_list_added.includes(v)),
+                                            tag_list_remove: tag_list_added.filter((v) => !tag_list_selected.includes(v)),
+                                        })
+                                        if (result_tag.status === 'success') {
+                                            setStateMedia({
+                                                ...stateMedia,
+                                                tag_list_added: tag_list_selected,
+                                            })
+                                        } else {
+                                            console.log(result_tag.error);
+                                            addToast({
+                                                title: "save tag error",
                                                 color: "danger",
                                             });
                                         }

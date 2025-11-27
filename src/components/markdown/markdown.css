@@ -138,7 +138,7 @@
 
 .md-body p {
     line-height: 1.2;
-    padding-bottom: 15px;
+    padding: 8px 0 8px 0;
 }
 
 .md-body a {
@@ -188,4 +188,23 @@
 .md-body td {
     min-width: 8%;
     max-width: 15%;
+}
+
+.md-body ul {
+    margin-left: 1em;
+}
+
+.md-body ul li {
+    display: block;
+    line-height: 1.2;
+}
+
+.md-body ul li::before {
+    content: "➤";
+    color: blue;
+    display: inline-block;
+    width: 1em;
+    margin-right: 0.5em;
+    font-size: 50%;
+    vertical-align: 0.3em;
 }
