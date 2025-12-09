@@ -133,6 +133,7 @@ export default function Client({ user_id }: Props) {
                             key={p.uuid}
                             item={p}
                             user_id={user_id}
+                            simple={false}
                             handleDelete={handleDelete}
                             handleUpdate={handleUpdate}
                         />
