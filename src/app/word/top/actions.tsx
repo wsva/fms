@@ -4,8 +4,8 @@ import { trashWord } from '@/app/actions/word';
 import { saveCard, saveCardTag, getTagAll, createTag } from '@/app/actions/card';
 import { getUUID } from '@/lib/utils';
 import { addToast, Button, ButtonGroup, Link, Tooltip, useDisclosure } from "@heroui/react"
-import { qsa_tag } from '@prisma/client';
-import React, { useState } from 'react';
+import { qsa_tag } from "@/generated/prisma/client";
+import { useState } from 'react';
 import CardModal from './modal';
 import { card_ext, topword } from '@/lib/types';
 import { BiLinkExternal, BiPlus, BiSolidBolt, BiTrash } from 'react-icons/bi';

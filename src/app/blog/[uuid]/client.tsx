@@ -5,7 +5,7 @@ import { Button, Input, Textarea, Link, addToast } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
-import { blog } from '@prisma/client';
+import { blog } from "@/generated/prisma/client";
 import { saveBlog } from '@/app/actions/blog';
 import Markdown2Html from '@/components/markdown/markdown';
 

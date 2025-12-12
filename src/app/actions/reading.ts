@@ -6,7 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
-import { read_book, read_chapter, read_sentence } from '@prisma/client'
+import { read_book, read_chapter, read_sentence } from "@/generated/prisma/client";
 
 /**
  * book

@@ -2,7 +2,7 @@
 
 import { formatDate } from '@/lib/utils';
 import { Button, Listbox, ListboxItem } from "@heroui/react"
-import { blog } from '@prisma/client';
+import { blog } from "@/generated/prisma/client";
 // cannot jump on click on phone
 //import Link from 'next/link';
 import { Link } from "@heroui/react"

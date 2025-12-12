@@ -1,8 +1,7 @@
 'use client'
 
-import React from 'react'
 import { Button, Tooltip } from '@heroui/react'
-import { plan_record } from '@prisma/client';
+import { plan_record } from "@/generated/prisma/client";
 import { MdClose, MdDone } from 'react-icons/md';
 
 const ColorMap = new Map<string, string>([

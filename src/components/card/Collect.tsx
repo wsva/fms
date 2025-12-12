@@ -3,8 +3,8 @@
 import { getTagAll, saveCard, saveCardTag } from '@/app/actions/card';
 import { getUUID } from '@/lib/utils';
 import { addToast, Checkbox, CheckboxGroup, Link } from "@heroui/react"
-import { qsa_card, qsa_tag } from '@prisma/client';
-import React, { useEffect, useState } from 'react';
+import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 type Props = {

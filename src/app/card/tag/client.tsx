@@ -4,7 +4,7 @@ import { addToast, Button, Input, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
 import { getTagAll, removeTag, saveTag } from '@/app/actions/card';
 import { getUUID } from "@/lib/utils";
-import { qsa_tag } from "@prisma/client";
+import { qsa_tag } from "@/generated/prisma/client";
 
 type PropsItem = {
     item: qsa_tag,

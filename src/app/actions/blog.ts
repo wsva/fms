@@ -7,7 +7,7 @@
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
 import { getUUID } from "@/lib/utils";
-import { blog, Prisma } from '@prisma/client'
+import { blog, Prisma } from "@/generated/prisma/client";
 
 
 export async function getBlogAllOfOthers(email?: string): Promise<ActionResult<blog[]>> {

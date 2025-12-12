@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Chip, CircularProgress, Divider, Input, Pagination, Tooltip } from "@heroui/react"
-import { qsa_card, qsa_tag } from '@prisma/client';
+import { qsa_card, qsa_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';
 import { getCardAll } from '@/app/actions/card';
 import { FilterType, FilterTypeList, TagAll, TagUnspecified, TagNo } from "@/lib/card";

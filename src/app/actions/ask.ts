@@ -6,7 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
-import { ask_answer, ask_question } from '@prisma/client'
+import { ask_answer, ask_question } from "@/generated/prisma/client";
 
 export async function getQuestion(uuid: string): Promise<ActionResult<ask_question>> {
     try {

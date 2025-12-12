@@ -2,8 +2,8 @@
 
 import { languageOptions } from '@/lib/language'
 import { Button, Input, Select, SelectItem } from '@heroui/react'
-import { voice_access_command } from '@prisma/client'
-import React, { useState } from 'react'
+import { voice_access_command } from "@/generated/prisma/client";
+import { useState } from 'react'
 
 type Props = {
     cmd: voice_access_command

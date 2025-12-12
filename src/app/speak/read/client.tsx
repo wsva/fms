@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useImmer } from 'use-immer'
 import { addToast, Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import Sentence from './sentence';

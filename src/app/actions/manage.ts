@@ -7,7 +7,7 @@
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
 import { getUUID } from "@/lib/utils";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 export async function getUserIDAll(): Promise<ActionResult<string[]>> {
     try {

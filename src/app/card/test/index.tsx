@@ -1,8 +1,8 @@
 "use client"
 
 import { getTagAll } from '@/app/actions/card';
-import React, { useEffect, useState } from 'react'
-import { qsa_tag } from '@prisma/client';
+import { useEffect, useState } from 'react'
+import { qsa_tag } from "@/generated/prisma/client";
 import { Link } from '@heroui/react';
 
 type Props = {

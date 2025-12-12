@@ -1,7 +1,7 @@
 'use client'
 
-import { qsa_card, qsa_tag } from '@prisma/client';
-import React, { useState } from 'react';
+import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { useState } from 'react';
 import { FamiliarityList } from '@/lib/card';
 import { addToast, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Link, Popover, PopoverContent, PopoverTrigger, Tooltip } from '@heroui/react';
 import Collect from './Collect';

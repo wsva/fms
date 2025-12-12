@@ -2,8 +2,8 @@
 
 import { getActionAll, getCommandAll } from '@/app/actions/voice_access'
 import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Link, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@heroui/react'
-import { voice_access_action, voice_access_command } from '@prisma/client'
-import React, { useEffect, useState } from 'react'
+import { voice_access_action, voice_access_command } from "@/generated/prisma/client";
+import { useEffect, useState } from 'react'
 import { indentJsonString } from '@/lib/utils'
 import { typeOptions } from './const'
 import { languageOptions } from '@/lib/language'

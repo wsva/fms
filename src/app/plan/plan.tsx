@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { addToast, Button, Divider, Tooltip } from '@heroui/react'
 import Record from './record';
-import { plan_plan, plan_record } from '@prisma/client';
+import { plan_plan, plan_record } from "@/generated/prisma/client";
 import { getRecordAll, saveRecord } from '../actions/plan';
 import { getUUID } from '@/lib/utils';
 import { MdCelebration, MdDelete, MdExpandCircleDown, MdOutlineStar, MdOutlineStarBorder } from 'react-icons/md';

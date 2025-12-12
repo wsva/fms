@@ -1,8 +1,7 @@
 'use client'
 
-import React from 'react'
 import { Link } from "@heroui/react";
-import { practice_text } from '@prisma/client';
+import { practice_text } from "@/generated/prisma/client";
 
 type Props = {
     user_id: string;

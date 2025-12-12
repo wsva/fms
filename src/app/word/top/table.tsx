@@ -1,7 +1,6 @@
 'use client'
 
 import { Chip, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip } from "@heroui/react"
-import React from 'react'
 import Actions from './actions'
 import { topword } from '@/lib/types'
 

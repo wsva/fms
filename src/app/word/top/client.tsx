@@ -2,7 +2,7 @@
 
 import { getTopword, searchTopword } from '@/app/actions/word'
 import { CircularProgress, Input, Pagination } from "@heroui/react"
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { topword } from '@/lib/types'
 import Table from './table'
 import { BiSearch } from 'react-icons/bi'

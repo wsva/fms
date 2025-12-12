@@ -6,7 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
-import { practice_audio, practice_text } from '@prisma/client'
+import { practice_audio, practice_text } from "@/generated/prisma/client";
 
 /**
  * text

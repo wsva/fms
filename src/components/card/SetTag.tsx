@@ -3,7 +3,7 @@
 import { getCardTag, saveCardTag } from '@/app/actions/card';
 import { card_ext } from '@/lib/types';
 import { addToast, Checkbox, CheckboxGroup, CircularProgress, Link } from "@heroui/react"
-import { qsa_card, qsa_tag } from '@prisma/client';
+import { qsa_card, qsa_tag } from "@/generated/prisma/client";
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 

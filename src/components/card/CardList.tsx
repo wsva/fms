@@ -1,6 +1,6 @@
 'use client'
 
-import { qsa_card, qsa_tag } from '@prisma/client';
+import { qsa_card, qsa_tag } from "@/generated/prisma/client";
 import React, { useEffect, useState } from 'react';
 import { getTagAll } from '@/app/actions/card';
 import Card from './Card';

@@ -6,7 +6,7 @@ import { addToast, Button, CircularProgress, Pagination, Spinner, Textarea, Tool
 import { getUUID } from '@/lib/utils';
 import Book from '@/app/speak/read/book';
 import Chapter from '@/app/speak/read/chapter';
-import { qsa_card } from '@prisma/client';
+import { qsa_card } from "@/generated/prisma/client";
 import { MdDelete } from 'react-icons/md';
 import { getCardAll, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
 import { FilterType } from '@/lib/card';

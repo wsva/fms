@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { Action, ActionResult } from "@/lib/types";
-import { voice_access_action, voice_access_command } from '@prisma/client';
+import { voice_access_action, voice_access_command } from "@/generated/prisma/client";
 
 export async function getActionAll(): Promise<ActionResult<voice_access_action[]>> {
     try {

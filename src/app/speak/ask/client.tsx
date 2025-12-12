@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { addToast, Button, Input, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
-import { ask_question } from '@prisma/client';
+import { ask_question } from "@/generated/prisma/client";
 import { getQuestionAll, removeQuestion, saveQuestion } from '@/app/actions/ask';
 import { EngineList, toggleRecording } from '@/lib/recording';
 import { ActionResult } from '@/lib/types';

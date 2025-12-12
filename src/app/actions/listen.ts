@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
 import { getUUID } from "@/lib/utils"
-import { listen_media, listen_media_tag, listen_note, listen_subtitle, listen_tag, listen_transcript, Prisma } from "@prisma/client"
+import { listen_media, listen_media_tag, listen_note, listen_subtitle, listen_tag, listen_transcript, Prisma } from "@/generated/prisma/client";
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {

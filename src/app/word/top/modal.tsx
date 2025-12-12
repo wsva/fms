@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Checkbox, Input, Textarea, Select, SelectItem, SelectSection, CheckboxGroup } from "@heroui/react";
 import { useForm } from 'react-hook-form';
 import { card_ext, topword } from '@/lib/types';
 import { FamiliarityList } from '@/lib/card';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from "zod";
-import { qsa_tag } from '@prisma/client';
+import { qsa_tag } from "@/generated/prisma/client";
 
 
 type Props = {

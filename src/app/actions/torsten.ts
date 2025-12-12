@@ -6,7 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
-import { torsten_voice } from '@prisma/client';
+import { torsten_voice } from "@/generated/prisma/client";
 
 export async function getTorstenVoice(page: number, limit: number): Promise<ActionResult<torsten_voice[]>> {
     const skip = (page - 1) * limit

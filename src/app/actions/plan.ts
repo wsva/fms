@@ -5,7 +5,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
-import { plan_plan, plan_record } from "@prisma/client";
+import { plan_plan, plan_record } from "@/generated/prisma/client";
 
 export async function getPlan(uuid: string): Promise<ActionResult<plan_plan>> {
     try {

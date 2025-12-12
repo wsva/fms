@@ -1,7 +1,7 @@
 import { getChapterAll, removeChapter, saveChapter } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
 import { addToast, Button, CircularProgress, Input, Select, SelectItem } from "@heroui/react";
-import { read_chapter } from '@prisma/client';
+import { read_chapter } from "@/generated/prisma/client";
 import React, { useEffect, useState } from 'react'
 
 type Props = {

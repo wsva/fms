@@ -5,7 +5,7 @@ import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
 import Plan from './plan';
 import { getUUID } from '@/lib/utils';
-import { plan_plan } from '@prisma/client';
+import { plan_plan } from "@/generated/prisma/client";
 
 type Props = {
     user_id: string;

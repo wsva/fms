@@ -1,4 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@/generated/prisma/client';
+
+const connectionString = `${process.env.DATABASE_URL}`
+
+const adapter = new PrismaPg({ connectionString })
 
 /**
  * 生产环境启动后就是长时间运行，直接下面一行代码就够了：
@@ -25,7 +31,7 @@ const globalForPrisma = global as unknown as {prisma: PrismaClient}
  * 如果这个属性已经存在并且是一个 PrismaClient 实例，则使用它。
  * 如果是 undefined 或 null（即还没有设置过 prisma 实例），则创建一个新的 PrismaClient 实例。
  */
-export const prisma = globalForPrisma.prisma || new PrismaClient({log: ['query']})
+export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter })
 
 /**
  * 确保在非生产环境中，每次代码热重载时，

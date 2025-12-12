@@ -2,7 +2,7 @@
 
 import { removeNote, saveNote } from "@/app/actions/listen";
 import { addToast, Button, Textarea } from "@heroui/react";
-import { listen_note } from "@prisma/client";
+import { listen_note } from "@/generated/prisma/client";
 import React, { useState } from "react";
 
 type Props = {

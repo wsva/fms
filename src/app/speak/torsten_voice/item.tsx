@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Button } from '@heroui/react'
 import { MdPlayCircle } from 'react-icons/md'
-import { torsten_voice } from '@prisma/client'
+import { torsten_voice } from "@/generated/prisma/client";
 import { ActionResult } from '@/lib/types'
 import { toggleRecording } from '@/lib/recording'
 

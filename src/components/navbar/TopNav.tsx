@@ -10,7 +10,8 @@ import { handleSTTResult } from "@/lib/voice_access";
 import { EngineList, toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
 import { initCmdHelpMap } from "@/app/actions/voice_access";
-import { signIn, signOut, useSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
+import { Session, User } from "better-auth";
 
 const ChevronDown = () => {
     return (
@@ -34,7 +35,7 @@ const ChevronDown = () => {
 };
 
 type Props = {
-    session: Session | null
+    session: { session: Session, user: User } | null
 }
 
 export default function TopNav({ session }: Props) {
@@ -285,7 +286,11 @@ export default function TopNav({ session }: Props) {
                         <UserMenu session={session} />
                     ) : (
                         <Button variant='bordered' className='text-gray-500'
-                            onPress={() => signIn('wsva_oauth2')}
+                            onPress={async () => {
+                                await authClient.signIn.social({
+                                    provider: "wsva_oauth2",
+                                });
+                            }}
                         >
                             Login
                         </Button>
@@ -304,7 +309,15 @@ export default function TopNav({ session }: Props) {
                                     </div>
 
                                     <Button color="danger" size="sm"
-                                        onPress={() => { signOut({ redirectTo: "/" }) }}
+                                        onPress={async () => {
+                                            await authClient.signOut({
+                                                fetchOptions: {
+                                                    onSuccess: () => {
+                                                        router.push("/");
+                                                    },
+                                                },
+                                            });
+                                        }}
                                     >
                                         Sign Out
                                     </Button>
@@ -314,7 +327,11 @@ export default function TopNav({ session }: Props) {
                         ) : (
                             <div className="flex flex-row items-center justify-center gap-2 w-full">
                                 <Button color="primary" size="sm"
-                                    onPress={() => signIn('wsva_oauth2')}
+                                    onPress={async () => {
+                                        await authClient.signIn.social({
+                                            provider: "wsva_oauth2",
+                                        });
+                                    }}
                                 >
                                     Login
                                 </Button>

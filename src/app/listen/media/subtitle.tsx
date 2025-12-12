@@ -4,7 +4,7 @@ import { buildVTT, Cue, parseSRT, parseVTT } from "@/lib/listen/subtitle";
 import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from "react";
 import { useImmer } from "use-immer";
-import { listen_subtitle } from "@prisma/client";
+import { listen_subtitle } from "@/generated/prisma/client";
 import { languageOptions } from "@/lib/language";
 import SubtitleCorrect from './subtitle_correct'
 import { removeSubtitle, saveSubtitle } from "@/app/actions/listen";

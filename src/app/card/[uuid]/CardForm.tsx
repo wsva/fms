@@ -5,7 +5,7 @@ import { addToast, Button, ButtonGroup, Checkbox, CheckboxGroup, Divider, Link, 
 import React, { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
-import { qsa_card, qsa_tag } from '@prisma/client';
+import { qsa_card, qsa_tag } from "@/generated/prisma/client";
 import { getCardTag, getTagAll, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';

@@ -1,7 +1,7 @@
 import { getBookAll, removeBook, saveBook } from '@/app/actions/reading';
 import { getUUID } from '@/lib/utils';
 import { addToast, Button, CircularProgress, Input, Select, SelectItem } from "@heroui/react";
-import { read_book } from '@prisma/client';
+import { read_book } from "@/generated/prisma/client";
 import React, { useEffect, useState } from 'react'
 
 type Props = {

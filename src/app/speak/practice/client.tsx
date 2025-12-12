@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { addToast, Button, Spinner, Textarea } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
 import Text from './text';
 import { getTextAll, removeText, saveText } from '@/app/actions/practice';
-import { practice_text } from '@prisma/client';
+import { practice_text } from "@/generated/prisma/client";
 
 type Props = {
     user_id: string;

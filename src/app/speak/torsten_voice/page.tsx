@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { getTorstenVoice } from '@/app/actions/torsten'
-import { torsten_voice } from '@prisma/client'
+import { torsten_voice } from "@/generated/prisma/client";
 import { Item } from './item'
 import { Pagination, Select, SelectItem } from '@heroui/react'
 import { EngineList } from '@/lib/recording'

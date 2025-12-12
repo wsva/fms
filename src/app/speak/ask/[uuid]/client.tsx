@@ -2,8 +2,8 @@
 
 import { getUUID } from '@/lib/utils';
 import { addToast, Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
-import React, { useEffect, useRef, useState } from 'react'
-import { ask_answer, ask_question } from '@prisma/client';
+import { useEffect, useRef, useState } from 'react'
+import { ask_answer, ask_question } from "@/generated/prisma/client";
 import { ActionResult } from '@/lib/types';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
 import { EngineList, toggleRecording } from '@/lib/recording';

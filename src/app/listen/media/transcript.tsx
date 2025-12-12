@@ -3,7 +3,7 @@
 import { removeTranscript, saveTranscript } from "@/app/actions/listen";
 import { languageOptions } from "@/lib/language";
 import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
-import { listen_transcript } from "@prisma/client";
+import { listen_transcript } from "@/generated/prisma/client";
 import React, { useState } from "react";
 
 type Props = {

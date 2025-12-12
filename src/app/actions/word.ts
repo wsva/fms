@@ -7,7 +7,7 @@
 import { prisma } from "@/lib/prisma";
 import { ActionResult, topword } from "@/lib/types";
 import { getUUID } from "@/lib/utils";
-import { Prisma, word_trash } from '@prisma/client';
+import { Prisma, word_trash } from "@/generated/prisma/client";
 
 export async function getTopword(
     email: string,

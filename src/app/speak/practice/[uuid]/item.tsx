@@ -3,7 +3,7 @@
 import { getUUID } from '@/lib/utils';
 import { addToast, Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
 import React, { useEffect, useState } from 'react'
-import { practice_audio, practice_text } from '@prisma/client';
+import { practice_audio, practice_text } from "@/generated/prisma/client";
 import { getAudioDBAll, getText, removeAudioDB, saveAudioDB, saveText } from '@/app/actions/practice';
 import { ActionResult } from '@/lib/types';
 import { highlightDifferences } from '../../lcs';

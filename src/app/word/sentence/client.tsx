@@ -1,7 +1,7 @@
 'use client'
 
 import { getExample, searchExample } from '@/app/actions/word'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ActionResult } from '@/lib/types';
 import { CircularProgress, Input, Link } from "@heroui/react";
 import { BiSearch } from 'react-icons/bi';

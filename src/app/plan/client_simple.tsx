@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { addToast } from "@heroui/react";
 import { getPlanAll, savePlan } from '@/app/actions/plan';
 import Plan from './plan';
-import { plan_plan } from '@prisma/client';
+import { plan_plan } from "@/generated/prisma/client";
 
 type Props = {
     user_id: string;
