@@ -14,7 +14,6 @@ export const auth = betterAuth({
                     pkce: true,
                     scopes: ["profile", "media"],
                     getUserInfo: async (token) => {
-                        console.log("token", token)
                         const response = await fetch(process.env.OAUTH2_USERINFO as string, {
                             headers: {
                                 Authorization: `Bearer ${token.accessToken}`,
