@@ -26,7 +26,7 @@ spec:
         runAsGroup: 1000
       containers:
         - name: fms
-          image: node:22.19.0
+          image: node:24.12.0
           imagePullPolicy: IfNotPresent
           env:
             - name: POSTGRES_PASSWORD
@@ -57,9 +57,8 @@ spec:
               git clone https://github.com/wsva/fms_build /home/node/app
               cd /home/node/app
               echo 'DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/fmsdb' > .env
-              echo 'NEXTAUTH_URL=https://yanansworkshop.site' >> .env
-              echo 'AUTH_SECRET="${AUTH_SECRET}"' >> .env
-              echo 'AUTH_TRUST_HOST=true' >> .env
+              echo 'BETTER_AUTH_URL=https://yanansworkshop.site' >> .env
+              echo 'BETTER_AUTH_SECRET="${AUTH_SECRET}"' >> .env
               echo 'OAUTH2_AUTHORIZATION=https://yanansworkshop.site/oauth2/authorize' >> .env
               echo 'OAUTH2_TOKEN=https://yanansworkshop.site/oauth2/token' >> .env
               echo 'OAUTH2_USERINFO=https://yanansworkshop.site/oauth2/userinfo' >> .env
