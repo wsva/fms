@@ -2,23 +2,19 @@ Fremdsprachen machen Spaß!
 
 # create project
 `````
-docker pull node:22.19.0
-docker run -it --user node --name next.js -v C:/Users/yanan/code/wsva/fms/next.js:/code node:22.19.0 /bin/bash
+docker pull node:24.12.0
+docker run -it --user node --name next.js -v /home/yanan/code/wsva/fms:/code node:24.12.0 /bin/bash
 cd /code/
 npx create-next-app@latest node_project
 
-
-npm config set registry https://mirrors.cloud.tencent.com/npm/
-npm config set registry https://registry.npmjs.org/
-
-
-npx create-next-app@latest node_project
+✔ Would you like to use the recommended Next.js defaults? › No, customize settings
 ✔ Would you like to use TypeScript? … Yes
-✔ Would you like to use ESLint? … Yes
+✔ Which linter would you like to use? › ESLint
+✔ Would you like to use React Compiler? … Yes
 ✔ Would you like to use Tailwind CSS? … Yes
-✔ Would you like to use `src/` directory? … Yes
+✔ Would you like your code inside a `src/` directory? … Yes
 ✔ Would you like to use App Router? (recommended) … Yes
-✔ Would you like to customize the default import alias (@/*)? … No
+✔ Would you like to customize the import alias (`@/*` by default)? … No
 `````
 
 # install
@@ -27,7 +23,14 @@ cd node_project/
 npm install @heroui/react framer-motion
 npm install react-icons
 npm install react-hook-form zod @hookform/resolvers
-npm install next-auth@beta
+npm install next-auth
+
+
+
+
+
+
+
 npx auth secret
 npm install uuid
 npm install -D @types/uuid

@@ -39,8 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# dev
-/public/temp/
-/public/torsten_voice/
-/public/data/
