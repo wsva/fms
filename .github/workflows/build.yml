@@ -24,7 +24,7 @@ jobs:
       - name: Generate Prisma Client
         run: |
           cd src
-          npm exec prisma@6.16.2 generate
+          npm exec prisma@7.1.0 generate
 
       - name: Build Next.js project
         run: |
