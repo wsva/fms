@@ -10,7 +10,23 @@ export const auth = betterAuth({
                     clientId: process.env.OAUTH2_CLIENT_ID as string,
                     authorizationUrl: process.env.OAUTH2_AUTHORIZATION,
                     tokenUrl: process.env.OAUTH2_TOKEN,
-                    scopes: ["user_profile", "user_media"],
+                    pkce: true,
+                    scopes: ["profile", "media"],
+                    getUserInfo: async (token) => {
+                        console.log("token", token)
+                        const response = await fetch(process.env.OAUTH2_USERINFO as string, {
+                            headers: {
+                                Authorization: `Bearer ${token.accessToken}`,
+                            },
+                        });
+                        const profile = await response.json();
+                        return {
+                            id: profile.email,
+                            name: profile.name,
+                            email: profile.email,
+                            emailVerified: profile.verified_email,
+                        };
+                    },
                 },
             ]
         })

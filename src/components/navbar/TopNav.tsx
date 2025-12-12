@@ -117,7 +117,7 @@ export default function TopNav({ session }: Props) {
                 shouldHideOnScroll
                 maxWidth='full'
                 //className='border-b-1'
-                className='bg-gradient-to-b from-sand-300 to-sand-200'
+                className='bg-linear-to-b from-sand-300 to-sand-200'
                 classNames={{
                     item: [
                         'text-sm',
@@ -130,7 +130,7 @@ export default function TopNav({ session }: Props) {
                 isMenuOpen={isMenuOpen}
                 onMenuOpenChange={setIsMenuOpen}
             >
-                <NavbarContent className='flex-grow-0 mr-1 sm:mr-4 data-[justify=start]:flex-grow-0' justify="start">
+                <NavbarContent className='grow-0 mr-1 sm:mr-4 data-[justify=start]:grow-0' justify="start">
                     <NavbarMenuToggle
                         aria-label={isMenuOpen ? "Close menu" : "Open menu"}
                         className="lg:hidden"
@@ -227,7 +227,7 @@ export default function TopNav({ session }: Props) {
                                     </DropdownTrigger>
                                     <DropdownMenu
                                         disallowEmptySelection
-                                        className="max-w-[300px]"
+                                        className="max-w-75"
                                     >
                                         {Array.from(stateCmdMap.entries()).map(([action, cmds]) => (
                                             <DropdownSection key={action} showDivider title={action}>
@@ -247,7 +247,7 @@ export default function TopNav({ session }: Props) {
                                     <DropdownMenu
                                         disallowEmptySelection
                                         aria-label="Merge options"
-                                        className="max-w-[300px]"
+                                        className="max-w-75"
                                     >
                                         <DropdownSection showDivider title="Select AI engine">
                                             <DropdownItem
@@ -314,8 +314,15 @@ export default function TopNav({ session }: Props) {
                                                 fetchOptions: {
                                                     onSuccess: () => {
                                                         router.push("/");
+                                                        router.refresh();
                                                     },
                                                 },
+                                            });
+                                            const formData = new FormData();
+                                            formData.append("user_id", session.user.email);
+                                            await fetch(`${process.env.OAUTH2_LOGOUT}`, {
+                                                method: "POST",
+                                                body: formData,
                                             });
                                         }}
                                     >

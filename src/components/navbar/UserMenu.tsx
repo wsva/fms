@@ -11,7 +11,7 @@ type Props = {
 
 export default function UserMenu({ session }: Props) {
     const router = useRouter();
-    
+
     return (
         <Dropdown placement="bottom-start">
             <DropdownTrigger>
@@ -32,9 +32,18 @@ export default function UserMenu({ session }: Props) {
                             fetchOptions: {
                                 onSuccess: () => {
                                     router.push("/");
+                                    router.refresh();
                                 },
                             },
                         });
+                        if (!!session) {
+                            const formData = new FormData();
+                            formData.append("user_id", session.user.email);
+                            await fetch(`${process.env.OAUTH2_LOGOUT}`, {
+                                method: "POST",
+                                body: formData,
+                            });
+                        }
                     }}
                 >
                     Sign Out
