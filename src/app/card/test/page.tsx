@@ -1,5 +1,5 @@
-import { auth } from '@/auth';
-import React from 'react'
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import Client from './client';
 import Index from './index';
 
@@ -9,7 +9,9 @@ type Props = {
 };
 
 export default async function CardTestPage({ searchParams }: Props) {
-    const session = await auth();
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
     const email = session?.user?.email || '';
 
     const sp = await searchParams;

@@ -4,15 +4,13 @@ import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, Dro
 import React, { useEffect } from 'react'
 import UserMenu from './UserMenu'
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react"
-import { Session } from "next-auth"
 import { MdArrowBack, MdArrowForward, MdHelpOutline, MdMic, MdMicOff, MdOutlineSettings } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
 import { EngineList, toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
 import { initCmdHelpMap } from "@/app/actions/voice_access";
-import { signOut } from "next-auth/react";
+import { signIn, signOut, useSession } from "@/lib/auth-client";
 
 const ChevronDown = () => {
     return (

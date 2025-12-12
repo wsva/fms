@@ -23,14 +23,7 @@ cd node_project/
 npm install @heroui/react framer-motion
 npm install react-icons
 npm install react-hook-form zod @hookform/resolvers
-npm install next-auth
-
-
-
-
-
-
-
+npm install better-auth
 npx auth secret
 npm install uuid
 npm install -D @types/uuid
@@ -42,23 +35,27 @@ npm install marked-katex-extension
 # npm install -D @types/dompurify
 npm install isomorphic-dompurify
 
-npm install crypto-js
-npm install -D @types/crypto-js
-npm install wretch
-npm install react-draggable
-
-npm install @prisma/client@6.16.2 @auth/prisma-adapter
-npm install prisma@6.16.2 --save-dev
+npm install prisma@7.1.0 @types/node @types/pg --save-dev
+npm install @prisma/client@7.1.0 @prisma/adapter-pg@7.1.0 pg dotenv
 # Generate Prisma Client
-npm exec prisma generate
-npm exec prisma@6.16.2 generate
-
-npm install wav
-npm i --save-dev @types/wav
+npm exec prisma@7.1.0 generate
 
 npm install use-immer
 npm install mime
 npm install hls.js
+npm install wav
+npm i --save-dev @types/wav
+npm install redis
+npm install crypto-js
+npm install -D @types/crypto-js
+
+-------------------------------------
+
+
+
+
+npm install wretch
+npm install react-draggable
 `````
 
 # db

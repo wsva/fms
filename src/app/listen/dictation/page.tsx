@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ReactNode, useRef, useState } from 'react'
+import { ReactNode, useRef, useState } from 'react'
 import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Input, Textarea, Link } from "@heroui/react";
 import { SRTItem, parse_srt_content } from './srt'
 import DictationSentence from './DictationSentence'

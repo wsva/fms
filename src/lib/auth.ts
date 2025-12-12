@@ -1,6 +1,23 @@
-import NextAuth from "next-auth"
+import { betterAuth } from "better-auth";
+import { genericOAuth } from "better-auth/plugins";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const auth = betterAuth({
+    plugins: [
+        genericOAuth({
+            config: [
+                {
+                    providerId: "wsva_oauth2",
+                    clientId: process.env.OAUTH2_CLIENT_ID as string,
+                    authorizationUrl: process.env.OAUTH2_AUTHORIZATION,
+                    tokenUrl: process.env.OAUTH2_TOKEN,
+                    scopes: ["user_profile", "user_media"],
+                },
+            ]
+        })
+    ]
+});
+/* 
+export const { handlers, signIn, signOut, auth1 } = NextAuth({
     // 配置 session 后才能使用 auth() 获取到 session 数据，包括 username, email
     session: { strategy: 'jwt' },
     providers: [
@@ -18,11 +35,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token: process.env.OAUTH2_TOKEN,
             userinfo: process.env.OAUTH2_USERINFO,
             clientId: process.env.OAUTH2_CLIENT_ID,
-            /**
-             * "pkce"	使用 PKCE（会生成 code_challenge/code_verifier）
-             * "state"	使用 state 参数防止 CSRF 攻击（大多数 provider 默认支持）
-             * "none"	不执行任何检查（极少使用）
-             */
             checks: ["pkce", "state"],
             profile(profile) {
                 return {
@@ -45,4 +57,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
     },
     debug: true,
-})
+}) */

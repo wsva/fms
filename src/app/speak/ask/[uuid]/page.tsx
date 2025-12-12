@@ -1,6 +1,6 @@
-import React from 'react'
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import Item from './client';
-import { auth } from '@/auth';
 
 type Props = {
     params: Promise<{ uuid: string }>
@@ -8,7 +8,9 @@ type Props = {
 };
 
 export default async function ExamplePage({ params }: Props) {
-    const session = await auth();
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
     const email = session?.user?.email || '';
 
     const p = await params;

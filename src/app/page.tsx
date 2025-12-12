@@ -1,9 +1,12 @@
 import { IndexItem } from "@/components/IndexItem";
-import { auth } from '@/auth';
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import PlanSimple from '@/app/plan/client_simple';
 
 export default async function Home() {
-    const session = await auth();
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
     const email = session?.user?.email || '';
 
     return (
