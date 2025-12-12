@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { genericOAuth } from "better-auth/plugins";
 
 export const auth = betterAuth({
+    secret: process.env.BETTER_AUTH_SECRET,
     plugins: [
         genericOAuth({
             config: [
