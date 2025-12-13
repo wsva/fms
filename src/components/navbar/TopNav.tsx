@@ -1,8 +1,7 @@
 'use client';
 
 import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
-import React, { useEffect } from 'react'
-import UserMenu from './UserMenu'
+import { useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
 import { MdArrowBack, MdArrowForward, MdHelpOutline, MdMic, MdMicOff, MdOutlineSettings } from "react-icons/md";
 import { menuList } from "./menu";
@@ -11,7 +10,7 @@ import { EngineList, toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
 import { initCmdHelpMap } from "@/app/actions/voice_access";
 import { authClient } from "@/lib/auth-client";
-import { Session, User } from "better-auth";
+import { User } from "better-auth";
 
 const ChevronDown = () => {
     return (
@@ -34,20 +33,17 @@ const ChevronDown = () => {
     );
 };
 
-type Props = {
-    session: { session: Session, user: User } | null
-}
-
-export default function TopNav({ session }: Props) {
-    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-    const [stateColor, setStateColor] = React.useState<"default" | "success" | "warning">("default");
-    const [stateEngine, setStateEngine] = React.useState<string>("local");
-    const [stateRecorder, setStateRecorder] = React.useState<MediaRecorder[]>([]);
-    const [stateRecording, setStateRecording] = React.useState(false);
-    const [stateProcessing, setStateProcessing] = React.useState(false);
-    const [stateSTT, setStateSTT] = React.useState<string>("");
-    const [stateCmdOpen, setStateCmdOpen] = React.useState<boolean>(false);
-    const [stateCmdMap, setStateCmdMap] = React.useState<Map<string, string[]>>(new Map());
+export default function TopNav() {
+    const [stateUser, setStateUser] = useState<User>();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [stateColor, setStateColor] = useState<"default" | "success" | "warning">("default");
+    const [stateEngine, setStateEngine] = useState<string>("local");
+    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
+    const [stateRecording, setStateRecording] = useState(false);
+    const [stateProcessing, setStateProcessing] = useState(false);
+    const [stateSTT, setStateSTT] = useState<string>("");
+    const [stateCmdOpen, setStateCmdOpen] = useState<boolean>(false);
+    const [stateCmdMap, setStateCmdMap] = useState<Map<string, string[]>>(new Map());
 
     const router = useRouter();
 
@@ -79,23 +75,22 @@ export default function TopNav({ session }: Props) {
     }
 
     useEffect(() => {
-        const loadCmdMap = async () => {
-            const cmdMap = await initCmdHelpMap();
-            setStateCmdMap(cmdMap);
-        }
-        if (stateCmdOpen) {
-            loadCmdMap();
-        }
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === 'F2') {
-                e.preventDefault();
-                const btn = document.getElementById("button-voice-access") as HTMLButtonElement | null;
-                btn?.click();
+        const refresh = async () => {
+            try {
+                const session = await authClient.getSession();
+                setStateUser(session.data?.user);
+            } catch (e) {
+                console.error("session refresh failed", e);
             }
         };
-        window.addEventListener('keydown', handleKeyDown);
 
+        refresh();
+        const refreshTimer = setInterval(refresh, 60_000); // 每分钟
+
+        return () => clearInterval(refreshTimer);
+    }, []);
+
+    useEffect(() => {
         let blinkTimer: NodeJS.Timeout | null = null;
         if (stateRecording) {
             blinkTimer = setInterval(() => {
@@ -107,6 +102,30 @@ export default function TopNav({ session }: Props) {
 
         return () => {
             if (blinkTimer) clearInterval(blinkTimer);
+        };
+    }, [stateRecording]);
+
+    useEffect(() => {
+        const loadCmdMap = async () => {
+            const cmdMap = await initCmdHelpMap();
+            setStateCmdMap(cmdMap);
+        }
+        if (stateCmdOpen) {
+            loadCmdMap();
+        }
+    }, [stateCmdOpen]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'F2') {
+                e.preventDefault();
+                const btn = document.getElementById("button-voice-access") as HTMLButtonElement | null;
+                btn?.click();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [stateCmdOpen, stateRecording]);
@@ -282,8 +301,42 @@ export default function TopNav({ session }: Props) {
 
 
                 <NavbarContent justify='end' className="hidden lg:flex">
-                    {session?.user ? (
-                        <UserMenu session={session} />
+                    {!!stateUser ? (
+                        <Dropdown placement="bottom-start">
+                            <DropdownTrigger>
+                                <Button size="sm" className="text-lg bg-sand-400">
+                                    {stateUser.name}
+                                </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu aria-label="User Actions" variant="flat">
+                                <DropdownItem key="profile" className="h-14 gap-2">
+                                    <p className="font-bold">{stateUser.name}</p>
+                                    <p className="font-bold">{stateUser.email}</p>
+                                </DropdownItem>
+                                <DropdownItem key="logout"
+                                    className="text-danger"
+                                    color="danger"
+                                    onPress={async () => {
+                                        await authClient.signOut({
+                                            fetchOptions: {
+                                                onSuccess: () => {
+                                                    router.push("/");
+                                                    setStateUser(undefined);
+                                                },
+                                            },
+                                        });
+                                        const formData = new FormData();
+                                        formData.append("user_id", stateUser.email);
+                                        await fetch(`${process.env.OAUTH2_LOGOUT}`, {
+                                            method: "POST",
+                                            body: formData,
+                                        });
+                                    }}
+                                >
+                                    Sign Out
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </Dropdown>
                     ) : (
                         <Button variant='bordered' className='text-gray-500'
                             onPress={async () => {
@@ -299,12 +352,12 @@ export default function TopNav({ session }: Props) {
 
                 <NavbarMenu className="pt-4 pb-20 bg-sand-200">
                     <div className="bg-sand-300 rounded-sm p-2 mb-5">
-                        {session?.user ? (
+                        {!!stateUser ? (
                             <div className="flex flex-col w-full">
                                 <div className="flex flex-row items-center justify-start gap-2 w-full">
                                     <div className="flex-1">
                                         <Button size="sm" isDisabled className="text-lg bg-sand-400 disabled:opacity-100">
-                                            {session.user?.name}
+                                            {stateUser.name}
                                         </Button>
                                     </div>
 
@@ -314,12 +367,12 @@ export default function TopNav({ session }: Props) {
                                                 fetchOptions: {
                                                     onSuccess: () => {
                                                         router.push("/");
-                                                        router.refresh();
+                                                        setStateUser(undefined);
                                                     },
                                                 },
                                             });
                                             const formData = new FormData();
-                                            formData.append("user_id", session.user.email);
+                                            formData.append("user_id", stateUser.email);
                                             await fetch(`${process.env.OAUTH2_LOGOUT}`, {
                                                 method: "POST",
                                                 body: formData,
@@ -329,7 +382,7 @@ export default function TopNav({ session }: Props) {
                                         Sign Out
                                     </Button>
                                 </div>
-                                <div className="select-none">{session.user?.email}</div>
+                                <div className="select-none">{stateUser.email}</div>
                             </div>
                         ) : (
                             <div className="flex flex-row items-center justify-center gap-2 w-full">

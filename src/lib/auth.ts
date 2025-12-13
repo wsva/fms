@@ -30,7 +30,14 @@ export const auth = betterAuth({
                 },
             ]
         })
-    ]
+    ],
+    session: {
+        cookieCache: {
+            enabled: true,
+            maxAge: 5 * 60,
+            strategy: "jwt" // or "compact" or "jwe"
+        }
+    },
 });
 /* 
 export const { handlers, signIn, signOut, auth1 } = NextAuth({
