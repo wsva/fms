@@ -14,9 +14,9 @@ const Command = ({ item }: { item: voice_access_command }) => {
 
     return (
         <Input className="max-w-2xl" size='sm'
-        classNames={{
-            "input": "text-xl"
-        }}
+            classNames={{
+                "input": "text-xl"
+            }}
             defaultValue={stateText}
             onChange={(e) => setStateText(e.target.value)}
             startContent={
@@ -26,7 +26,7 @@ const Command = ({ item }: { item: voice_access_command }) => {
                     </DropdownTrigger>
                     <DropdownMenu
                         disallowEmptySelection
-                        className="max-w-[300px]"
+                        className="max-w-75"
                         selectedKeys={[stateLanguage]}
                         selectionMode="single"
                         onSelectionChange={(keys) => setStateLanguage(keys.currentKey || "en")}

@@ -1,8 +1,21 @@
-import React from 'react'
-import { initCmdMap } from '@/app/actions/voice_access';
+"use client"
 
-export default async function Page() {
-    const cmdMap = await initCmdMap();
+import { initCmdMap } from '@/app/actions/voice_access';
+import { Action } from '@/lib/types';
+import { useEffect, useState } from 'react';
+
+export default function Page() {
+    const [stateCmd, setStateCmd] = useState<Map<string, Action>>(new Map());
+
+    useEffect(() => {
+        const loadData = async () => {
+            const cmdMap = await initCmdMap();
+            setStateCmd(cmdMap);
+        };
+        loadData();
+    }, []);
+
+
 
     return (
         <div>
@@ -13,7 +26,7 @@ export default async function Page() {
                 The latest variable cmdMap is as following:
             </div>
             <pre className='text-xl'>
-                {JSON.stringify(Array.from(cmdMap.entries()), null, 2)}
+                {JSON.stringify(Array.from(stateCmd.entries()), null, 2)}
             </pre>
         </div>
     )
