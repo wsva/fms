@@ -222,13 +222,21 @@ export default function Client({ email }: Props) {
             return
         }
 
+        // Auto-save reordering of existing sentences shifted by the insert
+        if (insertIndex < stateData.length) {
+            const shifted = stateData.slice(insertIndex).map((s, i) => toDbSentence({ ...s, order_num: insertIndex + 2 + i }))
+            const r2 = await saveBookSentenceMany(shifted)
+            if (r2.status !== 'success') {
+                addToast({ title: 'save order error', color: 'danger' })
+                setStateSaving(false)
+                return
+            }
+        }
+
         updateStateData(d => {
             d.splice(insertIndex, 0, newSentence)
-            d.forEach((s, i) => {
-                if (s.order_num !== i + 1) { s.order_num = i + 1; if (s.uuid !== newSentence.uuid) s.modified = true }
-            })
+            d.forEach((s, i) => { s.order_num = i + 1; s.modified = false })
         })
-        if (insertIndex < stateData.length) setStateNeedSave(true)
 
         setStateSaving(false)
         setStateDrawer(null)
