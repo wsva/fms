@@ -2,7 +2,7 @@
 
 import { getProperty, getUUID } from '@/lib/utils';
 import { addToast, Button, ButtonGroup, Checkbox, CheckboxGroup, Divider, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
 import { qsa_card, qsa_tag } from "@/generated/prisma/client";

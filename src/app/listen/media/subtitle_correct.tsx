@@ -2,7 +2,7 @@
 
 import { Cue, formatVttTime, parseVttTime, validateVttTime } from "@/lib/listen/subtitle";
 import { Button, Input, Textarea, Tooltip } from "@heroui/react";
-import React, { useState } from "react";
+import { useState } from "react";
 import { playMediaPart } from "@/lib/listen/utils";
 import { MdContentCopy, MdDelete, MdExpand, MdOutlinePlayCircle } from "react-icons/md";
 import { Updater } from "use-immer";

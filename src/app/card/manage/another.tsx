@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { addToast, Button, CircularProgress, Pagination, Select, SelectItem } from "@heroui/react"
 import { qsa_card, qsa_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';

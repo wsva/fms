@@ -2,7 +2,6 @@
  * cover text for dictation
  */
 
-import React from 'react';
 import { coverText, highlightName } from './utils';
 import './style.css';
 

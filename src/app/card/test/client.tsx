@@ -1,7 +1,7 @@
 'use client'
 
 import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress, Input, addToast } from "@heroui/react";
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BiCaretDown } from 'react-icons/bi';
 import { card_review } from '@/lib/types';
 import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';

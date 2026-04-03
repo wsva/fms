@@ -1,6 +1,5 @@
 "use client"
 
-import React from 'react'
 import { Link } from '@heroui/react';
 
 export default function Page() {

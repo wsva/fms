@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import DOMPurify from "isomorphic-dompurify";
 import { toHTML } from "./html";
 import './markdown.css';

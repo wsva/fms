@@ -2,7 +2,7 @@
 
 import { getProperty, getUUID } from '@/lib/utils';
 import { Button, Input, Textarea, Link, addToast } from "@heroui/react";
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
 import { blog } from "@/generated/prisma/client";

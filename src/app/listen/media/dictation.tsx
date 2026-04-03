@@ -1,5 +1,5 @@
 import { Avatar, Button, Input, Link, Tooltip } from "@heroui/react"
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { MdOutlineAddCircleOutline, MdOutlineHelpOutline, MdOutlineLightbulbCircle, MdOutlinePlayCircle } from 'react-icons/md'
 import { pureContent, splitContent, hideWord, playMediaPart } from '@/lib/listen/utils'
 import { Cue } from "@/lib/listen/subtitle"

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
 import Plan from './plan';

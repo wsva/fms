@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import TopNav from "@/components/navbar/TopNav";
-import { headers } from "next/headers";
+//import { headers } from "next/headers";
 
 export const metadata: Metadata = {
     title: "FmS",

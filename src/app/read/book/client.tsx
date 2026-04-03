@@ -1,21 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { addToast, Button, Input, Select, SelectItem, Switch, Spinner, Textarea } from "@heroui/react"
+import { addToast, Button, Input, Spinner } from "@heroui/react"
 import { book_meta } from "@/generated/prisma/client"
 import { getBookMetaAll, saveBookMeta, removeBookMeta } from "@/app/actions/book"
 import { saveTag } from "@/app/actions/card"
 import { getUUID } from "@/lib/utils"
-
-const LANGUAGES = [
-    { key: 'de', label: 'Deutsch' },
-    { key: 'en', label: 'English' },
-    { key: 'fr', label: 'Français' },
-    { key: 'es', label: 'Español' },
-    { key: 'it', label: 'Italiano' },
-    { key: 'zh', label: 'Chinese' },
-    { key: 'ja', label: 'Japanese' },
-]
 
 type Props = {
     email: string

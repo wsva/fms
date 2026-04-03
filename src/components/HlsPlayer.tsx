@@ -43,6 +43,7 @@ export default function Page({
             hls.attachMedia(videoRef.current);
 
             hls.on(Hls.Events.ERROR, (event, data) => {
+                console.log("event:", event);
                 console.log("HLS Error:", data);
                 if (data.details === Hls.ErrorDetails.MANIFEST_PARSING_ERROR) {
                     // 不是 HLS，直接使用普通视频播放

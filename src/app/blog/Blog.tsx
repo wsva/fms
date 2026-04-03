@@ -6,7 +6,6 @@ import { blog } from "@/generated/prisma/client";
 // cannot jump on click on phone
 //import Link from 'next/link';
 import { Link } from "@heroui/react"
-import React from 'react'
 
 type Props = {
     list: blog[];

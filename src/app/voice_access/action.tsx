@@ -2,7 +2,7 @@
 
 import { getCommandByAction } from '@/app/actions/voice_access'
 import { voice_access_action, voice_access_command } from "@/generated/prisma/client";
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Command from './command'
 import { Button, Input, Select, SelectItem, Textarea } from '@heroui/react'
 import { indentJsonString } from '@/lib/utils'

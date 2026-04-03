@@ -1,7 +1,7 @@
 'use client';
 
 import { addToast, Button, Input, Textarea } from "@heroui/react";
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getTagAll, removeTag, saveTag } from '@/app/actions/listen';
 import { getUUID } from "@/lib/utils";
 import { qsa_tag } from "@/generated/prisma/client";

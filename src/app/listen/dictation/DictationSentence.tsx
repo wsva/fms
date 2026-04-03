@@ -1,5 +1,5 @@
 import { Avatar, Button, Input, Link, Tooltip } from "@heroui/react"
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { MdFavorite, MdHelp, MdHelpOutline, MdPlayCircle } from 'react-icons/md'
 import { SRTItem, pureContent, splitContent, hideWord } from './srt'
 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { addToast, Button, Divider, Tooltip } from '@heroui/react'
 import Record from './record';
 import { plan_plan, plan_record } from "@/generated/prisma/client";
