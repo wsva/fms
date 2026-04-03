@@ -94,6 +94,14 @@ model topword_de_example {
   example String
 }
 
+model word_trash {
+  uuid       String   @id @db.VarChar(100)
+  word       String
+  created_by String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
 // ---------- blog
 
 model blog {
@@ -102,8 +110,8 @@ model blog {
   title       String   @db.VarChar(255)
   description String   @db.VarChar(255)
   content     String
-  created_at  DateTime @db.Timestamptz(6)
-  updated_at  DateTime @db.Timestamptz(6)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
 
 // ---------- listen
@@ -113,7 +121,7 @@ model listen_media {
   user_id    String   @db.VarChar(100)
   title      String
   source     String
-  note       String?
+  note       String
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -150,7 +158,7 @@ model listen_tag {
   uuid        String   @id @db.VarChar(100)
   user_id     String   @db.VarChar(100)
   tag         String
-  description String?
+  description String
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -167,21 +175,21 @@ model listen_transcript {
 
 model listening_document {
   uuid        String   @id @db.VarChar(100)
+  user_id     String   @db.VarChar(100)
   access_path String
   content     String
   branch      String
   version     Int
   deleted     Boolean
-  created_by  String
   created_at  DateTime @db.Timestamptz(6)
   updated_at  DateTime @db.Timestamptz(6)
 }
 
 model listening_storage {
   uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
   upload_to  String
   file       String   @db.VarChar(100)
-  created_by String
   created_at DateTime @db.Timestamptz(6)
   updated_at DateTime @db.Timestamptz(6)
 }
@@ -192,7 +200,6 @@ model practice_text {
   uuid       String   @id @db.VarChar(100)
   user_id    String   @db.VarChar(100)
   text       String
-  created_by String   @db.VarChar(100)
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -203,7 +210,6 @@ model practice_audio {
   text_uuid  String   @db.VarChar(100)
   audio_path String?
   recognized String?
-  created_by String   @db.VarChar(100)
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -215,7 +221,6 @@ model ask_question {
   audio_path String?
   video_path String?
   content    String?
-  created_by String   @db.VarChar(100)
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -227,7 +232,6 @@ model ask_answer {
   audio_path    String?
   video_path    String?
   content       String?
-  created_by    String   @db.VarChar(100)
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   updated_at    DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -236,13 +240,6 @@ model book_meta {
   uuid        String   @id @db.VarChar(100)
   user_id     String   @db.VarChar(100)
   title       String
-  author      String?
-  language    String   @db.VarChar(10)
-  description String?
-  cover_path  String?
-  source      String?
-  is_public   Boolean  @default(false)
-  created_by  String   @db.VarChar(100)
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -254,7 +251,6 @@ model book_chapter {
   order_num   Int
   title       String
   description String?
-  created_by  String   @db.VarChar(100)
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -267,9 +263,7 @@ model book_sentence {
   content       String
   sentence_type String   @db.VarChar(20)
   audio_path    String?
-  tts_path      String?
   recognized    String?
-  created_by    String   @db.VarChar(100)
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   updated_at    DateTime @default(now()) @db.Timestamptz(6)
 }
@@ -278,45 +272,43 @@ model book_sentence {
 
 model qsa_card {
   uuid        String   @id @db.VarChar(100)
-  user_id     String   @db.VarChar(255)
+  user_id     String   @db.VarChar(100)
   question    String
   suggestion  String
   answer      String
   familiarity Int
   note        String
-  created_at  DateTime @db.Timestamptz(6)
-  updated_at  DateTime @db.Timestamptz(6)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
 
 model qsa_card_review {
   uuid           String   @id @db.VarChar(100)
+  user_id        String   @db.VarChar(255)
+  card_uuid      String   @db.VarChar(100)
+  familiarity    Int
   interval_days  Int
   ease_factor    Int
   repetitions    Int
   last_review_at DateTime @db.Timestamptz(6)
   next_review_at DateTime @db.Timestamptz(6)
-  familiarity    Int
-  card_uuid      String   @db.VarChar(100)
-  user_id        String   @db.VarChar(255)
 }
 
 model qsa_card_tag {
   uuid       String   @id @db.VarChar(100)
   card_uuid  String   @db.VarChar(100)
   tag_uuid   String   @db.VarChar(100)
-  created_at DateTime @db.Timestamptz(6)
-  updated_at DateTime @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
 model qsa_tag {
   uuid        String   @id @db.VarChar(100)
-  tag         String   @db.VarChar(255)
-  created_at  DateTime @db.Timestamptz(6)
-  updated_at  DateTime @db.Timestamptz(6)
-  description String   @db.VarChar(255)
-  user_id     String   @db.VarChar(255)
-  abstract    String?  @db.VarChar(1)
-  children    String?
+  user_id     String   @db.VarChar(100)
+  tag         String
+  description String
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
 
 // ---------- voice access
@@ -326,17 +318,16 @@ model voice_access_action {
   name        String   @db.VarChar(100)
   action_type String   @db.VarChar(100)
   payload     String?
-  created_by  String?  @db.VarChar(100)
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
 
 model voice_access_command {
   uuid        String   @id @db.VarChar(100)
+  user_id     String   @db.VarChar(100)
   action_uuid String   @db.VarChar(100)
   language    String   @db.VarChar(10)
   text        String
-  created_by  String?  @db.VarChar(100)
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }
