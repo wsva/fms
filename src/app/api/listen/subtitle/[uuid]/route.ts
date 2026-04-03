@@ -3,6 +3,8 @@ import path from "path";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ uuid: string }> }) {
+    console.log(request);
+    
     try {
         const { uuid } = await context.params;
 
