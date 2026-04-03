@@ -173,27 +173,6 @@ model listen_transcript {
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
-model listening_document {
-  uuid        String   @id @db.VarChar(100)
-  user_id     String   @db.VarChar(100)
-  access_path String
-  content     String
-  branch      String
-  version     Int
-  deleted     Boolean
-  created_at  DateTime @db.Timestamptz(6)
-  updated_at  DateTime @db.Timestamptz(6)
-}
-
-model listening_storage {
-  uuid       String   @id @db.VarChar(100)
-  user_id    String   @db.VarChar(100)
-  upload_to  String
-  file       String   @db.VarChar(100)
-  created_at DateTime @db.Timestamptz(6)
-  updated_at DateTime @db.Timestamptz(6)
-}
-
 // ---------- speak
 
 model practice_text {

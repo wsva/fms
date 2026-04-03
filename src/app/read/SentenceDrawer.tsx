@@ -1,9 +1,10 @@
 'use client'
 
 import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea } from "@heroui/react"
-import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle } from 'react-icons/md'
+import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle, MdUnfoldMore, MdUnfoldLess } from 'react-icons/md'
 import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
+import { useState } from 'react'
 
 type Props = {
     drawer: DrawerState
@@ -35,12 +36,14 @@ export default function SentenceDrawer({
     onSaveAdd, onSaveEdit, onDelete,
     onInsertBefore, onInsertAfter, onParagraphBefore, onParagraphAfter,
 }: Props) {
+    const [expanded, setExpanded] = useState(false)
+
     if (!drawer) return null
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
             <div
-                className="bg-white rounded-t-2xl shadow-2xl w-full max-h-[75vh] overflow-y-auto"
+                className={`bg-white rounded-t-2xl shadow-2xl w-full max-h-[75vh] overflow-y-auto transition-[min-height] duration-300 ${expanded ? 'min-h-[50vh]' : ''}`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -48,7 +51,7 @@ export default function SentenceDrawer({
                     <span className="font-semibold text-base">
                         {drawer.mode === 'edit' ? 'Edit Sentence' : 'New Sentence'}
                     </span>
-                    <div className="flex flex-row items-center gap-1">
+                    <div className="flex flex-row items-center gap-4">
                         <Button size="sm" color="primary" isDisabled={saving}
                             onPress={drawer.mode === 'add' ? onSaveAdd : onSaveEdit}
                         >
@@ -86,6 +89,9 @@ export default function SentenceDrawer({
                                 </DropdownMenu>
                             </Dropdown>
                         )}
+                        <button onClick={() => setExpanded(e => !e)} className="text-gray-400 hover:text-gray-600 p-1" title={expanded ? 'Restore size' : 'Expand'}>
+                            {expanded ? <MdUnfoldLess size={22} /> : <MdUnfoldMore size={22} />}
+                        </button>
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
                             <MdClose size={22} />
                         </button>
@@ -97,30 +103,30 @@ export default function SentenceDrawer({
 
                     {/* STT diff (edit mode only) */}
                     {drawer.mode === 'edit' && drawer.sentence.recognized && (
-                        <div className="text-sm bg-sand-100 rounded p-2">
+                        <div className={`bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
                             {highlightDifferences(drawer.sentence.content ?? '', drawer.sentence.recognized ?? '')}
                         </div>
                     )}
 
                     {/* Content editor */}
                     <Textarea
-                        label="Content" size="sm" minRows={2}
+                        label="Content" size={expanded ? 'md' : 'sm'} minRows={expanded ? 6 : 2}
                         value={content}
                         onChange={e => onContentChange(e.target.value)}
-                        classNames={{ input: 'text-base' }}
+                        classNames={{ input: expanded ? 'text-2xl font-bold' : 'text-base' }}
                     />
 
                     {/* Audio + Recording */}
                     <div className="flex flex-row flex-wrap items-center justify-center gap-2">
                         {hasAudio && (
-                            <Button isIconOnly size="sm" variant="flat" onPress={onPlay}>
-                                <MdPlayCircle size={20} />
+                            <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="flat" onPress={onPlay}>
+                                <MdPlayCircle size={expanded ? 24 : 20} />
                             </Button>
                         )}
-                        <Button size="sm" color="primary" variant="flat"
+                        <Button size={expanded ? 'md' : 'sm'} color="primary" variant="flat"
                             isDisabled={!recording && processing}
                             onPress={onToggleRecording}
-                            startContent={recording ? <MdMicOff size={16} /> : <MdMic size={16} />}
+                            startContent={recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
                         >
                             {recording ? 'Stop' : processing ? 'Processing…' : 'Record'}
                         </Button>
