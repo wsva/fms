@@ -15,7 +15,7 @@ import { getUUID } from '@/lib/utils'
 import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store"
 import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache"
 import { removeAudio, saveAudio } from '@/app/actions/audio'
-import { SentenceClient, Paragraph, DrawerState, FlatChapter, flattenChapters, groupIntoParagraphs, toDbSentence } from './types'
+import { SentenceClient, Paragraph, DrawerState, flattenChapters, groupIntoParagraphs, toDbSentence } from './types'
 import ParagraphList from './ParagraphList'
 import SentenceDrawer from './SentenceDrawer'
 
@@ -208,9 +208,7 @@ export default function Client({ email }: Props) {
             content: stateDrawerContent,
             sentence_type: 'text',
             audio_path: audioPath,
-            tts_path: null,
             recognized: stateDrawerRecognized || null,
-            created_by: email,
             created_at: new Date(),
             updated_at: new Date(),
             modified: false,
@@ -347,8 +345,7 @@ export default function Client({ email }: Props) {
             order_num: insertIndex + 1,
             content: '',
             sentence_type: 'paragraph_break',
-            audio_path: null, tts_path: null, recognized: null,
-            created_by: email,
+            audio_path: null, recognized: null,
             created_at: new Date(), updated_at: new Date(),
             modified: false, hasLocalAudio: false,
         }
@@ -377,8 +374,7 @@ export default function Client({ email }: Props) {
             order_num: stateData.length + 1,
             content: '',
             sentence_type: 'paragraph_break',
-            audio_path: null, tts_path: null, recognized: null,
-            created_by: email,
+            audio_path: null, recognized: null,
             created_at: new Date(), updated_at: new Date(),
             modified: false, hasLocalAudio: false,
         }

@@ -21,12 +21,7 @@ export async function getBookMeta(uuid: string): Promise<ActionResult<book_meta>
 export async function getBookMetaAll(user_id: string): Promise<ActionResult<book_meta[]>> {
     try {
         const result = await prisma.book_meta.findMany({
-            where: {
-                OR: [
-                    { user_id },
-                    { is_public: true },
-                ],
-            },
+            where: { user_id },
             orderBy: { title: 'asc' },
         });
         return { status: 'success', data: result };
