@@ -43,8 +43,9 @@ export const menuList: MenuGroup[] = [
     {
         name: "Read",
         items: [
-            { key: "read_book", name: "Manage Books", description: "manage books and chapters", href: "/read/book" },
             { key: "read_main", name: "Reading", description: "read and record sentences", href: "/read" },
+            { key: "read_book", name: "Manage Books", description: "manage books and chapters", href: "/read/book" },
+            { key: "read_text", name: "View Text", description: "show content in pure text", href: "/read/text" },
         ],
     },
     {

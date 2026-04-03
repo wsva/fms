@@ -43,7 +43,7 @@ export default function SentenceDrawer({
     return (
         <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
             <div
-                className={`bg-white rounded-t-2xl shadow-2xl w-full max-h-[75vh] overflow-y-auto transition-[min-height] duration-300 ${expanded ? 'min-h-[50vh]' : ''}`}
+                className={`bg-sand-300 rounded-t-2xl shadow-2xl w-full max-h-[75vh] overflow-y-auto transition-[min-height] duration-300 ${expanded ? 'min-h-[50vh]' : ''}`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}

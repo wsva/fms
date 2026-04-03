@@ -62,7 +62,7 @@ export default function Client({ email }: Props) {
             path.unshift(c.title ?? '')
             uuid = c.parent_uuid ?? null
         }
-        return path.join(' › ')
+        return path.join(' --> ')
     }, [stateChapterUUID, stateChaptersFlat])
 
     // ── Load books ──────────────────────────────────────────────────────────
@@ -466,7 +466,7 @@ export default function Client({ email }: Props) {
 
     // ── Render ──────────────────────────────────────────────────────────────
     return (
-        <div className="flex flex-col w-full gap-4 my-4">
+        <div className="flex flex-col w-full gap-4 my-4 mb-100">
 
             {/* Book + Chapter + Engine selectors */}
             <div className="flex flex-col sm:flex-row gap-3">
