@@ -40,7 +40,6 @@ export default function Page({ user_id }: Props) {
             uuid: getUUID(),
             user_id: user_id,
             text: stateNew,
-            created_by: user_id,
             created_at: new Date(),
             updated_at: new Date(),
         });

@@ -23,7 +23,7 @@ export default function Page({ action }: Props) {
     const [stateHide, setStateHide] = useState<boolean>(true)
     const [stateName, setStateName] = useState<string>(action.name)
     const [stateType, setStateType] = useState<string>(action.action_type)
-    const [statePayload, setStatePayload] = useState<string>(action.payload)
+    const [statePayload, setStatePayload] = useState<string>(action.payload ?? '')
     const [stateCommandList, setStateCommandList] = useState<voice_access_command[]>([])
 
     useEffect(() => {

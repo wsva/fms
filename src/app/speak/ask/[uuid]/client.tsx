@@ -114,7 +114,6 @@ export default function Item({ question_uuid, user_id }: Props) {
             audio_path: !!stateNewAudio ? `/api/data/ask/${answer_uuid}.wav` : "",
             video_path: !!stateNewVideo ? `/api/data/ask/${answer_uuid}.mp4` : "",
             content: stateNewContent,
-            created_by: user_id,
             created_at: new Date(),
             updated_at: new Date(),
         });

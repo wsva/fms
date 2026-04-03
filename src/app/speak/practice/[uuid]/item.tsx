@@ -79,7 +79,6 @@ export default function Item({ uuid, user_id }: Props) {
             text_uuid: stateCurrent.text_uuid,
             recognized: stateCurrent.recognized,
             audio_path: stateCurrent.audio_path,
-            created_by: user_id,
             created_at: stateCurrent.created_at || new Date(),
             updated_at: new Date(),
         });
@@ -146,7 +145,6 @@ export default function Item({ uuid, user_id }: Props) {
                 text_uuid: uuid,
                 audio_path: `/api/data/practice/${audio_uuid}.wav`,
                 recognized: result.status === 'success' ? result.data : "",
-                created_by: user_id,
                 created_at: new Date(),
                 updated_at: new Date(),
             })
@@ -294,7 +292,7 @@ export default function Item({ uuid, user_id }: Props) {
                             </Button>
                         </div>
                         <div className="text-xl">
-                            {highlightDifferences(stateText!.text, stateCurrent.recognized)}
+                            {highlightDifferences(stateText!.text, stateCurrent.recognized ?? '')}
                         </div>
                     </div>
                     <Button variant='solid' color='primary'
@@ -314,7 +312,7 @@ export default function Item({ uuid, user_id }: Props) {
                                     <div className="text-md text-gray-400">recognized from audio:</div>
                                     <Button isIconOnly variant='light' className='h-fit'
                                         onPress={() => {
-                                            const audio = new Audio(v.audio_path);
+                                            const audio = new Audio(v.audio_path ?? '');
                                             audio.play();
                                         }}
                                     >
@@ -334,7 +332,7 @@ export default function Item({ uuid, user_id }: Props) {
                                 </div>
                             </div>
                             <div className="text-xl text-balance hyphens-auto">
-                                {highlightDifferences(stateText?.text || "", v.recognized)}
+                                {highlightDifferences(stateText?.text || "", v.recognized ?? '')}
                             </div>
                             <div className="text-md text-gray-400">by {v.user_id}</div>
                         </div>

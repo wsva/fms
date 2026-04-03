@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Check book access
     const book = await getBookMeta(book_uuid);
     if (book.status === 'error') return NextResponse.json({ error: 'Book not found' }, { status: 404 });
-    if (book.data.user_id !== session.user.email && !book.data.is_public) {
+    if (book.data.user_id !== session.user.email) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -63,15 +63,12 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date();
-    const email = session.user.email;
     const result = await saveBookChapter({
         uuid: getUUID(),
         book_uuid: parsed.data.book_uuid,
         parent_uuid: parsed.data.parent_uuid ?? null,
         order_num,
         title: parsed.data.title,
-        description: parsed.data.description ?? null,
-        created_by: email,
         created_at: now,
         updated_at: now,
     });

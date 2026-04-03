@@ -20,8 +20,8 @@ function buildTree(flat: book_chapter[], parentUuid: string | null = null): Chap
 
 // ─── Inline form ──────────────────────────────────────────────────────────────
 
-type ChapterForm = { title: string; description: string }
-const emptyForm = (): ChapterForm => ({ title: '', description: '' })
+type ChapterForm = { title: string }
+const emptyForm = (): ChapterForm => ({ title: '' })
 
 function InlineForm({ form, onChange, saving, label, onSave, onCancel }: {
     form: ChapterForm
@@ -37,10 +37,6 @@ function InlineForm({ form, onChange, saving, label, onSave, onCancel }: {
                 value={form.title}
                 onChange={e => onChange({ ...form, title: e.target.value })}
                 onKeyDown={e => { if (e.key === 'Enter') onSave() }}
-            />
-            <Textarea size="sm" label="Description (optional)" minRows={2}
-                value={form.description}
-                onChange={e => onChange({ ...form, description: e.target.value })}
             />
             <div className="flex flex-row gap-2">
                 <Button size="sm" color="primary" isDisabled={saving} onPress={onSave}>{label}</Button>
@@ -107,9 +103,6 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
                     ) : (
                         <div className="flex flex-row items-center gap-2 flex-wrap">
                             <span className="font-medium">{node.title}</span>
-                            {node.description && (
-                                <span className="text-xs text-gray-500">{node.description}</span>
-                            )}
                             <div className="flex flex-row gap-1 flex-shrink-0">
                                 <Button isIconOnly size="sm" variant="light"
                                     className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -125,15 +118,13 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
                                 >
                                     <MdEdit size={16} />
                                 </Button>
-                                {node.user_id === h.email && (
-                                    <Button isIconOnly size="sm" variant="light" color="danger"
-                                        isDisabled={h.saving}
-                                        onPress={() => h.onDelete(node)}
-                                        title="Delete"
-                                    >
-                                        <MdDelete size={16} />
-                                    </Button>
-                                )}
+                                <Button isIconOnly size="sm" variant="light" color="danger"
+                                    isDisabled={h.saving}
+                                    onPress={() => h.onDelete(node)}
+                                    title="Delete"
+                                >
+                                    <MdDelete size={16} />
+                                </Button>
                             </div>
                         </div>
                     )}
@@ -215,8 +206,6 @@ export default function Client({ email }: Props) {
             parent_uuid: parentUuid,
             order_num: siblings.length + 1,
             title: stateAddForm.title,
-            description: stateAddForm.description || null,
-            created_by: email,
             created_at: new Date(),
             updated_at: new Date(),
         })
@@ -237,7 +226,6 @@ export default function Client({ email }: Props) {
         const result = await saveBookChapter({
             ...base,
             title: stateEditForm.title,
-            description: stateEditForm.description || null,
             updated_at: new Date(),
         })
         if (result.status === 'success') {
@@ -276,7 +264,7 @@ export default function Client({ email }: Props) {
         onEdit: (item) => {
             setStateAddingUnder(undefined)
             setStateEditUUID(item.uuid)
-            setStateEditForm({ title: item.title ?? '', description: item.description ?? '' })
+            setStateEditForm({ title: item.title ?? '' })
         },
         onSaveEdit: handleSaveEdit,
         onCancelEdit: () => setStateEditUUID(null),

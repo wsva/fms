@@ -57,7 +57,6 @@ export async function PUT(
     const result = await saveBookChapter({
         ...existing.data,
         title: parsed.data.title,
-        description: parsed.data.description ?? null,
         order_num: parsed.data.order_num ?? existing.data.order_num,
         parent_uuid: parsed.data.parent_uuid !== undefined ? parsed.data.parent_uuid : existing.data.parent_uuid,
         updated_at: new Date(),

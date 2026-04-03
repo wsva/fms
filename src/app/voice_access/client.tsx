@@ -92,7 +92,7 @@ export default function Page() {
                                         ))}
                                     </div>
                                 </TableCell>
-                                <TableCell className='text-sm sm:text-base'><pre className='whitespace-pre-wrap break-all'>{indentJsonString(v.payload)}</pre></TableCell>
+                                <TableCell className='text-sm sm:text-base'><pre className='whitespace-pre-wrap break-all'>{indentJsonString(v.payload ?? '')}</pre></TableCell>
                                 <TableCell className='text-sm sm:text-base'>Save</TableCell>
                             </TableRow>
                         ))}
