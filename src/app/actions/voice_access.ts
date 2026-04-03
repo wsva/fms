@@ -48,7 +48,7 @@ export async function getCommandByAction(action_uuid: string): Promise<ActionRes
 function parseAction(action_db: voice_access_action): Action {
     const payloadMap: Map<string, string> = new Map();
     try {
-        const obj = JSON.parse(action_db.payload);
+        const obj = JSON.parse(action_db.payload || "");
         Object.entries(obj).forEach(([key, value]) => payloadMap.set(key, value as string));
     } catch {
         return { action_type: "invalid", info: `uuid: ${action_db.uuid}, invalid json format: ${action_db.payload}` };
