@@ -23,20 +23,10 @@ type Props = {
 
 type FormState = {
     title: string
-    author: string
-    language: string
-    description: string
-    source: string
-    is_public: boolean
 }
 
 const emptyForm = (): FormState => ({
     title: '',
-    author: '',
-    language: 'de',
-    description: '',
-    source: '',
-    is_public: false,
 })
 
 export default function Client({ email }: Props) {
@@ -68,10 +58,6 @@ export default function Client({ email }: Props) {
             addToast({ title: 'title is required', color: 'danger' })
             return
         }
-        if (!stateAddForm.language) {
-            addToast({ title: 'language is required', color: 'danger' })
-            return
-        }
         setStateSaving(true)
         const uuid = getUUID()
         const now = new Date()
@@ -79,13 +65,6 @@ export default function Client({ email }: Props) {
             uuid,
             user_id: email,
             title: stateAddForm.title,
-            author: stateAddForm.author || null,
-            language: stateAddForm.language,
-            description: stateAddForm.description || null,
-            source: stateAddForm.source || null,
-            cover_path: null,
-            is_public: stateAddForm.is_public,
-            created_by: email,
             created_at: now,
             updated_at: now,
         })
@@ -93,10 +72,8 @@ export default function Client({ email }: Props) {
             await saveTag({
                 uuid,
                 tag: stateAddForm.title,
-                description: stateAddForm.description || '',
+                description: '',
                 user_id: email,
-                abstract: null,
-                children: null,
                 created_at: now,
                 updated_at: now,
             })
@@ -112,12 +89,7 @@ export default function Client({ email }: Props) {
     const handleEdit = (item: book_meta) => {
         setStateEditUUID(item.uuid)
         setStateEditForm({
-            title: item.title || '',
-            author: item.author || '',
-            language: item.language || 'de',
-            description: item.description || '',
-            source: item.source || '',
-            is_public: item.is_public ?? false,
+            title: item.title || ''
         })
     }
 
@@ -126,11 +98,6 @@ export default function Client({ email }: Props) {
         const result = await saveBookMeta({
             ...item,
             title: stateEditForm.title,
-            author: stateEditForm.author || null,
-            language: stateEditForm.language,
-            description: stateEditForm.description || null,
-            source: stateEditForm.source || null,
-            is_public: stateEditForm.is_public,
             updated_at: new Date(),
         })
         if (result.status === 'success') {
@@ -205,30 +172,6 @@ export default function Client({ email }: Props) {
                                 <div className="flex flex-row items-start justify-between gap-2">
                                     <div className="flex flex-col gap-1 min-w-0">
                                         <div className="text-lg font-semibold">{item.title}</div>
-                                        {item.author && (
-                                            <div className="text-sm text-gray-500">{item.author}</div>
-                                        )}
-                                        <div className="flex flex-row flex-wrap gap-2 mt-1">
-                                            <span className="text-xs px-2 py-0.5 rounded-full bg-sand-400">
-                                                {LANGUAGES.find(l => l.key === item.language)?.label ?? item.language}
-                                            </span>
-                                            {item.is_public && (
-                                                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                                                    public
-                                                </span>
-                                            )}
-                                            {item.user_id !== email && (
-                                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                                                    shared
-                                                </span>
-                                            )}
-                                        </div>
-                                        {item.description && (
-                                            <div className="text-sm text-gray-600 mt-1">{item.description}</div>
-                                        )}
-                                        {item.source && (
-                                            <div className="text-xs text-gray-400 truncate">{item.source}</div>
-                                        )}
                                     </div>
                                     {item.user_id === email && (
                                         <div className="flex flex-row gap-1 flex-shrink-0">
@@ -270,36 +213,7 @@ function BookForm({ form, onChange }: {
                     value={form.title}
                     onChange={e => onChange({ ...form, title: e.target.value })}
                 />
-                <Input label="Author" size="sm" className="flex-1"
-                    value={form.author}
-                    onChange={e => onChange({ ...form, author: e.target.value })}
-                />
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-                <Select label="Language" size="sm" className="w-full sm:max-w-xs"
-                    selectedKeys={[form.language]}
-                    onChange={e => onChange({ ...form, language: e.target.value })}
-                >
-                    {LANGUAGES.map(l => (
-                        <SelectItem key={l.key} textValue={l.label}>{l.label}</SelectItem>
-                    ))}
-                </Select>
-                <div className="flex items-center gap-2 px-1">
-                    <Switch isSelected={form.is_public}
-                        onValueChange={v => onChange({ ...form, is_public: v })}
-                    >
-                        Public
-                    </Switch>
-                </div>
-            </div>
-            <Textarea label="Description" size="sm"
-                value={form.description}
-                onChange={e => onChange({ ...form, description: e.target.value })}
-            />
-            <Input label="Source (URL / ISBN / …)" size="sm"
-                value={form.source}
-                onChange={e => onChange({ ...form, source: e.target.value })}
-            />
         </div>
     )
 }

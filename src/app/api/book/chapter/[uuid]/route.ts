@@ -22,7 +22,7 @@ export async function GET(
     if (result.status === 'error') return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const book = await getBookMeta(result.data.book_uuid);
-    if (book.status === 'error' || (book.data.user_id !== session.user.email && !book.data.is_public)) {
+    if (book.status === 'error' || book.data.user_id !== session.user.email) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     return NextResponse.json(result.data);

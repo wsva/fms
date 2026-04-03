@@ -24,7 +24,7 @@ export async function GET(
     if (result.status === 'error') return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const book = result.data;
-    if (book.user_id !== session.user.email && !book.is_public) {
+    if (book.user_id !== session.user.email) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     return NextResponse.json(book);
@@ -57,11 +57,6 @@ export async function PUT(
     const result = await saveBookMeta({
         ...existing.data,
         title: parsed.data.title,
-        author: parsed.data.author ?? null,
-        language: parsed.data.language,
-        description: parsed.data.description ?? null,
-        source: parsed.data.source ?? null,
-        is_public: parsed.data.is_public ?? existing.data.is_public,
         updated_at: new Date(),
     });
 

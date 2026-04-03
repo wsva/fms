@@ -42,13 +42,6 @@ export async function POST(request: NextRequest) {
         uuid: getUUID(),
         user_id: email,
         title: parsed.data.title,
-        author: parsed.data.author ?? null,
-        language: parsed.data.language,
-        description: parsed.data.description ?? null,
-        source: parsed.data.source ?? null,
-        cover_path: null,
-        is_public: parsed.data.is_public,
-        created_by: email,
         created_at: now,
         updated_at: now,
     });

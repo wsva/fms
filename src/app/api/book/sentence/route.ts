@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const chapter = await getBookChapter(chapter_uuid);
     if (chapter.status === 'error') return NextResponse.json({ error: 'Chapter not found' }, { status: 404 });
     const book = await getBookMeta(chapter.data.book_uuid);
-    if (book.status === 'error' || (book.data.user_id !== session.user.email && !book.data.is_public)) {
+    if (book.status === 'error' || book.data.user_id !== session.user.email) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -70,9 +70,7 @@ export async function POST(request: NextRequest) {
         content: parsed.data.content,
         sentence_type: parsed.data.sentence_type,
         audio_path: null,
-        tts_path: null,
         recognized: null,
-        created_by: email,
         created_at: now,
         updated_at: now,
     });
