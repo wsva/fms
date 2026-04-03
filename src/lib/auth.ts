@@ -14,12 +14,22 @@ export const auth = betterAuth({
                     pkce: true,
                     scopes: ["profile", "media"],
                     getUserInfo: async (token) => {
-                        const response = await fetch(process.env.OAUTH2_USERINFO as string, {
+                        const userinfoUrl = process.env.OAUTH2_USERINFO;
+                        if (!userinfoUrl) {
+                            throw new Error("OAUTH2_USERINFO environment variable is not set");
+                        }
+                        const response = await fetch(userinfoUrl, {
                             headers: {
                                 Authorization: `Bearer ${token.accessToken}`,
                             },
                         });
+                        if (!response.ok) {
+                            throw new Error(`OAuth2 userinfo request failed: ${response.status} ${response.statusText}`);
+                        }
                         const profile = await response.json();
+                        if (!profile.email) {
+                            throw new Error("OAuth2 userinfo response missing required field: email");
+                        }
                         return {
                             id: profile.email,
                             name: profile.name,
@@ -28,56 +38,14 @@ export const auth = betterAuth({
                         };
                     },
                 },
-            ]
-        })
+            ],
+        }),
     ],
     session: {
         cookieCache: {
             enabled: true,
             maxAge: 5 * 60,
-            strategy: "jwt" // or "compact" or "jwe"
-        }
+            strategy: "jwt",
+        },
     },
 });
-/* 
-export const { handlers, signIn, signOut, auth1 } = NextAuth({
-    // 配置 session 后才能使用 auth() 获取到 session 数据，包括 username, email
-    session: { strategy: 'jwt' },
-    providers: [
-        // See https://authjs.dev/guides/configuring-oauth-providers
-        // https://was_oauth2_service:33001/authorize?scope=openid+profile+email&response_type=code&client_id=undefined&redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Fapi%2Fauth%2Fcallback%2Fwas_oauth2&code_challenge=OR8dVBB01P90pyA6iEkGaaNE7jQuv-XB3KPk7B2PLV8&code_challenge_method=S256
-        {
-            id: 'wsva_oauth2',
-            name: 'WsvaProvider',
-            type: 'oauth',
-            issuer: "wsva_oauth2",
-            authorization: {
-                url: process.env.OAUTH2_AUTHORIZATION,
-                params: { scope: "openid profile email" },
-            },
-            token: process.env.OAUTH2_TOKEN,
-            userinfo: process.env.OAUTH2_USERINFO,
-            clientId: process.env.OAUTH2_CLIENT_ID,
-            checks: ["pkce", "state"],
-            profile(profile) {
-                return {
-                    name: profile.name,
-                    email: profile.email,
-                }
-            },
-        },
-    ],
-    events: {
-        async signOut(message) {
-            if ("token" in message && message.token?.email) {
-                const formData = new FormData();
-                formData.append("user_id", message.token.email);
-                await fetch(`${process.env.OAUTH2_LOGOUT}`, {
-                    method: "POST",
-                    body: formData,
-                })
-            }
-        },
-    },
-    debug: true,
-}) */

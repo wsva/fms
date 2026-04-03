@@ -129,14 +129,14 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                     <div className={`flex flex-row w-full items-center justify-center p-2 ${getColor(stateCard.familiarity)}`}>
                         <div
                             className={stateCard.card.question.length < 30
-                                ? "my-5 font-bold text-2xl md:text-4xl lg:text-6xl xl:text-8xl"
-                                : "y-5 font-bold text-base md:text-xl lg:text-2xl xl:text-4xl"
+                                ? "my-5 font-bold text-xl sm:text-2xl md:text-4xl lg:text-6xl xl:text-8xl"
+                                : "my-5 font-bold text-sm sm:text-base md:text-xl lg:text-2xl xl:text-4xl"
                             }
                         >
                             <Markdown2Html content={stateCard.card.question} withTOC />
                         </div>
                     </div>
-                    <div className='flex flex-row my-5 items-center justify-center gap-4'>
+                    <div className='flex flex-wrap my-5 items-center justify-center gap-4'>
                         {stateCard.card.suggestion.length > 0 ? (
                             <Button
                                 color="primary"

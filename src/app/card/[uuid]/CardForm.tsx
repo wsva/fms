@@ -43,7 +43,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             setStateTagList(tag_list_result.data)
 
             // to avoid new uuid after save
-            const card_uuid = (!!card_ext.uuid && card_ext.user_id === email) ? card_ext.uuid : getUUID()
+            const card_uuid = (!!card_ext.uuid && (create_new || card_ext.user_id === email)) ? card_ext.uuid : getUUID()
             setStateCard({
                 uuid: card_uuid,
                 user_id: email,

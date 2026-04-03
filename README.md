@@ -1,264 +1,63 @@
-Fremdsprachen machen Spaß!
+# FMS — Fremdsprachen machen Spaß!
 
-# create project
-`````
-docker pull node:24.12.0
-docker run -it --user node --name next.js -v /home/yanan/code/wsva/fms:/code node:24.12.0 /bin/bash
-cd /code/
-npx create-next-app@latest node_project
+A language learning platform built with Next.js 16. Features include spaced-repetition flashcards, listening practice with HLS media streaming, speaking/reading practice, AI-assisted transcription (Google Gemini), word lookup, study planning, and a community blog.
 
-✔ Would you like to use the recommended Next.js defaults? › No, customize settings
-✔ Would you like to use TypeScript? … Yes
-✔ Which linter would you like to use? › ESLint
-✔ Would you like to use React Compiler? … Yes
-✔ Would you like to use Tailwind CSS? … Yes
-✔ Would you like your code inside a `src/` directory? … Yes
-✔ Would you like to use App Router? (recommended) … Yes
-✔ Would you like to customize the import alias (`@/*` by default)? … No
-`````
+---
 
-# install
-`````
-cd node_project/
-npm install @heroui/react framer-motion
-npm install react-icons
-npm install react-hook-form zod @hookform/resolvers
-npm install better-auth
-npx auth secret
-npm install uuid
-npm install -D @types/uuid
-npm install marked
-npm install marked-katex-extension
+## Architecture
 
-# error: sanitize is not a function
-# npm install dompurify
-# npm install -D @types/dompurify
-npm install isomorphic-dompurify
+- **Framework:** Next.js 16 (App Router, React 19, React Compiler)
+- **UI:** HeroUI + Tailwind CSS v4
+- **Auth:** better-auth with OAuth2/PKCE (custom WSVA provider), route protection via `src/proxy.ts`
+- **Database:** PostgreSQL via Prisma 7 (`@prisma/adapter-pg`)
+- **Cache:** Redis
+- **AI:** Google Gemini API (`@google/genai`)
+- **Media:** HLS.js for video streaming, files served from `/fms_data` volume
 
-npm install prisma@7.1.0 @types/node @types/pg --save-dev
-npm install @prisma/client@7.1.0 @prisma/adapter-pg@7.1.0 pg dotenv
-# Generate Prisma Client
-npm exec prisma@7.1.0 generate
+### Key directories
 
-npm install use-immer
-npm install mime
-npm install hls.js
-npm install wav
-npm i --save-dev @types/wav
-npm install redis
-npm install crypto-js
-npm install -D @types/crypto-js
+```
+src/
+├── app/actions/        # Server actions (one file per feature: card, listen, blog, …)
+├── app/api/            # API routes (auth, file serving, subtitles)
+├── lib/                # Singletons & utilities (prisma.ts, auth.ts, errors.ts, …)
+├── components/         # Shared React components
+├── generated/prisma/   # Auto-generated Prisma client (do not edit)
+└── proxy.ts            # Route protection (Next.js 16 Proxy)
+```
 
--------------------------------------
+---
 
+## Scripts
 
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production (standalone output) |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Run ESLint and auto-fix |
+| `npm run type-check` | Run TypeScript type checking |
+| `npm run format` | Format all files with Prettier |
+| `npm run format:check` | Check formatting without writing |
 
+---
 
-npm install wretch
-npm install react-draggable
-`````
+## API Documentation
 
-# db
-`````
-CREATE TABLE topword_de (
-    id          INTEGER PRIMARY KEY,
-    word        TEXT NOT NULL,
-    freq        INTEGER NOT NULL,
-    examples    INTEGER,
-    in_dict     VARCHAR(1),
-    base_form   TEXT,
-    article     VARCHAR(3)
-);
+See [`docs/api.md`](docs/api.md) for the full API reference.
 
-CREATE TABLE topword_de_example (
-    id SERIAL   PRIMARY KEY,   -- 自动递增 id
-    word_id     INTEGER,
-    example     TEXT NOT NULL
-);
+---
 
-CREATE TABLE read_book (
-    uuid        VARCHAR(100) PRIMARY KEY,
-    name        TEXT NOT NULL,
-    user_id     VARCHAR(100) NOT NULL,
-    created_by  VARCHAR(100) NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+## Setup
 
-CREATE TABLE read_chapter (
-    uuid        VARCHAR(100) PRIMARY KEY,
-    book_uuid   VARCHAR(100) NOT NULL,
-    order_num   INT NOT NULL,
-    name        TEXT NOT NULL,
-    created_by  VARCHAR(100) NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+Copy `.env.example` to `.env.local` and fill in all values, then:
 
-CREATE TABLE read_sentence (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    chapter_uuid  VARCHAR(100) NOT NULL,
-    order_num     INT NOT NULL,
-    original      TEXT NOT NULL,
-    recognized    TEXT,
-    audio_path    TEXT,
-    created_by    VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+```bash
+npm install
+npx prisma migrate deploy   # apply DB migrations
+npx prisma generate         # generate Prisma client
+npm run dev
+```
 
-CREATE TABLE ask_question (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    title         TEXT,
-    audio_path    TEXT,
-    video_path    TEXT,
-    content       TEXT,
-    created_by    VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE ask_answer (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    question_uuid VARCHAR(100) NOT NULL,
-    audio_path    TEXT,
-    video_path    TEXT,
-    content       TEXT,
-    created_by    VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE voice_access_action (
-    uuid         VARCHAR(100) PRIMARY KEY,
-    name         VARCHAR(100) NOT NULL,
-    action_type  VARCHAR(100) NOT NULL,
-    payload      TEXT,
-    created_by   VARCHAR(100),
-    created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE voice_access_command (
-    uuid         VARCHAR(100) PRIMARY KEY,
-    action_uuid  VARCHAR(100) NOT NULL,
-    language     VARCHAR(10) NOT NULL,
-    text         TEXT NOT NULL,
-    created_by   VARCHAR(100),
-    created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE practice_text (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    text          TEXT NOT NULL,
-    created_by    VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE practice_audio (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    text_uuid     VARCHAR(100) NOT NULL,
-    audio_path    TEXT,
-    recognized    TEXT,
-    created_by    VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE plan_plan (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    content       TEXT NOT NULL,
-    minutes       INT NOT NULL,
-    favorite      VARCHAR(1),
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE plan_record (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    plan_uuid     VARCHAR(100) NOT NULL,
-    start_at      TIMESTAMPTZ,
-    status        VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE listen_media (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    title         TEXT NOT NULL,
-    source        TEXT NOT NULL,
-    note          TEXT,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE listen_transcript (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    media_uuid    VARCHAR(100) NOT NULL,
-    language      VARCHAR(10) NOT NULL,
-    transcript    TEXT NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE listen_subtitle (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    media_uuid    VARCHAR(100) NOT NULL,
-    language      VARCHAR(10) NOT NULL,
-    subtitle      TEXT NOT NULL,
-    format        VARCHAR(10) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE listen_note (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    media_uuid    VARCHAR(100) NOT NULL,
-    note          TEXT NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE listen_tag (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    user_id       VARCHAR(100) NOT NULL,
-    tag           TEXT NOT NULL,
-    description   TEXT,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE listen_media_tag (
-    uuid          VARCHAR(100) PRIMARY KEY,
-    media_uuid    VARCHAR(100) NOT NULL,
-    tag_uuid      VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-`````
-
-# clean data
-`````
-UPDATE topword_de_example
-SET example = regexp_replace(
-    example,
-    '\s+([,.!?])',
-    '\1',
-    'g'
-)
-WHERE example ~ '\s+[,.!?]';
-
-
-`````
+---

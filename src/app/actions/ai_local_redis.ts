@@ -13,7 +13,7 @@ export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
 
     // 1. 连接 Redis
     const client = createClient({ url: `redis://default:${REDIS_PASSWORD}@${REDIS_HOST}:6379` });
-    client.on('error', err => console.log('Redis Client Error', err));
+    client.on('error', err => console.error('Redis Client Error', err));
     await client.connect();
 
     // check service status

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { Action, ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { voice_access_action, voice_access_command } from "@/generated/prisma/client";
 
 export async function getActionAll(): Promise<ActionResult<voice_access_action[]>> {
@@ -11,8 +12,8 @@ export async function getActionAll(): Promise<ActionResult<voice_access_action[]
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -26,8 +27,8 @@ export async function getCommandAll(): Promise<ActionResult<Map<string, voice_ac
         }
         return { status: "success", data: cmdMap }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -39,8 +40,8 @@ export async function getCommandByAction(action_uuid: string): Promise<ActionRes
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 

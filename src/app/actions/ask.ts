@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { ask_answer, ask_question } from "@/generated/prisma/client";
 
 export async function getQuestion(uuid: string): Promise<ActionResult<ask_question>> {
@@ -18,8 +19,8 @@ export async function getQuestion(uuid: string): Promise<ActionResult<ask_questi
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -30,8 +31,8 @@ export async function getQuestionAll(): Promise<ActionResult<ask_question[]>> {
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -42,8 +43,8 @@ export async function getAnswerAll(question_uuid: string): Promise<ActionResult<
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -56,8 +57,8 @@ export async function saveQuestion(item: ask_question): Promise<ActionResult<ask
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -68,8 +69,8 @@ export async function removeQuestion(uuid: string): Promise<ActionResult<ask_que
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -82,8 +83,8 @@ export async function saveAnswer(item: ask_answer): Promise<ActionResult<ask_ans
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -94,7 +95,7 @@ export async function removeAnswer(uuid: string): Promise<ActionResult<ask_answe
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

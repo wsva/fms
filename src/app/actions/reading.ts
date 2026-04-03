@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { read_book, read_chapter, read_sentence } from "@/generated/prisma/client";
 
 /**
@@ -22,8 +23,8 @@ export async function getBook(uuid: string): Promise<ActionResult<read_book>> {
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -39,8 +40,8 @@ export async function getBookAll(email: string): Promise<ActionResult<read_book[
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -53,8 +54,8 @@ export async function saveBook(item: read_book): Promise<ActionResult<read_book>
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -65,8 +66,8 @@ export async function createBook(item: read_book): Promise<ActionResult<read_boo
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -77,8 +78,8 @@ export async function removeBook(uuid: string): Promise<ActionResult<read_book>>
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -96,8 +97,8 @@ export async function getChapter(uuid: string): Promise<ActionResult<read_chapte
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -109,8 +110,8 @@ export async function getChapterAll(book_uuid: string): Promise<ActionResult<rea
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -123,8 +124,8 @@ export async function saveChapter(item: read_chapter): Promise<ActionResult<read
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -135,8 +136,8 @@ export async function createChapter(item: read_chapter): Promise<ActionResult<re
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -147,8 +148,8 @@ export async function removeChapter(uuid: string): Promise<ActionResult<read_cha
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -166,8 +167,8 @@ export async function getSentence(uuid: string): Promise<ActionResult<read_sente
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -179,8 +180,8 @@ export async function getSentenceAll(chapter_uuid: string): Promise<ActionResult
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -193,8 +194,8 @@ export async function saveSentence(item: read_sentence): Promise<ActionResult<re
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -205,8 +206,8 @@ export async function createSentence(item: read_sentence): Promise<ActionResult<
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -217,7 +218,7 @@ export async function removeSentence(uuid: string): Promise<ActionResult<read_se
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

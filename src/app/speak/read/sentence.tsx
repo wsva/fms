@@ -75,51 +75,57 @@ export default function Page({ item, engine, handleUpdate, handleDelete }: Props
 
                 <div className='flex flex-col w-full ps-2'>
                     <div className="flex flex-row items-center justify-start">
-                        <div className="flex flex-row items-center justify-start w-full">
-                            <div className="text-md text-gray-400">recognized from audio:</div>
-                            <Tooltip placement='top' content="re-record">
-                                <Button isIconOnly variant='light' className='h-fit'
-                                    isDisabled={!stateRecording && stateProcessing}
-                                    onPress={toggleRecordingLocal}
-                                >
-                                    {stateRecording ? <MdMic size={20} /> : <MdMicOff size={20} />}
+                        {item.original === "\n\n" ? (
+                            <div className="flex flex-row items-center justify-center w-full bg-black">
+                                <span className="font-bold text-white px-5">NEW PARAGRAPH</span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-row items-center justify-start w-full">
+                                <div className="text-md text-gray-400">recognized from audio:</div>
+                                <Tooltip placement='top' content="re-record">
+                                    <Button isIconOnly variant='light' className='h-fit'
+                                        isDisabled={!stateRecording && stateProcessing}
+                                        onPress={toggleRecordingLocal}
+                                    >
+                                        {stateRecording ? <MdMic size={20} /> : <MdMicOff size={20} />}
 
-                                </Button>
-                            </Tooltip>
-                            <Tooltip placement='top' content="play audio">
-                                <Button isIconOnly variant='light' className='h-fit'
-                                    onPress={async () => {
-                                        if (item.modified_fs) {
-                                            let audioBlob = getBlobFromWeakCache(item.uuid);
-                                            if (!audioBlob) {
-                                                audioBlob = await getBlobFromIndexedDB(item.uuid);
-                                                if (audioBlob) {
-                                                    cacheBlobInMemory(item.uuid, audioBlob);
-                                                } else {
-                                                    addToast({
-                                                        title: "Blob of audio not found",
-                                                        color: "danger",
-                                                    });
+                                    </Button>
+                                </Tooltip>
+                                <Tooltip placement='top' content="play audio">
+                                    <Button isIconOnly variant='light' className='h-fit'
+                                        onPress={async () => {
+                                            if (item.modified_fs) {
+                                                let audioBlob = getBlobFromWeakCache(item.uuid);
+                                                if (!audioBlob) {
+                                                    audioBlob = await getBlobFromIndexedDB(item.uuid);
+                                                    if (audioBlob) {
+                                                        cacheBlobInMemory(item.uuid, audioBlob);
+                                                    } else {
+                                                        addToast({
+                                                            title: "Blob of audio not found",
+                                                            color: "danger",
+                                                        });
+                                                    }
                                                 }
-                                            }
-                                            if (audioBlob) {
-                                                const audioUrl = URL.createObjectURL(audioBlob);
-                                                const audio = new Audio(audioUrl);
+                                                if (audioBlob) {
+                                                    const audioUrl = URL.createObjectURL(audioBlob);
+                                                    const audio = new Audio(audioUrl);
+                                                    audio.play();
+                                                    audio.onended = () => {
+                                                        URL.revokeObjectURL(audioUrl);
+                                                    };
+                                                }
+                                            } else {
+                                                const audio = new Audio(item.audio_path);
                                                 audio.play();
-                                                audio.onended = () => {
-                                                    URL.revokeObjectURL(audioUrl);
-                                                };
                                             }
-                                        } else {
-                                            const audio = new Audio(item.audio_path);
-                                            audio.play();
-                                        }
-                                    }}
-                                >
-                                    <MdPlayCircle size={20} />
-                                </Button>
-                            </Tooltip>
-                        </div>
+                                        }}
+                                    >
+                                        <MdPlayCircle size={20} />
+                                    </Button>
+                                </Tooltip>
+                            </div>
+                        )}
                         <div className="flex flex-row items-center justify-end">
                             <Tooltip placement='top' content="show/hide original">
                                 <Button isIconOnly variant='light' className='h-fit' onPress={() => setStateOriginal(!stateOriginal)} >

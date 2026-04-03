@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult, card_ext, card_review } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { getUUID, getWeightedRandom } from "@/lib/utils";
 import { qsa_card, Prisma, qsa_tag, qsa_card_tag, qsa_card_review } from "@/generated/prisma/client";
 import { FilterType, TagAll, TagUnspecified, TagNo } from "@/lib/card";
@@ -118,8 +119,8 @@ export async function getCardAll(
             total_pages: Math.ceil(total / limit),
         }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -133,8 +134,8 @@ export async function getCard(uuid: string): Promise<ActionResult<qsa_card>> {
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -158,8 +159,8 @@ export async function saveCard(item: qsa_card): Promise<ActionResult<qsa_card>> 
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -170,8 +171,8 @@ export async function removeCard(uuid: string): Promise<ActionResult<qsa_card>> 
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -202,8 +203,8 @@ export async function getCardTestByUUID(uuid: string): Promise<ActionResult<card
             }
         }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -263,8 +264,8 @@ export async function getCardTest(email: string, tag_uuid: string): Promise<Acti
         }
         return { status: 'error', error: 'no card found for test' }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -281,7 +282,7 @@ export async function saveCardReview(item: qsa_card_review): Promise<boolean> {
         })
         return true
     } catch (error) {
-        console.log(error)
+        console.error(error)
         return false
     }
 }
@@ -294,7 +295,7 @@ export async function setCardFamiliarity(uuid: string, familiarity: number): Pro
         })
         return true
     } catch (error) {
-        console.log(error)
+        console.error(error)
         return false
     }
 }
@@ -309,8 +310,8 @@ export async function getTag(uuid: string): Promise<ActionResult<qsa_tag>> {
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -329,8 +330,8 @@ export async function getTagAll(email: string): Promise<ActionResult<qsa_tag[]>>
         )
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -354,8 +355,8 @@ export async function saveTag(item: qsa_tag): Promise<ActionResult<qsa_tag>> {
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -367,8 +368,8 @@ export async function createTag(item: qsa_tag): Promise<ActionResult<qsa_tag>> {
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -385,8 +386,8 @@ export async function removeTag(uuid: string): Promise<ActionResult<qsa_tag>> {
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -409,8 +410,8 @@ export async function getCardTag(email: string, card_uuid: string): Promise<Acti
         }
         return { status: "success", data: item }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -446,7 +447,7 @@ export async function saveCardTag(item: card_ext): Promise<ActionResult<card_ext
 
         return { status: "success", data: { uuid: card_uuid } }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

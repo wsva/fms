@@ -215,8 +215,8 @@ export default function Page({ user_id }: Props) {
 
     return (
         <div>
-            <div className='flex flex-col lg:flex-row items-center justify-center gap-4 my-4'>
-                <Select aria-label='stt engine' className='max-w-sm'
+            <div className='flex flex-col sm:flex-row items-center justify-center gap-4 my-4'>
+                <Select aria-label='stt engine' className='w-full sm:max-w-sm'
                     selectedKeys={[stateEngine]}
                     onChange={(e) => setStateEngine(e.target.value)}
                     startContent={<div className="whitespace-nowrap font-bold">AI Engine</div>}
@@ -225,7 +225,7 @@ export default function Page({ user_id }: Props) {
                         <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
                     ))}
                 </Select>
-                <Select aria-label='stt engine' className='max-w-sm'
+                <Select aria-label='stt engine' className='w-full sm:max-w-sm'
                     selectedKeys={[stateMode]}
                     onChange={(e) => setStateMode(e.target.value as "video" | "audio")}
                     startContent={<div className="whitespace-nowrap font-bold">Mode</div>}
@@ -246,15 +246,15 @@ export default function Page({ user_id }: Props) {
             </div>
 
             {stateRecording ? (
-                <video ref={previewRef} autoPlay muted playsInline />
+                <video ref={previewRef} autoPlay muted playsInline className="w-full" />
             ) : (
                 <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
                     <Input label="title" size="lg" className='w-full'
                         value={stateNewTitle}
                         onChange={(e) => setStateNewTitle(e.target.value)}
                     />
-                    {!!stateNewAudio && (<audio controls src={stateNewAudio.url} />)}
-                    {!!stateNewVideo && (<video controls src={stateNewVideo.url} />)}
+                    {!!stateNewAudio && (<audio controls src={stateNewAudio.url} className="w-full" />)}
+                    {!!stateNewVideo && (<video controls src={stateNewVideo.url} className="w-full max-h-[40vh]" />)}
                     <Textarea size='lg' className='w-full' label="content"
                         classNames={{
                             inputWrapper: "bg-sand-200",

@@ -8,6 +8,7 @@ export interface EngineOption {
 }
 
 export const EngineList: EngineOption[] = [
+    { key: "none", value: "None" },
     { key: "gemini", value: "Google Gemini" },
     //{ key: "whisper", value: "OpenAI Whisper" },
     { key: "local", value: "Local Whisper" },

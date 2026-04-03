@@ -7,353 +7,336 @@ datasource db {
   provider = "postgresql"
 }
 
-model topword_de {
-    id        Int    @unique
-    word      String
-    freq      Int
-    examples  Int
-    in_dict   String
-    base_form String
-    article   String
-    level     String
+// ---------- auth
+
+model oauth2_token {
+  access_token  String  @id @db.VarChar(1000)
+  refresh_token String  @db.VarChar(1000)
+  client_id     String  @db.VarChar(100)
+  user_id       String  @db.VarChar(100)
+  ip            String  @db.VarChar(100)
+  parent        String? @db.VarChar(1000)
 }
 
-model topword_de_example {
-    id      Int    @unique
-    word_id Int
-    example String
+model oauth2_user {
+  user_id      String  @id @db.VarChar(100)
+  nickname     String? @db.VarChar(100)
+  username     String? @db.VarChar(100)
+  number       String? @db.VarChar(100)
+  email        String  @db.VarChar(100)
+  password     String  @db.VarChar(100)
+  is_superuser String  @db.VarChar(1)
+  is_staff     String  @db.VarChar(1)
+  is_active    String  @db.VarChar(1)
 }
 
-model torsten_voice {
-    id     String @unique
-    subset String
-    style  String
-    text   String
-    source String
-}
-
-model word_trash {
-    uuid       String   @unique
-    word       String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model word_user {
-    uuid        String   @unique
-    user_id     String
-    word        String
-    familiarity Int
-    language    String
-    created_at  DateTime
-    updated_at  DateTime
-    domain_list String
-    in_dict     Boolean
-    alias       String
-    note        String
-}
-
-model dict_de_level {
-    id       Int    @unique
-    lemma    String
-    pos      String
-    articles String
-    level    String
-    url      String
-}
-
-model dict_en {
-    id        Int    @unique
-    headword  String
-    pos       String
-    level     String
-    inventory String
-    notes     String
-}
-
-model word_example {
-    uuid        String   @unique
-    content     String
-    user_id     String
-    language    String
-    created_at  DateTime
-    updated_at  DateTime
-    context     String
-    familiarity Int
-    source      String
-    note        String
-}
-
-model word_example_lemma {
-    uuid         String @unique
-    lemma        String
-    example_uuid String
-}
-
-model word_phrase {
-    uuid        String   @unique
-    user_id     String
-    phrase      String
-    familiarity Int
-    language    String
-    note        String
-    created_at  DateTime
-    updated_at  DateTime
-}
-
-model blog {
-    uuid        String   @unique
-    user_id     String
-    title       String
-    description String
-    content     String
-    created_at  DateTime
-    updated_at  DateTime
-}
-
-model qsa_card {
-    uuid        String   @unique
-    user_id     String
-    question    String
-    suggestion  String
-    answer      String
-    familiarity Int
-    note        String
-    created_at  DateTime
-    updated_at  DateTime
-}
-
-model qsa_tag {
-    uuid        String   @unique
-    tag         String
-    description String
-    user_id     String
-    created_at  DateTime
-    updated_at  DateTime
-}
-
-model qsa_card_tag {
-    uuid       String   @unique
-    card_uuid  String
-    tag_uuid   String
-    created_at DateTime
-    updated_at DateTime
-
-    @@unique([card_uuid, tag_uuid])
-}
-
-model qsa_card_review {
-    uuid           String   @unique
-    card_uuid      String
-    user_id        String
-    interval_days  Int
-    ease_factor    Int
-    repetitions    Int
-    familiarity    Int
-    last_review_at DateTime
-    next_review_at DateTime
-}
-
-model speak_text {
-    uuid       String   @unique
-    text       String
-    note       String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model speak_media {
-    uuid       String   @unique
-    text_uuid  String
-    location   String
-    original   String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model speak_review {
-    uuid           String   @unique
-    text_uuid      String
-    user_id        String
-    interval_days  Int
-    ease_factor    Int
-    repetitions    Int
-    familiarity    Int
-    last_review_at DateTime
-    next_review_at DateTime
-}
-
-model read_book {
-    uuid       String   @unique
-    name       String
-    user_id    String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model read_chapter {
-    uuid       String   @unique
-    book_uuid  String
-    order_num  Int
-    name       String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model read_sentence {
-    uuid         String   @unique
-    chapter_uuid String
-    order_num    Int
-    original     String
-    recognized   String
-    audio_path   String
-    created_by   String
-    created_at   DateTime
-    updated_at   DateTime
-}
-
-model ask_question {
-    uuid       String   @unique
-    user_id    String
-    title      String
-    audio_path String
-    video_path String
-    content    String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model ask_answer {
-    uuid          String   @unique
-    user_id       String
-    question_uuid String
-    audio_path    String
-    video_path    String
-    content       String
-    created_by    String
-    created_at    DateTime
-    updated_at    DateTime
-}
-
-model voice_access_action {
-    uuid        String   @unique
-    name        String
-    action_type String
-    payload     String
-    created_by  String
-    created_at  DateTime
-    updated_at  DateTime
-}
-
-model voice_access_command {
-    uuid        String   @unique
-    action_uuid String
-    language    String
-    text        String
-    created_by  String
-    created_at  DateTime
-    updated_at  DateTime
-}
-
-model practice_text {
-    uuid       String   @unique
-    user_id    String
-    text       String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model practice_audio {
-    uuid       String   @unique
-    user_id    String
-    text_uuid  String
-    audio_path String
-    recognized String
-    created_by String
-    created_at DateTime
-    updated_at DateTime
-}
+// ---------- plan
 
 model plan_plan {
-    uuid       String   @unique
-    user_id    String
-    content    String
-    minutes    Int // 15, 30, 60
-    favorite   String // pending, completed, failed
-    created_at DateTime
-    updated_at DateTime
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  content    String
+  minutes    Int
+  favorite   String?  @db.VarChar(1)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
 model plan_record {
-    uuid       String   @unique
-    user_id    String
-    plan_uuid  String
-    start_at   DateTime
-    status     String // pending, completed, failed
-    created_at DateTime
-    updated_at DateTime
+  uuid       String    @id @db.VarChar(100)
+  user_id    String    @db.VarChar(100)
+  plan_uuid  String    @db.VarChar(100)
+  start_at   DateTime? @db.Timestamptz(6)
+  status     String    @db.VarChar(100)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
 }
+
+// ---------- word
+
+model dict_de {
+  uuid String @id @db.VarChar(255)
+  url  String @db.VarChar(255)
+}
+
+model dict_de_level {
+  id       Int    @id @default(autoincrement())
+  lemma    String @db.VarChar(255)
+  pos      String @db.VarChar(100)
+  articles String @db.VarChar(10)
+  level    String @db.VarChar(10)
+  url      String @db.VarChar(255)
+}
+
+model dict_en {
+  id        Int    @id @default(autoincrement())
+  headword  String @db.VarChar(255)
+  pos       String @db.VarChar(100)
+  level     String @db.VarChar(10)
+  inventory String @db.VarChar(255)
+  notes     String
+}
+
+model topword_de {
+  id        Int     @id
+  word      String
+  freq      Int
+  examples  Int?
+  in_dict   String? @db.VarChar(1)
+  base_form String?
+  article   String? @db.VarChar(100)
+  level     String? @db.VarChar(10)
+}
+
+model topword_de_example {
+  id      Int    @id @default(autoincrement())
+  word_id Int?
+  example String
+}
+
+// ---------- blog
+
+model blog {
+  uuid        String   @id @db.VarChar(100)
+  user_id     String   @db.VarChar(255)
+  title       String   @db.VarChar(255)
+  description String   @db.VarChar(255)
+  content     String
+  created_at  DateTime @db.Timestamptz(6)
+  updated_at  DateTime @db.Timestamptz(6)
+}
+
+// ---------- listen
 
 model listen_media {
-    uuid       String   @unique
-    user_id    String
-    title      String
-    source     String
-    note       String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model listen_transcript {
-    uuid       String   @unique
-    user_id    String
-    media_uuid String
-    language   String
-    transcript String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model listen_subtitle {
-    uuid       String   @unique
-    user_id    String
-    media_uuid String
-    language   String
-    subtitle   String
-    format     String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model listen_note {
-    uuid       String   @unique
-    user_id    String
-    media_uuid String
-    note       String
-    created_at DateTime
-    updated_at DateTime
-}
-
-model listen_tag {
-    uuid        String   @unique
-    user_id     String
-    tag         String
-    description String
-    created_at  DateTime
-    updated_at  DateTime
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  title      String
+  source     String
+  note       String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
 model listen_media_tag {
-    uuid       String   @unique
-    media_uuid String
-    tag_uuid   String
-    created_at DateTime
-    updated_at DateTime
+  uuid       String   @id @db.VarChar(100)
+  media_uuid String   @db.VarChar(100)
+  tag_uuid   String   @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model listen_note {
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  media_uuid String   @db.VarChar(100)
+  note       String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model listen_subtitle {
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  media_uuid String   @db.VarChar(100)
+  language   String   @db.VarChar(10)
+  subtitle   String
+  format     String   @db.VarChar(10)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model listen_tag {
+  uuid        String   @id @db.VarChar(100)
+  user_id     String   @db.VarChar(100)
+  tag         String
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model listen_transcript {
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  media_uuid String   @db.VarChar(100)
+  language   String   @db.VarChar(10)
+  transcript String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model listening_document {
+  uuid        String   @id @db.VarChar(100)
+  access_path String
+  content     String
+  branch      String
+  version     Int
+  deleted     Boolean
+  created_by  String
+  created_at  DateTime @db.Timestamptz(6)
+  updated_at  DateTime @db.Timestamptz(6)
+}
+
+model listening_storage {
+  uuid       String   @id @db.VarChar(100)
+  upload_to  String
+  file       String   @db.VarChar(100)
+  created_by String
+  created_at DateTime @db.Timestamptz(6)
+  updated_at DateTime @db.Timestamptz(6)
+}
+
+// ---------- speak
+
+model practice_text {
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  text       String
+  created_by String   @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model practice_audio {
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  text_uuid  String   @db.VarChar(100)
+  audio_path String?
+  recognized String?
+  created_by String   @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model ask_question {
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  title      String?
+  audio_path String?
+  video_path String?
+  content    String?
+  created_by String   @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model ask_answer {
+  uuid          String   @id @db.VarChar(100)
+  user_id       String   @db.VarChar(100)
+  question_uuid String   @db.VarChar(100)
+  audio_path    String?
+  video_path    String?
+  content       String?
+  created_by    String   @db.VarChar(100)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model book_meta {
+  uuid        String   @id @db.VarChar(100)
+  user_id     String   @db.VarChar(100)
+  title       String
+  author      String?
+  language    String   @db.VarChar(10)
+  description String?
+  cover_path  String?
+  source      String?
+  is_public   Boolean  @default(false)
+  created_by  String   @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model book_chapter {
+  uuid        String   @id @db.VarChar(100)
+  book_uuid   String   @db.VarChar(100)
+  parent_uuid String?  @db.VarChar(100)
+  order_num   Int
+  title       String
+  description String?
+  created_by  String   @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model book_sentence {
+  uuid          String   @id @db.VarChar(100)
+  chapter_uuid  String   @db.VarChar(100)
+  user_id       String   @db.VarChar(100)
+  order_num     Int
+  content       String
+  sentence_type String   @db.VarChar(20)
+  audio_path    String?
+  tts_path      String?
+  recognized    String?
+  created_by    String   @db.VarChar(100)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+}
+
+// ---------- card
+
+model qsa_card {
+  uuid        String   @id @db.VarChar(100)
+  user_id     String   @db.VarChar(255)
+  question    String
+  suggestion  String
+  answer      String
+  familiarity Int
+  note        String
+  created_at  DateTime @db.Timestamptz(6)
+  updated_at  DateTime @db.Timestamptz(6)
+}
+
+model qsa_card_review {
+  uuid           String   @id @db.VarChar(100)
+  interval_days  Int
+  ease_factor    Int
+  repetitions    Int
+  last_review_at DateTime @db.Timestamptz(6)
+  next_review_at DateTime @db.Timestamptz(6)
+  familiarity    Int
+  card_uuid      String   @db.VarChar(100)
+  user_id        String   @db.VarChar(255)
+}
+
+model qsa_card_tag {
+  uuid       String   @id @db.VarChar(100)
+  card_uuid  String   @db.VarChar(100)
+  tag_uuid   String   @db.VarChar(100)
+  created_at DateTime @db.Timestamptz(6)
+  updated_at DateTime @db.Timestamptz(6)
+}
+
+model qsa_tag {
+  uuid        String   @id @db.VarChar(100)
+  tag         String   @db.VarChar(255)
+  created_at  DateTime @db.Timestamptz(6)
+  updated_at  DateTime @db.Timestamptz(6)
+  description String   @db.VarChar(255)
+  user_id     String   @db.VarChar(255)
+  abstract    String?  @db.VarChar(1)
+  children    String?
+}
+
+// ---------- voice access
+
+model voice_access_action {
+  uuid        String   @id @db.VarChar(100)
+  name        String   @db.VarChar(100)
+  action_type String   @db.VarChar(100)
+  payload     String?
+  created_by  String?  @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model voice_access_command {
+  uuid        String   @id @db.VarChar(100)
+  action_uuid String   @db.VarChar(100)
+  language    String   @db.VarChar(10)
+  text        String
+  created_by  String?  @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
 }

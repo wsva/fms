@@ -5,6 +5,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { plan_plan, plan_record } from "@/generated/prisma/client";
 
 export async function getPlan(uuid: string): Promise<ActionResult<plan_plan>> {
@@ -17,8 +18,8 @@ export async function getPlan(uuid: string): Promise<ActionResult<plan_plan>> {
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -33,8 +34,8 @@ export async function getPlanAll(user_id: string): Promise<ActionResult<plan_pla
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -50,8 +51,8 @@ export async function savePlan(item: plan_plan): Promise<ActionResult<plan_plan>
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -62,8 +63,8 @@ export async function removePlan(uuid: string): Promise<ActionResult<plan_plan>>
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -77,8 +78,8 @@ export async function getRecord(uuid: string): Promise<ActionResult<plan_record>
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -90,8 +91,8 @@ export async function getRecordAll(plan_uuid: string): Promise<ActionResult<plan
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -104,8 +105,8 @@ export async function saveRecord(item: plan_record): Promise<ActionResult<plan_r
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -116,7 +117,7 @@ export async function removeRecord(uuid: string): Promise<ActionResult<plan_reco
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

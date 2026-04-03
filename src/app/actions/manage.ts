@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -17,8 +18,8 @@ export async function getUserIDAll(): Promise<ActionResult<string[]>> {
         });
         return { status: "success", data: result.map(r => r.user_id) }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -61,8 +62,8 @@ export const removeCardsByTag = async (user_id: string, tag_uuid: string): Promi
 
         return { status: 'success', data: true }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -113,7 +114,7 @@ export const copyCardsByTag = async (from_user_id: string, from_tag_uuid: string
 
         return { status: 'success', data: true }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

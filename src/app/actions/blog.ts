@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
 import { blog, Prisma } from "@/generated/prisma/client";
 
@@ -20,8 +21,8 @@ export async function getBlogAllOfOthers(email?: string): Promise<ActionResult<b
         )
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -35,8 +36,8 @@ export async function getBlogAllOfAnother(email: string): Promise<ActionResult<b
         )
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -48,8 +49,8 @@ export async function getBlogAll(email?: string): Promise<ActionResult<blog[]>> 
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -63,8 +64,8 @@ export async function getBlog(uuid: string): Promise<ActionResult<blog>> {
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -85,7 +86,7 @@ export async function saveBlog(item: blog): Promise<ActionResult<blog>> {
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

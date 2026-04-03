@@ -203,6 +203,61 @@ export default function Page({ email }: Props) {
         setStateSaving(false)
     }
 
+    const handleNewParagraph = async () => {
+        setStateSaving(true)
+
+        const new_sentence = {
+            uuid: getUUID(),
+            chapter_uuid: stateChapter,
+            order_num: stateData.length + 1,
+            original: "\n\n",
+            recognized: "\n\n",
+            audio_path: "",
+            in_db: false,
+            on_fs: false,
+            modified_db: true,
+            modified_fs: true,
+        }
+
+        const resultDb = await saveSentence({
+            uuid: new_sentence.uuid,
+            chapter_uuid: new_sentence.chapter_uuid,
+            order_num: new_sentence.order_num,
+            original: "\n\n",
+            recognized: "\n\n",
+            audio_path: "",
+            created_by: email,
+            created_at: new Date(),
+            updated_at: new Date(),
+        });
+        if (resultDb.status === "error") {
+            console.log(resultDb.error);
+            addToast({
+                title: "save data error",
+                color: "danger",
+            });
+            setStateSaving(false)
+            return
+        }
+
+        updateStateData(draft => {
+            draft.push({
+                ...new_sentence,
+                in_db: true,
+                on_fs: true,
+                modified_db: false,
+                modified_fs: false,
+            });
+        });
+        setStateCurrent(undefined);
+
+        addToast({
+            title: "save data success",
+            color: "success",
+        });
+        setStateSaving(false)
+    }
+
     const handleSaveAll = async () => {
         setStateSaving(true)
         try {
@@ -299,7 +354,7 @@ export default function Page({ email }: Props) {
             setStateRecorder,
             stateRecording,
             setStateRecording,
-            recognize: true,
+            recognize: stateEngine !== "none",
             sttEngine: stateEngine,
             setStateProcessing,
             handleAudio,
@@ -337,7 +392,7 @@ export default function Page({ email }: Props) {
                 </Button>
             </div> */}
 
-            <div className='flex flex-col md:flex-row gap-4 my-4'>
+            <div className='flex flex-col sm:flex-row gap-4 my-4'>
                 <Book user_id={email} onSelect={async (book_uuid: string) => {
                     setStateBook(book_uuid)
                 }} />
@@ -350,8 +405,8 @@ export default function Page({ email }: Props) {
                 }} />
             </div>
 
-            <div className='flex flex-col md:flex-row items-center justify-center gap-4 my-4'>
-                <Select aria-label='stt engine' className='max-w-sm'
+            <div className='flex flex-col sm:flex-row items-center justify-center gap-4 my-4'>
+                <Select aria-label='stt engine' className='w-full sm:max-w-sm'
                     selectedKeys={[stateEngine]}
                     onChange={(e) => setStateEngine(e.target.value)}
                     startContent={<div className="whitespace-nowrap font-bold">AI Engine</div>}
@@ -376,6 +431,18 @@ export default function Page({ email }: Props) {
                     {stateRecording
                         ? '⏹ Stop Recording (Ctrl+A)'
                         : stateProcessing ? "Processing" : '🎤 Read a Sentence (Ctrl+A)'}
+                </Button>
+
+                <Button variant='solid' color='secondary'
+                    onPress={async () => {
+                        if (!stateBook || !stateChapter) {
+                            alert("select book and chapter first")
+                        } else {
+                            await handleNewParagraph()
+                        }
+                    }}
+                >
+                    New Paragraph
                 </Button>
             </div>
 
@@ -411,9 +478,11 @@ export default function Page({ email }: Props) {
                                 <MdPlayCircle size={20} />
                             </Button>
                         </div>
-                        <div className="text-xl">
-                            {highlightDifferences(stateCurrent.original, stateCurrent.recognized)}
-                        </div>
+                        {stateEngine !== "none" && (
+                            <div className="text-xl">
+                                {highlightDifferences(stateCurrent.original, stateCurrent.recognized)}
+                            </div>
+                        )}
                         <Textarea size='lg' className='w-full' label="original text"
                             classNames={{
                                 inputWrapper: "bg-sand-200",

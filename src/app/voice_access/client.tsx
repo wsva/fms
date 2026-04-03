@@ -13,20 +13,20 @@ const Command = ({ item }: { item: voice_access_command }) => {
     const [stateText, setStateText] = useState<string>(item.text)
 
     return (
-        <Input className="max-w-2xl" size='sm'
+        <Input className="w-full max-w-2xl" size='sm'
             classNames={{
-                "input": "text-xl"
+                "input": "text-sm sm:text-base"
             }}
             defaultValue={stateText}
             onChange={(e) => setStateText(e.target.value)}
             startContent={
                 <Dropdown placement="bottom-end">
                     <DropdownTrigger>
-                        <div className='text-xl min-w-10 px-2 py-0.5 rounded-lg bg-sand-300'>{stateLanguage}</div>
+                        <div className='text-sm sm:text-base min-w-10 px-2 py-0.5 rounded-lg bg-sand-300'>{stateLanguage}</div>
                     </DropdownTrigger>
                     <DropdownMenu
                         disallowEmptySelection
-                        className="max-w-75"
+                        className="max-w-xs"
                         selectedKeys={[stateLanguage]}
                         selectionMode="single"
                         onSelectionChange={(keys) => setStateLanguage(keys.currentKey || "en")}
@@ -66,37 +66,39 @@ export default function Page() {
                     view latest cmdMap
                 </Link>
             </div>
-            <Table isStriped
-                classNames={{
-                    "th": "text-xl",
-                    "tr": "text-xl",
-                }}
-            >
-                <TableHeader>
-                    <TableColumn>Action</TableColumn>
-                    <TableColumn>Type</TableColumn>
-                    <TableColumn>Commands</TableColumn>
-                    <TableColumn>Payload</TableColumn>
-                    <TableColumn>Action</TableColumn>
-                </TableHeader>
-                <TableBody>
-                    {stateAction.map((v) => (
-                        <TableRow key={v.uuid}>
-                            <TableCell className='text-xl font-bold'>{v.name}</TableCell>
-                            <TableCell className='text-xl'>{typeOptions.get(v.action_type)}</TableCell>
-                            <TableCell>
-                                <div className='flex flex-col gap-1'>
-                                    {(stateCommand.get(v.uuid) || []).map((cmd) => (
-                                        <Command key={cmd.uuid} item={cmd} />
-                                    ))}
-                                </div>
-                            </TableCell>
-                            <TableCell className='text-lg'><pre>{indentJsonString(v.payload)}</pre></TableCell>
-                            <TableCell className='text-lg'>Save</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            <div className='overflow-x-auto'>
+                <Table isStriped
+                    classNames={{
+                        "th": "text-sm sm:text-base",
+                        "tr": "text-sm sm:text-base",
+                    }}
+                >
+                    <TableHeader>
+                        <TableColumn>Action</TableColumn>
+                        <TableColumn>Type</TableColumn>
+                        <TableColumn>Commands</TableColumn>
+                        <TableColumn>Payload</TableColumn>
+                        <TableColumn>Action</TableColumn>
+                    </TableHeader>
+                    <TableBody>
+                        {stateAction.map((v) => (
+                            <TableRow key={v.uuid}>
+                                <TableCell className='text-sm sm:text-base font-bold'>{v.name}</TableCell>
+                                <TableCell className='text-sm sm:text-base'>{typeOptions.get(v.action_type)}</TableCell>
+                                <TableCell>
+                                    <div className='flex flex-col gap-1'>
+                                        {(stateCommand.get(v.uuid) || []).map((cmd) => (
+                                            <Command key={cmd.uuid} item={cmd} />
+                                        ))}
+                                    </div>
+                                </TableCell>
+                                <TableCell className='text-sm sm:text-base'><pre className='whitespace-pre-wrap break-all'>{indentJsonString(v.payload)}</pre></TableCell>
+                                <TableCell className='text-sm sm:text-base'>Save</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     )
 }

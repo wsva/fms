@@ -23,15 +23,16 @@ export default async function ExamplePage({ params, searchParams }: Props) {
     const answer = typeof sp.answer === 'string' ? decodeURIComponent(sp.answer) : ''
     const note = typeof sp.note === 'string' ? decodeURIComponent(sp.note) : ''
     const simple = 'simple' in sp
-    const card = { question, suggestion, answer, note, tag_list_suggestion: tags.split(",") }
+    const card = { uuid: p.uuid !== 'add' ? p.uuid : undefined, question, suggestion, answer, note, tag_list_suggestion: tags.split(",") }
 
     const result = (typeof p.uuid === 'string' && p.uuid !== 'add')
         ? (await getCard(p.uuid)) : undefined
 
+    /* if question param is present, we came from "Link Card" in the reading page — show view mode so the existing card isn't accidentally overwritten */
     return (
         <>
             {(result?.status === 'success') ? (
-                <CardForm card_ext={result.data} email={email} edit_view={!!sp.edit} simple={false} create_new={false} />
+                < CardForm card_ext={result.data} email={email} edit_view={question ? false : !!sp.edit} simple={false} create_new={false} />
             ) : (
                 <CardForm card_ext={card} email={email} edit_view={!!sp.edit} simple={simple} create_new={true} />
             )}

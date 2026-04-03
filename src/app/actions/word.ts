@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult, topword } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
 import { Prisma, word_trash } from "@/generated/prisma/client";
 
@@ -72,8 +73,8 @@ export async function getTopword(
             total_pages: Math.ceil(total / limit),
         }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -164,8 +165,8 @@ export async function searchTopword(
             total_pages: Math.ceil(total / limit),
         }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -182,8 +183,8 @@ export async function trashWord(word: string, email: string): Promise<ActionResu
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -194,8 +195,8 @@ export async function getExample(topword_id: number): Promise<ActionResult<strin
         })
         return { status: "success", data: result.map((v) => v.example) }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -215,7 +216,7 @@ export async function searchExample(keyword: string): Promise<ActionResult<strin
         })
         return { status: "success", data: result.map((v) => v.example) }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

@@ -43,6 +43,14 @@ export const menuList: MenuGroup[] = [
         ],
     },
     {
+        name: "Read",
+        items: [
+            { key: "read_book", name: "Manage Books", description: "manage book info", href: "/read/book" },
+            { key: "read_chapter", name: "Manage Chapters", description: "manage chapters", href: "/read/chapter" },
+            { key: "read_main", name: "Reading", description: "read and record sentences", href: "/read" },
+        ],
+    },
+    {
         name: "Blog",
         items: [
             { key: "blog_index", name: "Blog", description: "all blogs", href: "/blog" },

@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import { torsten_voice } from "@/generated/prisma/client";
 
 export async function getTorstenVoice(page: number, limit: number): Promise<ActionResult<torsten_voice[]>> {
@@ -26,7 +27,7 @@ export async function getTorstenVoice(page: number, limit: number): Promise<Acti
             total_pages: Math.ceil(total / limit),
         }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

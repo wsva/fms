@@ -265,7 +265,7 @@ export default function Page({ user_id, uuid }: Props) {
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
-            <div className='flex flex-col lg:flex-row items-center justify-center gap-2'>
+            <div className='flex flex-col sm:flex-row items-center justify-center gap-2'>
                 <Select label="Tag" labelPlacement='outside-left' size="sm"
                     onChange={(e) => {
                         setStateTagUUID(e.target.value)

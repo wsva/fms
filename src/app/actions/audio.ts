@@ -1,6 +1,7 @@
 'use server';
 
 import { ActionResult } from "@/lib/types";
+import { toErrorMessage } from "@/lib/errors";
 import fs from 'fs';
 import path from 'path';
 
@@ -13,8 +14,8 @@ export async function saveAudio(blob: Blob, filedir: string, filename: string): 
 
         return { status: "success", data: true }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -24,7 +25,7 @@ export async function removeAudio(filedir: string, filename: string): Promise<Ac
         fs.promises.unlink(filePath);
         return { status: "success", data: true }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }

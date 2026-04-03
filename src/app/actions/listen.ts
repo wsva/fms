@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
+import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils"
 import { listen_media, listen_media_tag, listen_note, listen_subtitle, listen_tag, listen_transcript, Prisma } from "@/generated/prisma/client";
 
@@ -26,8 +27,8 @@ export async function getMedia(uuid: string): Promise<ActionResult<listen_media_
             }
         }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -46,8 +47,8 @@ export async function getMediaAll(user_id: string): Promise<ActionResult<listen_
         )
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -63,8 +64,8 @@ export async function getMediaByTag(user_id: string, tag_uuid: string): Promise<
         `);
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -80,8 +81,8 @@ export async function getMediaByInvalidSubtitle(user_id: string): Promise<Action
         `);
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -99,8 +100,8 @@ export async function saveMedia(item: listen_media): Promise<ActionResult<listen
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -112,8 +113,8 @@ export async function createMedia(item: listen_media): Promise<ActionResult<list
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -138,8 +139,8 @@ export async function removeMedia(uuid: string): Promise<ActionResult<boolean>> 
         });
         return { status: "success", data: true }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -153,8 +154,8 @@ export async function getTranscript(uuid: string): Promise<ActionResult<listen_t
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -165,8 +166,8 @@ export async function getTranscriptAll(media_uuid: string): Promise<ActionResult
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -184,8 +185,8 @@ export async function saveTranscript(item: listen_transcript): Promise<ActionRes
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -197,8 +198,8 @@ export async function createTranscript(item: listen_transcript): Promise<ActionR
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -212,8 +213,8 @@ export async function removeTranscript(uuid: string): Promise<ActionResult<liste
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -227,8 +228,8 @@ export async function getSubtitle(uuid: string): Promise<ActionResult<listen_sub
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -239,8 +240,8 @@ export async function getSubtitleAll(media_uuid: string): Promise<ActionResult<l
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -258,8 +259,8 @@ export async function saveSubtitle(item: listen_subtitle): Promise<ActionResult<
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -271,8 +272,8 @@ export async function createSubtitle(item: listen_subtitle): Promise<ActionResul
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -286,8 +287,8 @@ export async function removeSubtitle(uuid: string): Promise<ActionResult<listen_
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -302,8 +303,8 @@ export async function getNote(uuid: string): Promise<ActionResult<listen_note>> 
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -314,8 +315,8 @@ export async function getNoteAll(media_uuid: string): Promise<ActionResult<liste
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -333,8 +334,8 @@ export async function saveNote(item: listen_note): Promise<ActionResult<listen_n
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -346,8 +347,8 @@ export async function createNote(item: listen_note): Promise<ActionResult<listen
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -361,8 +362,8 @@ export async function removeNote(uuid: string): Promise<ActionResult<listen_note
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -376,8 +377,8 @@ export async function getTag(uuid: string): Promise<ActionResult<listen_tag>> {
         }
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -396,8 +397,8 @@ export async function getTagAll(email: string): Promise<ActionResult<listen_tag[
         )
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -421,8 +422,8 @@ export async function saveTag(item: listen_tag): Promise<ActionResult<listen_tag
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -434,8 +435,8 @@ export async function createTag(item: listen_tag): Promise<ActionResult<listen_t
 
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -452,8 +453,8 @@ export async function removeTag(uuid: string): Promise<ActionResult<listen_tag>>
         })
         return { status: "success", data: result }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -471,8 +472,8 @@ export async function getMediaTag(email: string, media_uuid: string): Promise<Ac
         }
         return { status: "success", data: result.map((v) => v.tag_uuid) }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 
@@ -508,7 +509,7 @@ export async function saveMediaTag(item: listen_media_ext): Promise<ActionResult
 
         return { status: "success", data: true }
     } catch (error) {
-        console.log(error)
-        return { status: 'error', error: (error as object).toString() }
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
