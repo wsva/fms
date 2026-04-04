@@ -509,9 +509,6 @@ export default function Client({ email }: Props) {
                             Save Order
                         </Button>
                     )}
-                    <Button size="sm" variant="flat" isDisabled={stateSaving} onPress={handleNewParagraph}>
-                        + New Paragraph
-                    </Button>
                     <Button isIconOnly size="sm" variant="flat"
                         title={stateViewMode === 'line' ? 'Switch to paragraph view' : 'Switch to line view'}
                         onPress={() => setStateViewMode(m => m === 'line' ? 'inline' : 'line')}
@@ -535,6 +532,15 @@ export default function Client({ email }: Props) {
                     onAddSentence={openAddDrawer}
                     onDeleteParagraph={handleDeleteParagraph}
                 />
+            )}
+
+            {/* New Paragraph button at bottom */}
+            {stateChapterUUID && !stateLoading && (
+                <div className="flex justify-center">
+                    <Button size="sm" variant="flat" isDisabled={stateSaving} onPress={handleNewParagraph}>
+                        + New Paragraph
+                    </Button>
+                </div>
             )}
 
             {/* Delete paragraph dialog */}

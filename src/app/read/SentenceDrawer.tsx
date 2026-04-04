@@ -4,7 +4,7 @@ import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea
 import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle, MdUnfoldMore, MdUnfoldLess } from 'react-icons/md'
 import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 type Props = {
     drawer: DrawerState
@@ -37,6 +37,20 @@ export default function SentenceDrawer({
     onInsertBefore, onInsertAfter, onParagraphBefore, onParagraphAfter,
 }: Props) {
     const [expanded, setExpanded] = useState(false)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+    const insertAtCursor = (char: string) => {
+        const el = textareaRef.current
+        if (!el) { onContentChange(content + char); return }
+        const start = el.selectionStart ?? content.length
+        const end = el.selectionEnd ?? content.length
+        onContentChange(content.slice(0, start) + char + content.slice(end))
+        requestAnimationFrame(() => {
+            el.selectionStart = start + char.length
+            el.selectionEnd = start + char.length
+            el.focus()
+        })
+    }
 
     if (!drawer) return null
 
@@ -108,8 +122,25 @@ export default function SentenceDrawer({
                         </div>
                     )}
 
+                    {/* Special character insertion */}
+                    <div className="flex flex-row flex-wrap gap-1">
+                        {([
+                            { char: '–', label: '–', hint: 'En dash — Alt 0150' },
+                        ] as { char: string; label: string; hint: string }[]).map(({ char, label, hint }) => (
+                            <button
+                                key={char}
+                                title={hint}
+                                className="px-2 py-0.5 text-sm rounded bg-sand-100 hover:bg-sand-200 border border-sand-300 font-mono"
+                                onClick={() => insertAtCursor(char)}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Content editor */}
                     <Textarea
+                        ref={textareaRef}
                         label="Content" size={expanded ? 'md' : 'sm'} minRows={expanded ? 6 : 2}
                         value={content}
                         onChange={e => onContentChange(e.target.value)}
