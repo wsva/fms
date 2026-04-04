@@ -4,7 +4,36 @@ import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea
 import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle, MdUnfoldMore, MdUnfoldLess } from 'react-icons/md'
 import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+
+const LS_KEY = 'read_auto_replace_rules'
+const DEFAULT_RULES_TEXT = `\
+// add rules in the following format
+// save only to browser cache and maybe disappear, so backup it yourself
+{"from":" vor Christus ", "to": " v. Chr. "}
+{"from":" zum Beispiel ", "to": " z.B. "}
+{"from":" sogenannte ",   "to": " sog. "}
+`
+
+function textToRules(text: string): [string, string][] {
+    return text.split('\n')
+        .map(line => line.trim())
+        .filter(line => !line.startsWith('//') && line.startsWith('{'))
+        .flatMap(line => {
+            try {
+                const { from, to } = JSON.parse(line)
+                return (from && to) ? [[from, to] as [string, string]] : []
+            } catch { return [] }
+        })
+}
+
+function loadRulesText(): string {
+    try {
+        const raw = localStorage.getItem(LS_KEY)
+        if (raw !== null) return raw
+    } catch { /* ignore */ }
+    return DEFAULT_RULES_TEXT
+}
 
 type Props = {
     drawer: DrawerState
@@ -14,7 +43,7 @@ type Props = {
     saving: boolean
     recording: boolean
     processing: boolean
-    bookUUID?: string  // used as tag pre-selection when linking a card (book and tag share the same uuid)
+    bookUUID?: string
     chapterPath?: string
     onClose: () => void
     onPlay: () => void
@@ -37,7 +66,39 @@ export default function SentenceDrawer({
     onInsertBefore, onInsertAfter, onParagraphBefore, onParagraphAfter,
 }: Props) {
     const [expanded, setExpanded] = useState(false)
+    const [rulesText, setRulesText] = useState(DEFAULT_RULES_TEXT)
+    const [showRulesEditor, setShowRulesEditor] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+    useEffect(() => {
+        setRulesText(loadRulesText())
+    }, [])
+
+    const openRulesEditor = () => {
+        setShowRulesEditor(true)
+    }
+
+    const saveRules = () => {
+        localStorage.setItem(LS_KEY, rulesText)
+        setShowRulesEditor(false)
+    }
+
+    const applyRules = () => {
+        let result = content
+        for (const [from, to] of textToRules(rulesText)) {
+            result = result.split(from).join(to)
+        }
+        onContentChange(result)
+    }
+
+    const applySmartQuotes = () => {
+        const parts = content.split('"')
+        const result = parts.reduce((acc, part, i) => {
+            if (i === 0) return part
+            return acc + (i % 2 === 1 ? '„' : '“') + part
+        }, '')
+        onContentChange(result)
+    }
 
     const insertAtCursor = (char: string) => {
         const el = textareaRef.current
@@ -122,10 +183,19 @@ export default function SentenceDrawer({
                         </div>
                     )}
 
-                    {/* Special character insertion */}
-                    <div className="flex flex-row flex-wrap gap-1">
+                    {/* Special character insertion + auto-replace */}
+                    <div className="flex flex-row flex-wrap items-center gap-1">
                         {([
-                            { char: '–', label: '–', hint: 'En dash — Alt 0150' },
+                            { char: '–', label: '–', hint: 'en dash — Alt 0150' },
+                            { char: '„', label: '„', hint: 'opening quotation marks — Alt 0132' },
+                            { char: '“', label: '“', hint: 'closing quotation marks — Alt 0147' },
+                            { char: '‚', label: '‚', hint: 'single open quote — Alt 0130' }, // single quotation marks, for nested quotes
+                            { char: '‘', label: '‘', hint: 'single close quote — Alt 0145' },
+                            { char: '»', label: '»', hint: 'Alt 0187' }, // chevrons, chevrons in German: »…«, chevrons in French: «…»
+                            { char: '«', label: '«', hint: 'Alt 0171' },
+                            { char: '›', label: '›', hint: 'Alt 0155' }, // single chevrons, for nested quotes
+                            { char: '‹', label: '‹', hint: 'Alt 0139' },
+                            { char: 'é', label: 'é', hint: 'Alt 0233' },
                         ] as { char: string; label: string; hint: string }[]).map(({ char, label, hint }) => (
                             <button
                                 key={char}
@@ -136,6 +206,17 @@ export default function SentenceDrawer({
                                 {label}
                             </button>
                         ))}
+                        <div className="ml-auto flex flex-row gap-1">
+                            <Button size="sm" variant="flat" onPress={applySmartQuotes} title='Replace "..." with „..."'>
+                                „"
+                            </Button>
+                            <Button size="sm" variant="flat" onPress={applyRules} title="Apply auto-replace rules to content">
+                                Apply
+                            </Button>
+                            <Button size="sm" variant="flat" onPress={openRulesEditor} title="Edit auto-replace rules">
+                                Rules
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Content editor */}
@@ -165,6 +246,29 @@ export default function SentenceDrawer({
 
                 </div>
             </div>
+
+            {/* Rules editor modal */}
+            {showRulesEditor && (
+                <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40"
+                    onClick={() => setShowRulesEditor(false)}
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl p-5 flex flex-col gap-3 w-96 max-w-[90vw]"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <p className="font-semibold text-base">Auto-replace Rules</p>
+                        <textarea
+                            className="w-full h-48 text-sm font-mono border border-gray-200 rounded p-2 resize-none focus:outline-none focus:border-gray-400 overflow-x-auto whitespace-pre"
+                            value={rulesText}
+                            onChange={e => setRulesText(e.target.value)}
+                            spellCheck={false}
+                        />
+                        <div className="flex flex-row gap-2 justify-end">
+                            <Button size="sm" variant="flat" onPress={() => setShowRulesEditor(false)}>Cancel</Button>
+                            <Button size="sm" color="primary" onPress={saveRules}>Save</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
