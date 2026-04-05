@@ -38,14 +38,9 @@ export const menuList: MenuGroup[] = [
         items: [
             { key: "speak_practice", name: "Practice", description: "practice", href: "/speak/practice" },
             { key: "speak_ask", name: "Asking", description: "ask or answer a question", href: "/speak/ask" },
-        ],
-    },
-    {
-        name: "Read",
-        items: [
-            { key: "read_main", name: "Reading", description: "read and record sentences", href: "/read" },
-            { key: "read_book", name: "Manage Books", description: "manage books and chapters", href: "/read/book" },
-            { key: "read_text", name: "View Text", description: "show content in pure text", href: "/read/text" },
+            { key: "read_book_main", name: "Reading", description: "read a book", href: "/speak/read" },
+            { key: "read_book_manage", name: "Manage Books", description: "manage books and chapters", href: "/speak/read/book" },
+            { key: "read_book_text", name: "View Book Text", description: "show content in pure text", href: "/speak/read/text" },
         ],
     },
     {
@@ -65,6 +60,13 @@ export const menuList: MenuGroup[] = [
             { key: "card_read", name: "Notes by reading", description: "orgnize notes with cards", href: "/card/read" },
             { key: "card_manage", name: "Manage Cards", description: "manage cards", href: "/card/manage" },
             { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test" },
+        ],
+    },
+    {
+        name: "Settings",
+        items: [
+            { key: "settings_api", name: "API", description: "view APIs", href: "/settings/api" },
+            { key: "settings_api_key", name: "API Key", description: "manage API key", href: "/settings/api-key" },
         ],
     },
 ];

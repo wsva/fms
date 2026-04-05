@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { resolveEmail } from '@/lib/api-auth';
 import { getBookMeta, getBookChapterAll, saveBookChapter } from '@/app/actions/book';
 import { getUUID } from '@/lib/utils';
 
@@ -13,18 +13,15 @@ const CreateChapterSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const email = await resolveEmail(request);
+    if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const book_uuid = request.nextUrl.searchParams.get('book_uuid');
     if (!book_uuid) return NextResponse.json({ error: 'book_uuid query param is required' }, { status: 400 });
 
-    // Check book access
     const book = await getBookMeta(book_uuid);
     if (book.status === 'error') return NextResponse.json({ error: 'Book not found' }, { status: 404 });
-    if (book.data.user_id !== session.user.email) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    if (book.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const result = await getBookChapterAll(book_uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
@@ -32,8 +29,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const email = await resolveEmail(request);
+    if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     let body: unknown;
     try { body = await request.json(); } catch {
@@ -45,14 +42,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
 
-    // Check book ownership
     const book = await getBookMeta(parsed.data.book_uuid);
     if (book.status === 'error') return NextResponse.json({ error: 'Book not found' }, { status: 404 });
-    if (book.data.user_id !== session.user.email) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    if (book.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    // Default order_num: count existing siblings + 1
     let order_num = parsed.data.order_num;
     if (!order_num) {
         const siblings = await getBookChapterAll(parsed.data.book_uuid);

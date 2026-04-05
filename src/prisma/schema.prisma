@@ -30,6 +30,16 @@ model oauth2_user {
   is_active    String  @db.VarChar(1)
 }
 
+// ---------- settings
+
+model settings_api_key {
+  uuid       String   @id @db.VarChar(100)
+  user_id    String   @db.VarChar(100)
+  name       String   @db.VarChar(100)
+  key_hash   String   @unique @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
 // ---------- plan
 
 model plan_plan {

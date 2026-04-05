@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { resolveEmail } from '@/lib/api-auth';
 import { saveCard } from '@/app/actions/card';
 import { getUUID } from '@/lib/utils';
 
@@ -13,10 +13,8 @@ const CreateCardSchema = z.object({
 
 export async function POST(request: NextRequest) {
     // 1. Check authentication
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const email = await resolveEmail(request);
+    if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // 2. Parse and validate request body
     let body: unknown;
@@ -38,7 +36,7 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const result = await saveCard({
         uuid: getUUID(),
-        user_id: session.user.email,
+        user_id: email,
         question: parsed.data.question,
         answer: parsed.data.answer,
         suggestion: parsed.data.suggestion,

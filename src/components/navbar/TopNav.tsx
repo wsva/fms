@@ -218,7 +218,7 @@ export default function TopNav() {
                     {/* <NavLink href='/card/test' label='Test' /> */}
                 </NavbarContent>
 
-
+                {/* 
                 <NavbarContent justify='center'>
                     <Input className="mx-0 w-[60vw] lg:w-[30vw]"
                         classNames={{
@@ -298,6 +298,7 @@ export default function TopNav() {
                         value={stateSTT || "Voice Access: F2 to activate"}
                     />
                 </NavbarContent>
+                */}
 
 
                 <NavbarContent justify='end' className="hidden lg:flex">

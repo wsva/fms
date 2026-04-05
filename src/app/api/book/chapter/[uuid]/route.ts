@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { resolveEmail } from '@/lib/api-auth';
 import { getBookMeta, getBookChapter, saveBookChapter, removeBookChapter } from '@/app/actions/book';
 
 const UpdateChapterSchema = z.object({
@@ -14,15 +14,15 @@ export async function GET(
     request: NextRequest,
     context: { params: Promise<{ uuid: string }> },
 ) {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const email = await resolveEmail(request);
+    if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { uuid } = await context.params;
     const result = await getBookChapter(uuid);
     if (result.status === 'error') return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const book = await getBookMeta(result.data.book_uuid);
-    if (book.status === 'error' || book.data.user_id !== session.user.email) {
+    if (book.status === 'error' || book.data.user_id !== email) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     return NextResponse.json(result.data);
@@ -32,15 +32,15 @@ export async function PUT(
     request: NextRequest,
     context: { params: Promise<{ uuid: string }> },
 ) {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const email = await resolveEmail(request);
+    if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { uuid } = await context.params;
     const existing = await getBookChapter(uuid);
     if (existing.status === 'error') return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const book = await getBookMeta(existing.data.book_uuid);
-    if (book.status === 'error' || book.data.user_id !== session.user.email) {
+    if (book.status === 'error' || book.data.user_id !== email) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -70,15 +70,15 @@ export async function DELETE(
     request: NextRequest,
     context: { params: Promise<{ uuid: string }> },
 ) {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const email = await resolveEmail(request);
+    if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { uuid } = await context.params;
     const existing = await getBookChapter(uuid);
     if (existing.status === 'error') return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const book = await getBookMeta(existing.data.book_uuid);
-    if (book.status === 'error' || book.data.user_id !== session.user.email) {
+    if (book.status === 'error' || book.data.user_id !== email) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
