@@ -20,7 +20,22 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
     const searchParams = useSearchParams()
     const [stateUUID, setStateUUID] = useState<string>("");
     const [stateEdit, setStateEdit] = useState(edit_view);
-    const { register, handleSubmit, formState, watch } = useForm<blog>({});
+
+    const getDefault = (field: keyof blog): string => {
+        const fromInit = getProperty(blog_init, field)
+        if (fromInit) return fromInit as string
+        const fromUrl = searchParams.get(field)
+        if (fromUrl) return decodeURIComponent(fromUrl)
+        return ''
+    }
+
+    const { register, handleSubmit, formState, watch, reset } = useForm<blog>({
+        defaultValues: {
+            title: getDefault('title'),
+            description: getDefault('description'),
+            content: getDefault('content'),
+        }
+    });
 
     useEffect(() => {
         const blog_uuid = (!!blog_init.uuid && (create_new || blog_init.user_id === email))
@@ -29,16 +44,6 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
         setStateUUID(blog_uuid)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    const getDefault = (field: keyof blog): unknown => {
-        if (blog_init) {
-            const value = getProperty(blog_init, field)
-            if (value) return value
-        }
-        const value = searchParams.get(field)
-        if (value) return decodeURIComponent(value)
-        return undefined
-    }
 
     const onSubmit = async (formData: blog) => {
         const result = await saveBlog({
@@ -52,6 +57,7 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
             if (create_new) {
                 window.location.href = `/blog/${stateUUID}`
             } else {
+                reset(formData)
                 addToast({ title: "saved", color: "success" })
             }
         } else {
@@ -84,6 +90,7 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
                         </Button>
                         <Button color="primary" variant="solid" size='sm' type='submit'
                             isLoading={formState.isSubmitting}
+                            isDisabled={!formState.isDirty}
                         >
                             Save
                         </Button>
@@ -116,13 +123,13 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
                 ) : (
                     <>
                         <div className='text-3xl leading-tight font-roboto font-bold'>
-                            {watch('title', getDefault('title') as string | '')}
+                            {watch('title')}
                         </div>
                         <div className='text-xl font-roboto'>
-                            {watch('description', getDefault('description') as string | '')}
+                            {watch('description')}
                         </div>
                         <div className='text-xl bg-sand-300 rounded-md p-2'>
-                            <Markdown2Html content={watch('content', getDefault('content') as string)} withTOC />
+                            <Markdown2Html content={watch('content')} withTOC />
                         </div>
                     </>
                 )}
