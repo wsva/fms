@@ -9,7 +9,7 @@ import {
     getBookMetaAll, getBookChapterAll,
     getBookSentenceAll, saveBookSentence, saveBookSentenceMany, removeBookSentence,
 } from "@/app/actions/book"
-import { EngineList, toggleRecording } from '@/lib/recording'
+import { toggleRecording } from '@/lib/recording'
 import { ActionResult } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
 import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store"
@@ -62,8 +62,10 @@ export default function Client({ email }: Props) {
             path.unshift(c.title ?? '')
             uuid = c.parent_uuid ?? null
         }
+        const bookTitle = stateBooks.find(b => b.uuid === stateBookUUID)?.title
+        if (bookTitle) path.unshift(bookTitle)
         return path.join(' --> ')
-    }, [stateChapterUUID, stateChaptersFlat])
+    }, [stateChapterUUID, stateChaptersFlat, stateBookUUID, stateBooks])
 
     // ── Load books ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -468,9 +470,9 @@ export default function Client({ email }: Props) {
     return (
         <div className="flex flex-col w-full gap-4 my-4 mb-100">
 
-            {/* Book + Chapter + Engine selectors */}
+            {/* Book + Chapter selectors */}
             <div className="flex flex-col sm:flex-row gap-3">
-                <Select label="Book" className="w-full sm:max-w-xs"
+                <Select label="Book" className="w-full sm:w-1/2"
                     selectedKeys={stateBookUUID ? [stateBookUUID] : []}
                     onChange={e => setStateBookUUID(e.target.value)}
                 >
@@ -479,7 +481,7 @@ export default function Client({ email }: Props) {
                     ))}
                 </Select>
 
-                <Select label="Chapter" className="w-full sm:max-w-xs"
+                <Select label="Chapter" className="w-full sm:w-1/2"
                     selectedKeys={stateChapterUUID ? [stateChapterUUID] : []}
                     onChange={e => setStateChapterUUID(e.target.value)}
                     isDisabled={flatChapters.length === 0}
@@ -488,15 +490,6 @@ export default function Client({ email }: Props) {
                         <SelectItem key={c.uuid} textValue={c.title ?? ''}>
                             {'　'.repeat(c.depth)}{c.depth > 0 ? '└ ' : ''}{c.title}
                         </SelectItem>
-                    ))}
-                </Select>
-
-                <Select label="STT Engine" className="w-full sm:max-w-xs"
-                    selectedKeys={[stateEngine]}
-                    onChange={e => setStateEngine(e.target.value)}
-                >
-                    {EngineList.map(v => (
-                        <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
                     ))}
                 </Select>
             </div>
@@ -509,6 +502,9 @@ export default function Client({ email }: Props) {
                             Save Order
                         </Button>
                     )}
+                    <Button size="sm" variant="flat" onPress={() => window.open(`/blog/${stateChapterUUID}?description=${encodeURIComponent(chapterPath)}`, '_blank')}>
+                        note
+                    </Button>
                     <Button isIconOnly size="sm" variant="flat"
                         title={stateViewMode === 'line' ? 'Switch to paragraph view' : 'Switch to line view'}
                         onPress={() => setStateViewMode(m => m === 'line' ? 'inline' : 'line')}
@@ -577,6 +573,8 @@ export default function Client({ email }: Props) {
                 content={stateDrawerContent}
                 onContentChange={setStateDrawerContent}
                 hasAudio={drawerHasAudio}
+                engine={stateEngine}
+                onEngineChange={setStateEngine}
                 bookUUID={stateBookUUID}
                 chapterPath={chapterPath}
                 saving={stateSaving}

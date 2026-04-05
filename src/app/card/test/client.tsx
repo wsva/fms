@@ -25,25 +25,27 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
     const [stateExamples, setStateExamples] = useState<string[]>([])
     const [stateLoading, setStateLoading] = useState<boolean>(false)
 
-    useEffect(() => {
-        const loadData = async () => {
-            const result = await getTag(tag_uuid)
-            if (result.status === "success") {
-                setStateTag(result.data)
-            }
-            if (!!card_uuid) {
-                const result = await getCardTestByUUID(card_uuid)
-                if (result.status === "success") {
-                    setStateCard(result.data)
-                }
-            } else if (!!user_id && !!tag_uuid) {
-                const result = await getCardTest(user_id, tag_uuid)
-                if (result.status === "success") {
-                    setStateCard(result.data)
-                }
-            }
+    const loadNextCard = async () => {
+        setStateSuggestion(false)
+        setStateAnswer(false)
+        setStateExamples([])
+        if (card_uuid) {
+            const result = await getCardTestByUUID(card_uuid)
+            if (result.status === "success") setStateCard(result.data)
+        } else if (user_id && tag_uuid) {
+            const result = await getCardTest(user_id, tag_uuid)
+            if (result.status === "success") setStateCard(result.data)
+            else setStateCard(undefined)
         }
-        loadData()
+    }
+
+    useEffect(() => {
+        const init = async () => {
+            const result = await getTag(tag_uuid)
+            if (result.status === "success") setStateTag(result.data)
+            await loadNextCard()
+        }
+        init()
     }, [card_uuid, tag_uuid, user_id]);
 
     const getColor = (familiarity: number) => {
@@ -64,9 +66,9 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
 
         let { repetitions, interval_days, ease_factor } = stateCard;
 
-        if (!interval_days) interval_days = 0
-        if (!ease_factor) ease_factor = 0
-        if (!repetitions) repetitions = 0
+        if (interval_days == null) interval_days = 0
+        if (ease_factor == null) ease_factor = 2.5 // SM-2 standard initial value
+        if (repetitions == null) repetitions = 0
 
         if (familiarity < 3) {
             repetitions = 0;
@@ -101,11 +103,12 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
             last_review_at: new Date(),
             next_review_at,
         });
-        if (result) {
-            window.location.reload()
+        if (result.status === 'success') {
+            await loadNextCard()
         } else {
             addToast({
                 title: "save review error",
+                description: typeof result.error === 'string' ? result.error : undefined,
                 color: "danger",
             });
         }
@@ -119,10 +122,10 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                 <div className="flex flex-col my-5 mx-5">
                     <div className="flex flex-row gap-4 items-center justify-center">
                         <div className="w-full">Tag: {stateTag?.tag}</div>
-                        <Button as={Link} size="sm" target='_blank' color='secondary' href={`/card/${stateCard.uuid}/?edit=y`}>
+                        <Button as={Link} size="sm" target='_blank' color='secondary' href={`/card/${stateCard.card_uuid}/?edit=y`}>
                             Edit
                         </Button>
-                        <Button size="sm" color='secondary' onPress={() => window.location.reload()}>
+                        <Button size="sm" color='secondary' onPress={loadNextCard}>
                             Next
                         </Button>
                     </div>
@@ -174,14 +177,12 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                             Type 'Element[]' is not assignable to type 'CollectionElement<object>'
                             https://github.com/nextui-org/nextui/issues/1691
                              */}
-                                    <DropdownSection items={FamiliarityList}>
-                                        {FamiliarityList.map((v) => {
-                                            return (
-                                                <DropdownItem key={v.value} description={v.description} className={`${getColor(v.value)}`}>
-                                                    {`${v.value} - ${v.label}`}
-                                                </DropdownItem>
-                                            )
-                                        })}
+                                    <DropdownSection>
+                                        {FamiliarityList.map((v) => (
+                                            <DropdownItem key={v.value} description={v.description} className={`${getColor(v.value)}`}>
+                                                {`${v.value} - ${v.label}`}
+                                            </DropdownItem>
+                                        ))}
                                     </DropdownSection>
                                 </DropdownMenu>
                             </Dropdown>
@@ -190,12 +191,12 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                             placeholder="custom keyword"
                             value={stateKeyword}
                             onClear={() => setStateKeyword("")}
-                            onChange={(e) => setStateKeyword(e.target.value.trim())}
+                            onChange={(e) => setStateKeyword(e.target.value)}
                             startContent={
                                 <Button color='primary' isDisabled={stateLoading}
                                     onPress={async () => {
                                         setStateLoading(true)
-                                        const result = await searchExample(!!stateKeyword ? stateKeyword : stateCard.card.question)
+                                        const result = await searchExample(stateKeyword.trim() || stateCard.card.question)
                                         if (result.status === "success") {
                                             setStateExamples(result.data)
                                         }
@@ -205,13 +206,9 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                                     View Examples
                                 </Button>
                             }
+                            endContent={stateLoading ? <CircularProgress size="sm" aria-label="Loading..." /> : null}
                         />
                     </div>
-                    {stateLoading && (
-                        <div className='flex flex-row w-full items-center justify-center gap-4'>
-                            <CircularProgress label="Loading..." />
-                        </div>
-                    )}
                     {stateSuggestion ? (
                         <Textarea isDisabled
                             classNames={{ input: 'text-2xl leading-tight font-roboto' }}

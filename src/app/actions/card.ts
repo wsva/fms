@@ -7,7 +7,7 @@
 import { prisma } from "@/lib/prisma";
 import { ActionResult, card_ext, card_review } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errors";
-import { getUUID, getWeightedRandom } from "@/lib/utils";
+import { getUUID } from "@/lib/utils";
 import { qsa_card, Prisma, qsa_tag, qsa_card_tag, qsa_card_review } from "@/generated/prisma/client";
 import { FilterType, TagAll, TagUnspecified, TagNo } from "@/lib/card";
 
@@ -194,7 +194,7 @@ export async function getCardTestByUUID(uuid: string): Promise<ActionResult<card
                 card_uuid: card.uuid,
                 user_id: card.user_id,
                 interval_days: 0,
-                ease_factor: 0,
+                ease_factor: 2.5, // SM-2 standard initial value
                 repetitions: 0,
                 familiarity: 0,
                 last_review_at: new Date(),
@@ -210,55 +210,57 @@ export async function getCardTestByUUID(uuid: string): Promise<ActionResult<card
 
 export async function getCardTest(email: string, tag_uuid: string): Promise<ActionResult<card_review>> {
     try {
-        const reviews = await prisma.$queryRaw<card_review[]>(
-            Prisma.sql`SELECT t0.*
-                    FROM qsa_card_review t0
-                    WHERE t0.familiarity < 6
-                    and t0.user_id = ${email}
-                    and t0.next_review_at < now()
-                    and exists (select 1 from qsa_card_tag t1 where
-                        t1.card_uuid = t0.card_uuid
-                        and t1.tag_uuid = ${tag_uuid})
-                    `
+        // Weighted random in DB: lower familiarity → higher weight → picked more often.
+        // RANDOM() * (6 - familiarity) gives a uniform draw scaled by weight, then we take the top row.
+        type ReviewWithCard = qsa_card_review & { card: qsa_card }
+        const rows = await prisma.$queryRaw<ReviewWithCard[]>(
+            Prisma.sql`SELECT t0.*,
+                    row_to_json(c.*) AS card
+                FROM qsa_card_review t0
+                JOIN qsa_card c ON c.uuid = t0.card_uuid
+                WHERE t0.familiarity < 6
+                  AND t0.user_id = ${email}
+                  AND t0.next_review_at < now()
+                  AND EXISTS (SELECT 1 FROM qsa_card_tag t1
+                              WHERE t1.card_uuid = t0.card_uuid
+                                AND t1.tag_uuid = ${tag_uuid})
+                ORDER BY RANDOM() * (6 - t0.familiarity) DESC
+                LIMIT 1`
         )
-        if (reviews.length > 0) {
-            const weights = reviews.map((v) => 6 - v.familiarity!)
-            const i = getWeightedRandom(weights)
-            const selected = reviews[i]
-            const card = await prisma.qsa_card.findUnique({ where: { uuid: selected.card_uuid } })
-            if (!card) {
-                return { status: 'error', error: `no card found by uuid: ${selected.card_uuid}` }
-            }
-            return { status: "success", data: { ...selected, card } }
+        if (rows.length > 0) {
+            return { status: "success", data: rows[0] }
         }
 
+        // No due reviews — pick from cards that have never been reviewed yet
         const cards = await prisma.$queryRaw<qsa_card[]>(
-            Prisma.sql`SELECT t0.* 
-                FROM qsa_card t0 
+            Prisma.sql`SELECT t0.*
+                FROM qsa_card t0
                 WHERE length(t0.question) > 0
-                and length(t0.answer) > 0
-                and t0.familiarity < 6
-                and t0.user_id = ${email}
-                and exists (select 1 from qsa_card_tag t1 where
-                    t1.card_uuid = t0.uuid
-                    and t1.tag_uuid = ${tag_uuid})
-                `
+                  AND length(t0.answer) > 0
+                  AND t0.familiarity < 6
+                  AND t0.user_id = ${email}
+                  AND EXISTS (SELECT 1 FROM qsa_card_tag t1
+                              WHERE t1.card_uuid = t0.uuid
+                                AND t1.tag_uuid = ${tag_uuid})
+                  AND NOT EXISTS (SELECT 1 FROM qsa_card_review r
+                                  WHERE r.card_uuid = t0.uuid
+                                    AND r.user_id = ${email})
+                ORDER BY RANDOM() * (6 - t0.familiarity) DESC
+                LIMIT 1`
         )
         if (cards.length > 0) {
-            const weights = cards.map((v) => 6 - v.familiarity!)
-            const i = getWeightedRandom(weights)
             return {
                 status: "success", data: {
                     uuid: getUUID(),
-                    card_uuid: cards[i].uuid,
-                    user_id: cards[i].user_id,
+                    card_uuid: cards[0].uuid,
+                    user_id: cards[0].user_id,
                     interval_days: 0,
-                    ease_factor: 0,
+                    ease_factor: 2.5, // SM-2 standard initial value
                     repetitions: 0,
                     familiarity: 0,
                     last_review_at: new Date(),
                     next_review_at: new Date(),
-                    card: cards[i],
+                    card: cards[0],
                 }
             }
         }
@@ -269,7 +271,7 @@ export async function getCardTest(email: string, tag_uuid: string): Promise<Acti
     }
 }
 
-export async function saveCardReview(item: qsa_card_review): Promise<boolean> {
+export async function saveCardReview(item: qsa_card_review): Promise<ActionResult<null>> {
     try {
         await prisma.qsa_card_review.upsert({
             where: { uuid: item.uuid },
@@ -280,10 +282,10 @@ export async function saveCardReview(item: qsa_card_review): Promise<boolean> {
             where: { uuid: item.card_uuid },
             data: { familiarity: item.familiarity }
         })
-        return true
+        return { status: 'success', data: null }
     } catch (error) {
         console.error(error)
-        return false
+        return { status: 'error', error: toErrorMessage(error) }
     }
 }
 

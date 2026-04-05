@@ -10,26 +10,29 @@ import { saveBlog } from '@/app/actions/blog';
 import Markdown2Html from '@/components/markdown/markdown';
 
 type Props = {
-    item?: blog,
+    blog_init: Partial<blog>,
     email: string,
     edit_view: boolean,
+    create_new: boolean,
 }
 
-export default function BlogForm({ item, email, edit_view }: Props) {
+export default function BlogForm({ blog_init, email, edit_view, create_new }: Props) {
     const searchParams = useSearchParams()
     const [stateUUID, setStateUUID] = useState<string>("");
     const [stateEdit, setStateEdit] = useState(edit_view);
     const { register, handleSubmit, formState, watch } = useForm<blog>({});
 
-    // 空依赖数组意味着仅在组件挂载时执行一次
     useEffect(() => {
-        setStateUUID((!!item?.uuid && item.user_id === email) ? item.uuid : getUUID())
+        const blog_uuid = (!!blog_init.uuid && (create_new || blog_init.user_id === email))
+            ? blog_init.uuid
+            : getUUID()
+        setStateUUID(blog_uuid)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const getDefault = (field: keyof blog): unknown => {
-        if (item) {
-            const value = getProperty(item, field)
+        if (blog_init) {
+            const value = getProperty(blog_init, field)
             if (value) return value
         }
         const value = searchParams.get(field)
@@ -42,11 +45,15 @@ export default function BlogForm({ item, email, edit_view }: Props) {
             ...formData,
             uuid: stateUUID,
             user_id: email,
-            created_at: item?.created_at ? item.created_at : new Date(),
+            created_at: blog_init?.created_at ? blog_init.created_at : new Date(),
             updated_at: new Date(),
         })
         if (result.status === 'success') {
-            window.location.href = "/blog"
+            if (create_new) {
+                window.location.href = `/blog/${stateUUID}`
+            } else {
+                addToast({ title: "saved", color: "success" })
+            }
         } else {
             console.log(result.error);
             addToast({
@@ -59,16 +66,16 @@ export default function BlogForm({ item, email, edit_view }: Props) {
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className='w-full space-y-4 px-2 mb-10'>
-                {item && item.user_id !== email && (
+                {blog_init.user_id && blog_init.user_id !== email && (
                     <div className='flex flex-row my-1 items-start justify-start gap-4'>
                         <Link className='text-blue-500 underline' target='_blank'
-                            href={`/blog/all_of_another?user_id=${item.user_id}`}
+                            href={`/blog/all_of_another?user_id=${blog_init.user_id}`}
                         >
-                            {item.user_id}
+                            {blog_init.user_id}
                         </Link>
                     </div>
                 )}
-                {(!item?.user_id || item.user_id === email) && (
+                {(!blog_init.user_id || blog_init.user_id === email) && (
                     <div className='flex flex-row my-1 items-end justify-end gap-4'>
                         <Button color="primary" variant="solid" size='sm'
                             onPress={() => setStateEdit(!stateEdit)}
@@ -117,14 +124,9 @@ export default function BlogForm({ item, email, edit_view }: Props) {
                         <div className='text-xl bg-sand-300 rounded-md p-2'>
                             <Markdown2Html content={watch('content', getDefault('content') as string)} withTOC />
                         </div>
-                        <div>
-                            TODO:
-                            write commentar
-                        </div>
                     </>
                 )}
             </div>
-        </form >
+        </form>
     )
 }
-
