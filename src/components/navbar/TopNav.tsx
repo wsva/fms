@@ -1,12 +1,12 @@
 'use client';
 
-import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
+import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Tooltip } from "@heroui/react"
 import { useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
-import { MdArrowBack, MdArrowForward, MdHelpOutline, MdMic, MdMicOff, MdOutlineSettings } from "react-icons/md";
+import { MdArrowBack, MdArrowForward } from "react-icons/md";
 import { menuList } from "./menu";
 import { handleSTTResult } from "@/lib/voice_access";
-import { EngineList, toggleRecording } from "@/lib/recording";
+import { toggleRecording } from "@/lib/recording";
 import { ActionResult } from "@/lib/types";
 import { initCmdHelpMap } from "@/app/actions/voice_access";
 import { authClient } from "@/lib/auth-client";
