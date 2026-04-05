@@ -65,7 +65,6 @@ export async function GET(
 
     const title = book.data.title ?? 'Untitled'
     const header = [`# ${title}`, '']
-    if (book.data.author) header.push(`*${book.data.author}*`, '')
 
     const body = buildMarkdown(chapters, sentenceMap, null, 1)
     const markdown = [...header, body].join('\n')
