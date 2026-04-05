@@ -1,14 +1,10 @@
 'use client';
 
-import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Input, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Select, SelectItem, Tooltip } from "@heroui/react"
+import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Tooltip } from "@heroui/react"
 import { useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
-import { MdArrowBack, MdArrowForward, MdHelpOutline, MdMic, MdMicOff, MdOutlineSettings } from "react-icons/md";
+import { MdArrowBack, MdArrowForward } from "react-icons/md";
 import { menuList } from "./menu";
-import { handleSTTResult } from "@/lib/voice_access";
-import { EngineList, toggleRecording } from "@/lib/recording";
-import { ActionResult } from "@/lib/types";
-import { initCmdHelpMap } from "@/app/actions/voice_access";
 import { authClient } from "@/lib/auth-client";
 import { User } from "better-auth";
 
@@ -36,43 +32,8 @@ const ChevronDown = () => {
 export default function TopNav() {
     const [stateUser, setStateUser] = useState<User>();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [stateColor, setStateColor] = useState<"default" | "success" | "warning">("default");
-    const [stateEngine, setStateEngine] = useState<string>("local");
-    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
-    const [stateRecording, setStateRecording] = useState(false);
-    const [stateProcessing, setStateProcessing] = useState(false);
-    const [stateSTT, setStateSTT] = useState<string>("");
-    const [stateCmdOpen, setStateCmdOpen] = useState<boolean>(false);
-    const [stateCmdMap, setStateCmdMap] = useState<Map<string, string[]>>(new Map());
 
     const router = useRouter();
-
-    const toggleRecordingLocal = async () => {
-        const handleLog = (log: string) => {
-            setStateSTT(log);
-        }
-        const handleAudio = async (result: ActionResult<string>) => {
-            if (result.status === 'success') {
-                setStateSTT(result.data);
-                handleSTTResult(result.data);
-            } else {
-                setStateSTT(result.error as string);
-            }
-        }
-
-        await toggleRecording({
-            mode: "audio",
-            stateRecorder,
-            setStateRecorder,
-            stateRecording,
-            setStateRecording,
-            recognize: true,
-            sttEngine: stateEngine,
-            setStateProcessing,
-            handleLog,
-            handleAudio,
-        });
-    }
 
     useEffect(() => {
         const refresh = async () => {
@@ -85,57 +46,15 @@ export default function TopNav() {
         };
 
         refresh();
-        const refreshTimer = setInterval(refresh, 60_000); // 每分钟
-
+        const refreshTimer = setInterval(refresh, 60_000);
         return () => clearInterval(refreshTimer);
     }, []);
-
-    useEffect(() => {
-        let blinkTimer: NodeJS.Timeout | null = null;
-        if (stateRecording) {
-            blinkTimer = setInterval(() => {
-                setStateColor(prev => (prev === "success" ? "warning" : "success"));
-            }, 200);
-        } else {
-            setStateColor("default");
-        }
-
-        return () => {
-            if (blinkTimer) clearInterval(blinkTimer);
-        };
-    }, [stateRecording]);
-
-    useEffect(() => {
-        const loadCmdMap = async () => {
-            const cmdMap = await initCmdHelpMap();
-            setStateCmdMap(cmdMap);
-        }
-        if (stateCmdOpen) {
-            loadCmdMap();
-        }
-    }, [stateCmdOpen]);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === 'F2') {
-                e.preventDefault();
-                const btn = document.getElementById("button-voice-access") as HTMLButtonElement | null;
-                btn?.click();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [stateCmdOpen, stateRecording]);
 
     return (
         <>
             <Navbar
                 shouldHideOnScroll
                 maxWidth='full'
-                //className='border-b-1'
                 className='bg-linear-to-b from-sand-300 to-sand-200'
                 classNames={{
                     item: [
@@ -215,90 +134,7 @@ export default function TopNav() {
                             </DropdownMenu>
                         </Dropdown>
                     ))}
-                    {/* <NavLink href='/card/test' label='Test' /> */}
                 </NavbarContent>
-
-
-                <NavbarContent justify='center'>
-                    <Input className="mx-0 w-[60vw] lg:w-[30vw]"
-                        classNames={{
-                            "inputWrapper": "bg-sand-100 data-[hover=true]:bg-sand-100 group-data-[focus=true]:bg-sand-100",
-                        }}
-                        startContent={
-                            <Tooltip content="F2" placement="right">
-                                <Button isIconOnly size="sm" color={stateColor} id="button-voice-access"
-                                    disabled={stateProcessing}
-                                    onPress={toggleRecordingLocal}
-                                >
-                                    {stateRecording ? <MdMic size={24} /> : <MdMicOff size={24} />}
-                                </Button>
-                            </Tooltip>
-                        }
-                        endContent={
-                            <div className="flex flex-row items-center gap-0">
-                                <Dropdown placement="bottom-end" className="bg-sand-200"
-                                    onOpenChange={() => setStateCmdOpen(!stateCmdOpen)}
-                                >
-                                    <DropdownTrigger>
-                                        <Button isIconOnly size="sm" variant="light">
-                                            <MdHelpOutline size={24} />
-                                        </Button>
-                                    </DropdownTrigger>
-                                    <DropdownMenu
-                                        disallowEmptySelection
-                                        className="max-w-75"
-                                    >
-                                        {Array.from(stateCmdMap.entries()).map(([action, cmds]) => (
-                                            <DropdownSection key={action} showDivider title={action}>
-                                                {cmds.map((cmd) => (
-                                                    <DropdownItem isReadOnly key={cmd}>{cmd}</DropdownItem>
-                                                ))}
-                                            </DropdownSection>
-                                        ))}
-                                    </DropdownMenu>
-                                </Dropdown>
-                                <Dropdown placement="bottom-end" className="bg-sand-200">
-                                    <DropdownTrigger>
-                                        <Button isIconOnly size="sm" variant="light">
-                                            <MdOutlineSettings size={24} />
-                                        </Button>
-                                    </DropdownTrigger>
-                                    <DropdownMenu
-                                        disallowEmptySelection
-                                        aria-label="Merge options"
-                                        className="max-w-75"
-                                    >
-                                        <DropdownSection showDivider title="Select AI engine">
-                                            <DropdownItem
-                                                key="theme"
-                                                isReadOnly
-                                                className="cursor-default"
-                                                startContent={
-                                                    <Select className="max-w-xs" variant="underlined"
-                                                        selectedKeys={[stateEngine]}
-                                                        selectionMode="single"
-                                                        onSelectionChange={(keys) => setStateEngine(keys.currentKey || "local")}
-                                                    >
-                                                        {EngineList.map((v) => <SelectItem key={v.key}>{v.value}</SelectItem>)}
-                                                    </Select>
-                                                }
-                                            >
-                                            </DropdownItem>
-                                        </DropdownSection>
-
-                                        <DropdownSection title="Commands">
-                                            <DropdownItem key="edit" onPress={() => router.push("/voice_access")}>
-                                                Edit
-                                            </DropdownItem>
-                                        </DropdownSection>
-                                    </DropdownMenu>
-                                </Dropdown>
-                            </div>
-                        }
-                        value={stateSTT || "Voice Access: F2 to activate"}
-                    />
-                </NavbarContent>
-
 
                 <NavbarContent justify='end' className="hidden lg:flex">
                     {!!stateUser ? (
@@ -360,7 +196,6 @@ export default function TopNav() {
                                             {stateUser.name}
                                         </Button>
                                     </div>
-
                                     <Button color="danger" size="sm"
                                         onPress={async () => {
                                             await authClient.signOut({
@@ -421,7 +256,7 @@ export default function TopNav() {
                         </div>
                     ))}
                 </NavbarMenu>
-            </Navbar >
+            </Navbar>
         </>
     )
 }
