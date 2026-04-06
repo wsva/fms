@@ -1,7 +1,8 @@
 'use client'
 
+import { useRef } from 'react'
 import { Button } from "@heroui/react"
-import { MdAdd, MdContentCopy, MdDelete } from 'react-icons/md'
+import { MdAdd, MdAudiotrack, MdContentCopy, MdDelete, MdPlayCircle } from 'react-icons/md'
 import { Paragraph, SentenceClient } from './types'
 
 type Props = {
@@ -11,11 +12,14 @@ type Props = {
     onEditSentence: (s: SentenceClient) => void
     onAddSentence: (para: Paragraph) => void
     onDeleteParagraph: (para: Paragraph) => void
+    onParagraphAudio: (para: Paragraph, file: File) => void
 }
 
 export default function ParagraphList({
-    paragraphs, viewMode, saving, onEditSentence, onAddSentence, onDeleteParagraph,
+    paragraphs, viewMode, saving, onEditSentence, onAddSentence, onDeleteParagraph, onParagraphAudio,
 }: Props) {
+    const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
     return (
         <div className="flex flex-col gap-4">
             {paragraphs.map((para, pi) => (
@@ -29,6 +33,38 @@ export default function ParagraphList({
                     <div className="flex flex-row items-center justify-between">
                         <div className="text-xs font-semibold text-gray-400 select-none">¶ {pi + 1}</div>
                         <div className="flex flex-row items-center gap-1">
+                            <input
+                                type="file" accept="audio/*"
+                                className="hidden"
+                                ref={el => { fileInputRefs.current[pi] = el }}
+                                onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    if (file) {
+                                        if (para.breakSentence?.audio_path && !window.confirm('This paragraph already has audio. Replace it?')) {
+                                            e.target.value = ''
+                                            return
+                                        }
+                                        onParagraphAudio(para, file)
+                                    }
+                                    e.target.value = ''
+                                }}
+                            />
+                            {para.breakSentence?.audio_path && (
+                                <Button isIconOnly size="sm" variant="light" color="primary"
+                                    title="play paragraph audio"
+                                    onPress={() => new Audio(para.breakSentence!.audio_path!).play()}
+                                >
+                                    <MdPlayCircle size={15} />
+                                </Button>
+                            )}
+                            <Button isIconOnly size="sm" variant="light"
+                                isDisabled={saving}
+                                color={para.breakSentence?.audio_path ? 'primary' : 'default'}
+                                title="upload audio"
+                                onPress={() => fileInputRefs.current[pi]?.click()}
+                            >
+                                <MdAudiotrack size={15} />
+                            </Button>
                             {para.sentences.length > 0 && (
                                 <Button isIconOnly size="sm" variant="light"
                                     onPress={() => navigator.clipboard.writeText(

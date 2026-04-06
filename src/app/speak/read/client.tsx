@@ -397,6 +397,58 @@ export default function Client({ email }: Props) {
         setStateSaving(false)
     }
 
+    // ── Paragraph audio upload ──────────────────────────────────────────────
+    const handleParagraphAudio = async (para: Paragraph, file: File) => {
+        if (!stateChapterUUID) return
+        setStateSaving(true)
+
+        let breakSentence = para.breakSentence
+        if (!breakSentence) {
+            // Last paragraph has no break row — create one at the end
+            breakSentence = {
+                uuid: getUUID(),
+                chapter_uuid: stateChapterUUID,
+                user_id: email,
+                order_num: stateData.length + 1,
+                content: '',
+                sentence_type: 'paragraph_break',
+                audio_path: null, recognized: null,
+                created_at: new Date(), updated_at: new Date(),
+                modified: false, hasLocalAudio: false,
+            }
+            const r = await saveBookSentence(toDbSentence(breakSentence))
+            if (r.status !== 'success') {
+                addToast({ title: 'save error', color: 'danger' })
+                setStateSaving(false)
+                return
+            }
+            updateStateData(d => { d.push(breakSentence!) })
+        }
+
+        const subPath = `reading/${stateBookUUID}/${stateChapterUUID}`
+        const r = await saveAudio(file, subPath, `${breakSentence.uuid}.wav`)
+        if (r.status !== 'success') {
+            addToast({ title: 'upload error', color: 'danger' })
+            setStateSaving(false)
+            return
+        }
+
+        const audioPath = `/api/data/${subPath}/${breakSentence.uuid}.wav`
+        const updated = { ...breakSentence, audio_path: audioPath }
+        const r2 = await saveBookSentence(toDbSentence(updated))
+        if (r2.status !== 'success') {
+            addToast({ title: 'save error', color: 'danger' })
+            setStateSaving(false)
+            return
+        }
+
+        updateStateData(d => {
+            const idx = d.findIndex(s => s.uuid === breakSentence!.uuid)
+            if (idx !== -1) d[idx].audio_path = audioPath
+        })
+        setStateSaving(false)
+    }
+
     // ── Delete paragraph ────────────────────────────────────────────────────
     const handleDeleteParagraph = (para: Paragraph) => {
         const toDelete = [...para.sentences, ...(para.breakSentence ? [para.breakSentence] : [])]
@@ -527,6 +579,7 @@ export default function Client({ email }: Props) {
                     onEditSentence={openEditDrawer}
                     onAddSentence={openAddDrawer}
                     onDeleteParagraph={handleDeleteParagraph}
+                    onParagraphAudio={handleParagraphAudio}
                 />
             )}
 
