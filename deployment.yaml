@@ -57,12 +57,12 @@ spec:
               git clone https://github.com/wsva/fms_build /home/node/app
               cd /home/node/app
               echo 'DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/fmsdb' > .env
-              echo 'BETTER_AUTH_URL=https://yanansworkshop.site' >> .env
+              echo 'BETTER_AUTH_URL=https://lusworkshop.site' >> .env
               echo 'BETTER_AUTH_SECRET="${AUTH_SECRET}"' >> .env
-              echo 'OAUTH2_AUTHORIZATION=https://yanansworkshop.site/oauth2/authorize' >> .env
-              echo 'OAUTH2_TOKEN=https://yanansworkshop.site/oauth2/token' >> .env
-              echo 'OAUTH2_USERINFO=https://yanansworkshop.site/oauth2/userinfo' >> .env
-              echo 'OAUTH2_LOGOUT=https://yanansworkshop.site/oauth2/logout' >> .env
+              echo 'OAUTH2_AUTHORIZATION=https://lusworkshop.site/oauth2/authorize' >> .env
+              echo 'OAUTH2_TOKEN=https://lusworkshop.site/oauth2/token' >> .env
+              echo 'OAUTH2_USERINFO=https://lusworkshop.site/oauth2/userinfo' >> .env
+              echo 'OAUTH2_LOGOUT=https://lusworkshop.site/oauth2/logout' >> .env
               echo 'OAUTH2_CLIENT_ID=als_next.js' >> .env
               echo 'REDIS_HOST=redis' >> .env
               echo 'REDIS_PASSWORD=${REDIS_PASSWORD}' >> .env
