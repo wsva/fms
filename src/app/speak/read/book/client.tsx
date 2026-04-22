@@ -213,13 +213,8 @@ export default function Client({ email }: Props) {
         setStateSavingBook(true)
         const uuid = getUUID()
         const now = new Date()
-        const result = await saveBookMeta({
-            uuid,
-            user_id: email,
-            title: stateAddForm.title,
-            created_at: now,
-            updated_at: now,
-        })
+        const newBook = { uuid, user_id: email, title: stateAddForm.title, created_at: now, updated_at: now }
+        const result = await saveBookMeta(newBook)
         if (result.status === 'success') {
             await saveTag({
                 uuid,
@@ -231,7 +226,7 @@ export default function Client({ email }: Props) {
             })
             setStateAddForm(emptyBookForm())
             setStateShowAdd(false)
-            setStateBooksReload(n => n + 1)
+            setStateBooks(prev => [...prev, newBook])
         } else {
             addToast({ title: 'save error', color: 'danger' })
         }
@@ -279,7 +274,7 @@ export default function Client({ email }: Props) {
         }
         const siblings = stateFlat.filter(c => c.parent_uuid === parentUuid)
         setStateSavingChapter(true)
-        const result = await saveBookChapter({
+        const newChapter = {
             uuid: getUUID(),
             book_uuid: stateBookUUID,
             parent_uuid: parentUuid,
@@ -287,11 +282,12 @@ export default function Client({ email }: Props) {
             title: stateChapterAddForm.title,
             created_at: new Date(),
             updated_at: new Date(),
-        })
+        }
+        const result = await saveBookChapter(newChapter)
         if (result.status === 'success') {
             setStateChapterAddForm(emptyChapterForm())
             setStateAddingUnder(undefined)
-            setStateChaptersReload(n => n + 1)
+            setStateFlat(prev => [...prev, newChapter])
         } else {
             addToast({ title: 'save error', color: 'danger' })
         }
