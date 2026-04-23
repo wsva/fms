@@ -9,6 +9,7 @@ const CreateSentenceSchema = z.object({
     order_num: z.number().int().min(1).optional(),
     content: z.string().min(1, 'content is required'),
     sentence_type: z.string().default('text'),
+    bg_color: z.string().max(20).nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
         sentence_type: parsed.data.sentence_type,
         audio_path: null,
         recognized: null,
+        bg_color: parsed.data.bg_color ?? null,
         created_at: now,
         updated_at: now,
     });
