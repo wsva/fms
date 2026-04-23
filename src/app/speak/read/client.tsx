@@ -42,6 +42,7 @@ export default function Client({ email }: Props) {
     const [stateDrawerContent, setStateDrawerContent] = useState('')
     const [stateDrawerRecognized, setStateDrawerRecognized] = useState('')
     const [stateDrawerHasLocalAudio, setStateDrawerHasLocalAudio] = useState(false)
+    const [stateDrawerBgColor, setStateDrawerBgColor] = useState<string | null>(null)
 
     // recording
     const [stateEngine, setStateEngine] = useState('none')
@@ -116,6 +117,7 @@ export default function Client({ email }: Props) {
         setStateDrawerContent(sentence.content ?? '')
         setStateDrawerRecognized(sentence.recognized ?? '')
         setStateDrawerHasLocalAudio(sentence.hasLocalAudio)
+        setStateDrawerBgColor(sentence.bg_color ?? null)
     }
 
     const openInsertDrawer = (insertBeforeUUID: string | null) => {
@@ -137,6 +139,7 @@ export default function Client({ email }: Props) {
         setStateDrawerContent('')
         setStateDrawerRecognized('')
         setStateDrawerHasLocalAudio(false)
+        setStateDrawerBgColor(null)
     }
 
     // ── Recording ───────────────────────────────────────────────────────────
@@ -211,6 +214,7 @@ export default function Client({ email }: Props) {
             sentence_type: 'text',
             audio_path: audioPath,
             recognized: stateDrawerRecognized || null,
+            bg_color: null,
             created_at: new Date(),
             updated_at: new Date(),
             modified: false,
@@ -245,6 +249,7 @@ export default function Client({ email }: Props) {
         setStateDrawerContent('')
         setStateDrawerRecognized('')
         setStateDrawerHasLocalAudio(false)
+        setStateDrawerBgColor(null)
     }
 
     // ── Save edit ───────────────────────────────────────────────────────────
@@ -272,6 +277,7 @@ export default function Client({ email }: Props) {
             content: stateDrawerContent,
             recognized: stateDrawerRecognized || null,
             audio_path: audioPath,
+            bg_color: stateDrawerBgColor,
             updated_at: new Date(),
             hasLocalAudio: false,
             modified: sentence.modified,
@@ -294,6 +300,7 @@ export default function Client({ email }: Props) {
         setStateDrawerContent('')
         setStateDrawerRecognized('')
         setStateDrawerHasLocalAudio(false)
+        setStateDrawerBgColor(null)
     }
 
     // ── Delete sentence ─────────────────────────────────────────────────────
@@ -625,6 +632,8 @@ export default function Client({ email }: Props) {
                 drawer={stateDrawer}
                 content={stateDrawerContent}
                 onContentChange={setStateDrawerContent}
+                bgColor={stateDrawerBgColor}
+                onBgColorChange={setStateDrawerBgColor}
                 hasAudio={drawerHasAudio}
                 engine={stateEngine}
                 onEngineChange={setStateEngine}

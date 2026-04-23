@@ -4,6 +4,12 @@ import { useRef } from 'react'
 import { Button } from "@heroui/react"
 import { MdAdd, MdAudiotrack, MdContentCopy, MdDelete, MdPlayCircle } from 'react-icons/md'
 import { Paragraph, SentenceClient } from './types'
+import { BG_COLORS } from './SentenceDrawer'
+
+function sentenceBgClass(bgColor: string | null | undefined): string {
+    if (!bgColor) return ''
+    return BG_COLORS.find(c => c.key === bgColor)?.bg ?? ''
+}
 
 type Props = {
     paragraphs: Paragraph[]
@@ -96,7 +102,7 @@ export default function ParagraphList({
                                     onClick={() => onEditSentence(s)}
                                     className={[
                                         'inline cursor-pointer rounded px-0.5 transition-colors',
-                                        s.modified ? 'bg-sand-400' : 'hover:bg-sand-300',
+                                        s.modified ? 'bg-sand-400' : (sentenceBgClass(s.bg_color) || 'hover:bg-sand-300'),
                                         s.audio_path || s.hasLocalAudio ? 'underline decoration-primary decoration-2' : '',
                                     ].join(' ')}
                                 >
@@ -112,7 +118,7 @@ export default function ParagraphList({
                                     onClick={() => onEditSentence(s)}
                                     className={[
                                         'text-left text-xl cursor-pointer rounded px-2 py-0.5 transition-colors',
-                                        s.modified ? 'bg-sand-400' : 'hover:bg-sand-300',
+                                        s.modified ? 'bg-sand-400' : (sentenceBgClass(s.bg_color) || 'hover:bg-sand-300'),
                                         s.audio_path || s.hasLocalAudio ? 'border-l-2 border-primary' : '',
                                     ].join(' ')}
                                 >
