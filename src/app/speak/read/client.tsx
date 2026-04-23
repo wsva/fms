@@ -419,7 +419,7 @@ export default function Client({ email }: Props) {
                 order_num: stateData.length + 1,
                 content: '',
                 sentence_type: 'paragraph_break',
-                audio_path: null, recognized: null,
+                audio_path: null, recognized: null, bg_color: null,
                 created_at: new Date(), updated_at: new Date(),
                 modified: false, hasLocalAudio: false,
             }
