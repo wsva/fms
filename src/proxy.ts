@@ -38,7 +38,8 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!isPublic && !session) {
-        return NextResponse.redirect(new URL('/unauthorized', nextUrl));
+        const redirectUrl = nextUrl.pathname + nextUrl.search
+        return NextResponse.redirect(new URL(`/unauthorized?redirect_url=${encodeURIComponent(redirectUrl)}`, nextUrl));
     }
 
     return NextResponse.next();
