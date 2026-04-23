@@ -64,9 +64,9 @@ type Props = {
 
 const BG_COLORS: { key: string; label: string; swatch: string; bg: string }[] = [
     { key: 'yellow', label: 'Yellow', swatch: 'bg-yellow-200', bg: 'bg-yellow-200' },
-    { key: 'green',  label: 'Green',  swatch: 'bg-green-200',  bg: 'bg-green-200'  },
-    { key: 'blue',   label: 'Blue',   swatch: 'bg-blue-200',   bg: 'bg-blue-200'   },
-    { key: 'pink',   label: 'Pink',   swatch: 'bg-pink-200',   bg: 'bg-pink-200'   },
+    { key: 'green', label: 'Green', swatch: 'bg-green-200', bg: 'bg-green-200' },
+    { key: 'blue', label: 'Blue', swatch: 'bg-blue-200', bg: 'bg-blue-200' },
+    { key: 'pink', label: 'Pink', swatch: 'bg-pink-200', bg: 'bg-pink-200' },
     { key: 'orange', label: 'Orange', swatch: 'bg-orange-200', bg: 'bg-orange-200' },
 ]
 
@@ -270,32 +270,30 @@ export default function SentenceDrawer({
                         </Button>
                     </div>
 
-                    {/* Background color picker (edit mode only) */}
-                    {drawer.mode === 'edit' && (
-                        <div className="flex flex-row items-center gap-2">
-                            <span className="text-xs text-gray-500 shrink-0">Color:</span>
+                    {/* Background color picker */}
+                    <div className="flex flex-row items-center gap-2">
+                        <span className="text-xs text-gray-500 shrink-0">Color:</span>
+                        <button
+                            title="None"
+                            onClick={() => onBgColorChange(null)}
+                            className={[
+                                'w-6 h-6 rounded-full border-2 bg-white',
+                                bgColor === null ? 'border-gray-500' : 'border-gray-200',
+                            ].join(' ')}
+                        />
+                        {BG_COLORS.map(c => (
                             <button
-                                title="None"
-                                onClick={() => onBgColorChange(null)}
+                                key={c.key}
+                                title={c.label}
+                                onClick={() => onBgColorChange(bgColor === c.key ? null : c.key)}
                                 className={[
-                                    'w-6 h-6 rounded-full border-2 bg-white',
-                                    bgColor === null ? 'border-gray-500' : 'border-gray-200',
+                                    'w-6 h-6 rounded-full border-2',
+                                    c.swatch,
+                                    bgColor === c.key ? 'border-gray-500' : 'border-transparent',
                                 ].join(' ')}
                             />
-                            {BG_COLORS.map(c => (
-                                <button
-                                    key={c.key}
-                                    title={c.label}
-                                    onClick={() => onBgColorChange(bgColor === c.key ? null : c.key)}
-                                    className={[
-                                        'w-6 h-6 rounded-full border-2',
-                                        c.swatch,
-                                        bgColor === c.key ? 'border-gray-500' : 'border-transparent',
-                                    ].join(' ')}
-                                />
-                            ))}
-                        </div>
-                    )}
+                        ))}
+                    </div>
 
                 </div>
             </div>
