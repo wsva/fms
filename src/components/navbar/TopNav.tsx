@@ -230,6 +230,7 @@ export default function TopNav() {
                                     onPress={async () => {
                                         await authClient.signIn.social({
                                             provider: "wsva_oauth2",
+                                            callbackURL: window.location.href,
                                         });
                                     }}
                                 >
