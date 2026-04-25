@@ -244,7 +244,7 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                         <div className='text-lg whitespace-pre-wrap'>
                             {item.subtitle}
                         </div>
-                        <div className='text-sm text-gray-400'>by {item.user_id}</div>
+                        <div className='text-sm text-foreground-400'>by {item.user_id}</div>
                     </div>
                 )
             }

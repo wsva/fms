@@ -263,7 +263,7 @@ export default function Item({ uuid, user_id }: Props) {
                 <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
                     <div className='flex flex-col w-full p-2 rounded-lg bg-sand-300'>
                         <div className="flex flex-row items-center justify-start">
-                            <div className="text-md text-gray-400">recognized from audio:</div>
+                            <div className="text-md text-foreground-400">recognized from audio:</div>
                             <Button isIconOnly variant='light' className='h-fit'
                                 onPress={async () => {
                                     let audioBlob = getBlobFromWeakCache(stateCurrent.uuid);
@@ -309,7 +309,7 @@ export default function Item({ uuid, user_id }: Props) {
                         <div key={`${i}-${v.uuid}`} className='flex flex-col w-full ps-2'>
                             <div className="flex flex-row items-center justify-start">
                                 <div className="flex flex-row items-center justify-start w-full">
-                                    <div className="text-md text-gray-400">recognized from audio:</div>
+                                    <div className="text-md text-foreground-400">recognized from audio:</div>
                                     <Button isIconOnly variant='light' className='h-fit'
                                         onPress={() => {
                                             const audio = new Audio(v.audio_path ?? '');
@@ -334,7 +334,7 @@ export default function Item({ uuid, user_id }: Props) {
                             <div className="text-xl text-balance hyphens-auto">
                                 {highlightDifferences(stateText?.text || "", v.recognized ?? '')}
                             </div>
-                            <div className="text-md text-gray-400">by {v.user_id}</div>
+                            <div className="text-md text-foreground-400">by {v.user_id}</div>
                         </div>
                     )}
                 </div>

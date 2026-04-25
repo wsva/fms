@@ -25,7 +25,7 @@ export default function Page({ user_id, item, handleDelete }: Props) {
             <div className="flex flex-row w-full items-center justify-end gap-4">
                 <Link target='_blank'
                     href={`/speak/practice?user_id=${item.user_id}`}
-                    className='text-sm text-gray-500 hover:underline w-full'
+                    className='text-sm text-foreground-500 hover:underline w-full'
                 >
                     {`by ${item.user_id}`}
                 </Link>

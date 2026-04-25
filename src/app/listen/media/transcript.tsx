@@ -109,7 +109,7 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                     <div className='text-lg whitespace-pre-wrap'>
                         {item.transcript}
                     </div>
-                    <div className='text-sm text-gray-400'>by {item.user_id}</div>
+                    <div className='text-sm text-foreground-400'>by {item.user_id}</div>
                 </div>
             )}
         </div >

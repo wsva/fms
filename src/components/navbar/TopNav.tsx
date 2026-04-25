@@ -7,6 +7,7 @@ import { MdArrowBack, MdArrowForward } from "react-icons/md";
 import { menuList } from "./menu";
 import { authClient } from "@/lib/auth-client";
 import { User } from "better-auth";
+import ThemeSelector from '@/components/ThemeSelector'
 
 const ChevronDown = () => {
     return (
@@ -136,7 +137,8 @@ export default function TopNav() {
                     ))}
                 </NavbarContent>
 
-                <NavbarContent justify='end' className="hidden lg:flex">
+                <NavbarContent justify='end' className="hidden lg:flex gap-3">
+                    <ThemeSelector />
                     {!!stateUser ? (
                         <Dropdown placement="bottom-start">
                             <DropdownTrigger>
@@ -187,6 +189,9 @@ export default function TopNav() {
                 </NavbarContent>
 
                 <NavbarMenu className="pt-4 pb-20 bg-sand-200">
+                    <div className="flex justify-end px-1 mb-3">
+                        <ThemeSelector />
+                    </div>
                     <div className="bg-sand-300 rounded-sm p-2 mb-5">
                         {!!stateUser ? (
                             <div className="flex flex-col w-full">

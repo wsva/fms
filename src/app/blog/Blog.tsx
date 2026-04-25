@@ -28,7 +28,7 @@ export default function Blog({ list }: Props) {
                 {(item) => (
                     <ListboxItem
                         key={item.uuid}
-                        className="flex flex-col w-full mb-1 items-start bg-slate-200"
+                        className="flex flex-col w-full mb-1 items-start bg-sand-200"
                     >
                         <Link target='_blank'
                             href={`/blog/${item.uuid}`}
@@ -36,10 +36,10 @@ export default function Blog({ list }: Props) {
                         >
                             {item.title}
                         </Link>
-                        <div className='text-sm text-slate-500' >
+                        <div className='text-sm text-foreground-500' >
                             {item.description}
                         </div>
-                        <div className='text-sm text-slate-400' >
+                        <div className='text-sm text-foreground-400' >
                             {formatDate(item.created_at)}
                         </div>
                     </ListboxItem>

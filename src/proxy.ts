@@ -6,7 +6,8 @@ const publicRoutes = [
     '/',
     '/listening/dictation',
     '/blog',
-    '/unauthorized'
+    '/unauthorized',
+    '/speak/just-speaking',
 ]
 
 const publicRoutesReg = [

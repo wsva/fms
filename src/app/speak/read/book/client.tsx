@@ -81,7 +81,7 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
                 style={{ marginLeft: indent }}
             >
                 <button
-                    className="text-gray-400 w-5 flex-shrink-0"
+                    className="text-foreground-400 w-5 flex-shrink-0"
                     onClick={() => setExpanded(v => !v)}
                 >
                     {node.children.length > 0
@@ -447,7 +447,7 @@ export default function Client({ email }: Props) {
                 ))}
 
                 {!stateBooksLoading && stateBooks.length === 0 && (
-                    <div className="text-center text-gray-400 py-8">No books yet.</div>
+                    <div className="text-center text-foreground-400 py-8">No books yet.</div>
                 )}
             </div>
 
@@ -457,7 +457,7 @@ export default function Client({ email }: Props) {
                     <div className="border-t border-sand-300 pt-4">
                         <div className="flex flex-row items-center justify-between mb-3">
                             <h3 className="text-lg font-semibold">
-                                Chapters — <span className="font-normal text-gray-600">{selectedBook.title}</span>
+                                Chapters — <span className="font-normal text-foreground-600">{selectedBook.title}</span>
                             </h3>
                             <Button size="sm" color="primary"
                                 onPress={() => {
@@ -488,7 +488,7 @@ export default function Client({ email }: Props) {
                                 )}
 
                                 {stateFlat.length === 0 && stateAddingUnder !== null && (
-                                    <div className="text-center text-gray-400 py-4">No chapters yet.</div>
+                                    <div className="text-center text-foreground-400 py-4">No chapters yet.</div>
                                 )}
 
                                 <div className="flex flex-col">

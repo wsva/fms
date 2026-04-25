@@ -37,7 +37,7 @@ export default function ParagraphList({
                 >
                     {/* Paragraph badge + actions */}
                     <div className="flex flex-row items-center justify-between">
-                        <div className="text-xs font-semibold text-gray-400 select-none">¶ {pi + 1}</div>
+                        <div className="text-xs font-semibold text-foreground-400 select-none">¶ {pi + 1}</div>
                         <div className="flex flex-row items-center gap-1">
                             <input
                                 type="file" accept="audio/*"
@@ -93,7 +93,7 @@ export default function ParagraphList({
 
                     {/* Sentences */}
                     {para.sentences.length === 0 ? (
-                        <p className="text-sm text-gray-400 italic">empty paragraph</p>
+                        <p className="text-sm text-foreground-400 italic">empty paragraph</p>
                     ) : viewMode === 'inline' ? (
                         <p className="text-xl leading-relaxed">
                             {para.sentences.map(s => (

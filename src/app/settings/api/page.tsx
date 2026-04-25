@@ -43,17 +43,17 @@ export default function Page() {
     return (
         <div className="flex flex-col gap-4 my-4 max-w-2xl">
             <h1 className="text-xl font-semibold">API Reference</h1>
-            <p className="text-sm text-gray-500">
-                All endpoints require authentication via session cookie or <code className="font-mono bg-gray-100 px-1 rounded">x-api-key</code> header.
+            <p className="text-sm text-foreground-500">
+                All endpoints require authentication via session cookie or <code className="font-mono bg-sand-100 px-1 rounded">x-api-key</code> header.
             </p>
             <div className="flex flex-col gap-1">
                 {API_LIST.map((entry, i) => (
-                    <div key={i} className="flex flex-row items-center gap-3 py-2 border-b border-gray-100">
+                    <div key={i} className="flex flex-row items-center gap-3 py-2 border-b border-sand-200">
                         <span className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded w-16 text-center ${METHOD_COLOR[entry.method] ?? ''}`}>
                             {entry.method}
                         </span>
-                        <code className="text-sm font-mono text-gray-800 flex-1">{entry.path}</code>
-                        <span className="text-sm text-gray-500">{entry.description}</span>
+                        <code className="text-sm font-mono text-foreground flex-1">{entry.path}</code>
+                        <span className="text-sm text-foreground-500">{entry.description}</span>
                     </div>
                 ))}
             </div>

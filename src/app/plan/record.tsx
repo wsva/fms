@@ -47,7 +47,7 @@ export default function Page({ item, handleUpdate }: Props) {
     return (
         <div className={`flex flex-col lg:flex-row items-center justify-start w-full ${ColorMap.get(item.status)}`}>
             <div className="flex flex-row items-center justify-center gap-4">
-                <div className="text-lg text-gray-500 select-none">
+                <div className="text-lg text-foreground-500 select-none">
                     {item.start_at ? getDay(item.start_at) : ''}&emsp;from {item.start_at ? formatTime(item.start_at) : ''}
                 </div>
                 {item.status === "pending" && (

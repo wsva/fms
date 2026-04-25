@@ -174,7 +174,7 @@ export default function DictationPage() {
                     <p>1, Practice dictation using videos (or audios) and their corresponding subtitles</p>
                     <p>2, Subtitle files should be in srt format</p>
                     <p>3, Example: TED</p>
-                    <div className='ms-4 sm:ms-8 bg-slate-100'>
+                    <div className='ms-4 sm:ms-8 bg-sand-100'>
                         <p>1, Download video from <StyledLink href="https://www.ted.com">www.ted.com</StyledLink>{`: click "Share" to download MP4`}</p>
                         <p>2, Subtitles are already included in the video. You can extract them using an ffmpeg command:</p>
                         <p className='ps-8'>{`ffprobe exampe.mp4 2>&1 | grep "Subtitle:"`}</p>
@@ -182,12 +182,12 @@ export default function DictationPage() {
                         <p className='ps-8'>ffmpeg -i exampe.mp4 -map 0:6 exampe.srt</p>
                     </div>
                     <p>4, Example: ARD Mediathek</p>
-                    <div className='ms-4 sm:ms-8 bg-slate-100'>
+                    <div className='ms-4 sm:ms-8 bg-sand-100'>
                         <p>1, Download video and subtitle using <StyledLink href="https://mediathekview.de/download/">MediathekView</StyledLink></p>
                         <p>2, Process and prepare subtitles <StyledLink href="/listening/subtitle/prepare">here</StyledLink></p>
                     </div>
                     <p>5, Example: logo</p>
-                    <div className='ms-4 sm:ms-8 bg-slate-100'>
+                    <div className='ms-4 sm:ms-8 bg-sand-100'>
                         <p>1, Download video/audio and html file from logo会员群</p>
                         <p>2, Use html file directly as subtitle file</p>
                     </div>
@@ -204,15 +204,15 @@ export default function DictationPage() {
                     <p className='ps-8'>c, 如果包含译文，原文在上，译文在下，且只能有一种译文</p>
                     <p className='ps-8'>d, 原文和译文都要去掉格式信息，只保留文本</p>
                     <p>4, 如下字幕格式，包含原文和译文：</p>
-                    <pre className='ps-8 bg-slate-100'>
+                    <pre className='ps-8 bg-sand-100'>
                         {'45\n00:02:32,560 --> 00:02:34,240\nWie bitte?\n你说什么？'}
                     </pre>
                     <p>5, 如下字幕格式，因为原文占用了 2 行，因此不再支持译文：</p>
-                    <pre className='ps-8 bg-slate-100'>
+                    <pre className='ps-8 bg-sand-100'>
                         {'45\n00:02:32,560 --> 00:02:34,240\nWie \nbitte?'}
                     </pre>
                     <p>6, 如下字幕格式是<b>不正确</b>的，因为原文除了文本，还有字体、颜色等格式信息：</p>
-                    <pre className='ps-8 bg-slate-100'>
+                    <pre className='ps-8 bg-sand-100'>
                         {'45\n00:02:32,560 --> 00:02:34,240\n<font color="#ffffff">Wie bitte?</font>'}
                     </pre>
                 </div>

@@ -317,7 +317,7 @@ export default function Page({ user_id, uuid }: Props) {
 
             {stateCues.length > 0 && (
                 <div className="flex flex-row items-center justify-start min-h-[3rem] w-full p-2">
-                    <div className="text-xl font-bold text-gray-800 select-none text-balance hyphens-auto w-fit">
+                    <div className="text-xl font-bold text-foreground select-none text-balance hyphens-auto w-fit">
                         {stateDictation ? "" : stateActiveCue}
                     </div>
                 </div>

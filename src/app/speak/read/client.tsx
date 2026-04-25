@@ -604,11 +604,11 @@ export default function Client({ email }: Props) {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
                     onClick={() => setStateDeleteTarget(null)}
                 >
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 flex flex-col gap-4 w-72"
+                    <div className="bg-sand-50 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 w-72"
                         onClick={e => e.stopPropagation()}
                     >
                         <p className="font-semibold text-base">Delete paragraph?</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-foreground-500">
                             {stateDeleteTarget.sentences.length} sentence(s)
                         </p>
                         <div className="flex flex-col gap-2">

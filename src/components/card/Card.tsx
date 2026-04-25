@@ -41,7 +41,7 @@ export default function Card({ user_id, card, tag_list }: Props) {
                 </Link>
             </div>
             {!isOwner && (
-                <Link target='_blank' className='text-sm text-gray-500 hover:underline'
+                <Link target='_blank' className='text-sm text-foreground-500 hover:underline'
                     href={`/card/market?user_id=${card.user_id}`}
                 >
                     {`by ${card.user_id}`}

@@ -139,7 +139,7 @@ export default function SentenceDrawer({
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex flex-row items-center justify-between px-4 pt-4 pb-2 border-b border-gray-100">
+                <div className="flex flex-row items-center justify-between px-4 pt-4 pb-2 border-b border-sand-300">
                     <span className="font-semibold text-base">
                         {drawer.mode === 'edit' ? 'Edit Sentence' : 'New Sentence'}
                     </span>
@@ -181,10 +181,10 @@ export default function SentenceDrawer({
                                 </DropdownMenu>
                             </Dropdown>
                         )}
-                        <button onClick={() => setExpanded(e => !e)} className="text-gray-400 hover:text-gray-600 p-1" title={expanded ? 'Restore size' : 'Expand'}>
+                        <button onClick={() => setExpanded(e => !e)} className="text-foreground-400 hover:text-foreground-600 p-1" title={expanded ? 'Restore size' : 'Expand'}>
                             {expanded ? <MdUnfoldLess size={22} /> : <MdUnfoldMore size={22} />}
                         </button>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+                        <button onClick={onClose} className="text-foreground-400 hover:text-foreground-600 p-1">
                             <MdClose size={22} />
                         </button>
                     </div>
@@ -272,13 +272,13 @@ export default function SentenceDrawer({
 
                     {/* Background color picker */}
                     <div className="flex flex-row items-center gap-2">
-                        <span className="text-xs text-gray-500 shrink-0">Color:</span>
+                        <span className="text-xs text-foreground-500 shrink-0">Color:</span>
                         <button
                             title="None"
                             onClick={() => onBgColorChange(null)}
                             className={[
-                                'w-6 h-6 rounded-full border-2 bg-white',
-                                bgColor === null ? 'border-gray-500' : 'border-gray-200',
+                                'w-6 h-6 rounded-full border-2 bg-sand-50',
+                                bgColor === null ? 'border-sand-500' : 'border-sand-300',
                             ].join(' ')}
                         />
                         {BG_COLORS.map(c => (
@@ -289,7 +289,7 @@ export default function SentenceDrawer({
                                 className={[
                                     'w-6 h-6 rounded-full border-2',
                                     c.swatch,
-                                    bgColor === c.key ? 'border-gray-500' : 'border-transparent',
+                                    bgColor === c.key ? 'border-sand-500' : 'border-transparent',
                                 ].join(' ')}
                             />
                         ))}
@@ -303,12 +303,12 @@ export default function SentenceDrawer({
                 <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40"
                     onClick={() => setShowRulesEditor(false)}
                 >
-                    <div className="bg-white rounded-2xl shadow-2xl p-5 flex flex-col gap-3 w-96 max-w-[90vw]"
+                    <div className="bg-sand-50 rounded-2xl shadow-2xl p-5 flex flex-col gap-3 w-96 max-w-[90vw]"
                         onClick={e => e.stopPropagation()}
                     >
                         <p className="font-semibold text-base">Auto-replace Rules</p>
                         <textarea
-                            className="w-full h-48 text-sm font-mono border border-gray-200 rounded p-2 resize-none focus:outline-none focus:border-gray-400 overflow-x-auto whitespace-pre"
+                            className="w-full h-48 text-sm font-mono border border-sand-300 rounded p-2 resize-none focus:outline-none focus:border-sand-500 overflow-x-auto whitespace-pre bg-sand-50"
                             value={rulesText}
                             onChange={e => setRulesText(e.target.value)}
                             spellCheck={false}

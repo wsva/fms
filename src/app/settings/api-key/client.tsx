@@ -52,12 +52,12 @@ export default function SettingsClient({ email }: { email: string }) {
 
             <section className="flex flex-col gap-3">
                 <h2 className="font-medium">API Keys</h2>
-                <p className="text-sm text-gray-500">Logged in as <span className="font-mono">{email}</span></p>
+                <p className="text-sm text-foreground-500">Logged in as <span className="font-mono">{email}</span></p>
 
                 {/* Create */}
                 <div className="flex flex-row gap-2 items-center">
                     <input
-                        className="border border-gray-200 rounded px-3 py-1.5 text-sm flex-1 focus:outline-none focus:border-gray-400"
+                        className="border border-sand-300 rounded px-3 py-1.5 text-sm flex-1 focus:outline-none focus:border-sand-500 bg-sand-50"
                         placeholder="Key name (optional)"
                         value={newName}
                         onChange={e => setNewName(e.target.value)}
@@ -86,14 +86,14 @@ export default function SettingsClient({ email }: { email: string }) {
 
                 {/* Key list */}
                 {keys.length === 0 ? (
-                    <p className="text-sm text-gray-400">No API keys yet.</p>
+                    <p className="text-sm text-foreground-400">No API keys yet.</p>
                 ) : (
                     <div className="flex flex-col gap-2">
                         {keys.map(k => (
-                            <div key={k.uuid} className="flex flex-row items-center justify-between border border-gray-100 rounded px-3 py-2">
+                            <div key={k.uuid} className="flex flex-row items-center justify-between border border-sand-200 rounded px-3 py-2">
                                 <div>
                                     <span className="text-sm font-medium">{k.name}</span>
-                                    <span className="text-xs text-gray-400 ml-2">{new Date(k.created_at).toLocaleDateString()}</span>
+                                    <span className="text-xs text-foreground-400 ml-2">{new Date(k.created_at).toLocaleDateString()}</span>
                                 </div>
                                 <Button size="sm" color="danger" variant="light" onPress={() => handleDelete(k.uuid)}>
                                     Revoke
@@ -106,7 +106,7 @@ export default function SettingsClient({ email }: { email: string }) {
 
             <section className="flex flex-col gap-2">
                 <h2 className="font-medium">Usage</h2>
-                <pre className="text-xs bg-gray-50 border border-gray-100 rounded p-3 overflow-x-auto whitespace-pre">{`curl -X POST https://your-domain/api/card \\
+                <pre className="text-xs bg-sand-50 border border-sand-200 rounded p-3 overflow-x-auto whitespace-pre">{`curl -X POST https://your-domain/api/card \\
   -H "x-api-key: fms_..." \\
   -H "Content-Type: application/json" \\
   -d '{"question": "...", "answer": "..."}'`}</pre>

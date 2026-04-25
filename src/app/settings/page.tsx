@@ -12,10 +12,10 @@ export default function Page() {
             <div className="flex flex-col gap-2">
                 {SECTIONS.map(s => (
                     <Link key={s.href} href={s.href}
-                        className="flex flex-col gap-0.5 border border-gray-100 rounded-xl px-4 py-3 hover:bg-gray-50"
+                        className="flex flex-col gap-0.5 border border-sand-200 rounded-xl px-4 py-3 hover:bg-sand-50"
                     >
                         <span className="font-medium">{s.title}</span>
-                        <span className="text-sm text-gray-500">{s.description}</span>
+                        <span className="text-sm text-foreground-500">{s.description}</span>
                     </Link>
                 ))}
             </div>

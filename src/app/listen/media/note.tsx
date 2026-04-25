@@ -99,7 +99,7 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
                     <div className='text-lg whitespace-pre-wrap'>
                         {item.note}
                     </div>
-                    <div className='text-sm text-gray-400'>by {item.user_id}</div>
+                    <div className='text-sm text-foreground-400'>by {item.user_id}</div>
                 </div>
             )}
         </div >

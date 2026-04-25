@@ -64,7 +64,7 @@ function Item({ item, handleUpdate, handleDelete }: PropsItem) {
             ) : (
                 <div className="text-lg">{stateData.description}</div>
             )}
-            <div className="text-sm text-gray-500">UUID: {stateData.uuid}</div>
+            <div className="text-sm text-foreground-500">UUID: {stateData.uuid}</div>
         </div >
     )
 }
