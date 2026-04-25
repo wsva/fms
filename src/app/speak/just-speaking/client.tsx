@@ -47,7 +47,11 @@ export default function Page({ user_id: _user_id, name }: Props) {
 
     useEffect(() => {
         const saved = localStorage.getItem(AUTHOR_KEY);
-        if (saved) setStateAuthor(saved);
+        if (saved && saved !== 'anonymous') {
+            setStateAuthor(saved);
+        } else if (name) {
+            setStateAuthor(name);
+        }
     }, []);
 
     useEffect(() => {
