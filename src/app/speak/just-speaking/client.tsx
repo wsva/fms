@@ -180,14 +180,18 @@ export default function Page({ user_id: _user_id, name }: Props) {
                         disabled={!stateRecording && stateProcessing}
                         className={[
                             'relative z-10 w-24 h-24 rounded-full flex flex-col items-center justify-center',
-                            'text-white font-medium shadow-lg transition-colors cursor-pointer',
+                            'text-white font-medium cursor-pointer select-none',
                             'disabled:opacity-50 disabled:cursor-not-allowed',
-                            stateRecording
-                                ? 'bg-danger'
-                                : stateProcessing
-                                    ? 'bg-default-400'
-                                    : 'bg-primary hover:bg-primary-600 active:bg-primary-700',
+                            'transition-all duration-100 ease-out',
+                            'hover:-translate-y-1 active:translate-y-1',
                         ].join(' ')}
+                        style={{
+                            background: stateRecording
+                                ? 'radial-gradient(ellipse at 38% 28%, #f87171 0%, #dc2626 55%, #b91c1c 100%)'
+                                : stateProcessing
+                                    ? 'radial-gradient(ellipse at 38% 28%, #e5e7eb 0%, #9ca3af 55%, #6b7280 100%)'
+                                    : 'radial-gradient(ellipse at 38% 28%, #93c5fd 0%, #3b82f6 55%, #1d4ed8 100%)',
+                        }}
                     >
                         {stateRecording ? (
                             <>
