@@ -7,6 +7,7 @@ import { themes } from "@/lib/themes";
 export const metadata: Metadata = {
     title: "FmS",
     description: "Fremdsprachen machen Spaß!",
+    icons: { icon: '/favicon.svg' },
 };
 
 // Serialise only what the inline script needs (scale + dark flag).

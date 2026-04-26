@@ -8,6 +8,7 @@ import { menuList } from "./menu";
 import { authClient } from "@/lib/auth-client";
 import { User } from "better-auth";
 import ThemeSelector from '@/components/ThemeSelector'
+import NavIcon from '@/components/NavIcon'
 
 const ChevronDown = () => {
     return (
@@ -75,12 +76,9 @@ export default function TopNav() {
                         className="lg:hidden"
                     />
                     <NavbarBrand className="hidden lg:flex">
-                        <Tooltip content='Fremdsprachen machen Spaß!'>
-                            <Link
-                                className='font-bold text-sm sm:text-2xl text-red-500'
-                                href='/'
-                            >
-                                FmS
+                        <Tooltip content={<NavIcon size={280} />} classNames={{ content: 'bg-transparent p-0 shadow-none border-none' }}>
+                            <Link href='/'>
+                                <NavIcon size={40} />
                             </Link>
                         </Tooltip>
                     </NavbarBrand>
