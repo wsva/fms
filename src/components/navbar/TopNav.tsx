@@ -188,7 +188,11 @@ export default function TopNav() {
                 </NavbarContent>
 
                 <NavbarMenu className="pt-4 pb-20 bg-sand-200">
-                    <div className="flex justify-end px-1 mb-3">
+                    <div className="flex justify-center">
+                        <NavIcon size={280} />
+                    </div>
+                    <div className="flex flex-row items-center justify-center px-1 mb-3">
+                        Select Theme:
                         <ThemeSelector />
                     </div>
                     <div className="bg-sand-300 rounded-sm p-2 mb-5">
