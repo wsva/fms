@@ -217,6 +217,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                     </Button>
                     <Button color="primary" type='submit' variant="solid" size='sm'
                         isLoading={formState.isSubmitting}
+                        isDisabled={!create_new && !formState.isDirty && [...stateTagSelected].sort().join() === [...stateTagAdded].sort().join()}
                     >
                         Save
                     </Button>
@@ -376,7 +377,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             <Markdown2Html content={watch('answer', getDefault('answer') as string)} withTOC />
                         </div>
                         <Divider />
-                        <pre className='text-md font-roboto mx-8'>
+                        <pre className='text-md font-roboto mx-8 whitespace-pre-wrap'>
                             {watch('note', getDefault('note') as string || '')}
                         </pre>
                     </>
