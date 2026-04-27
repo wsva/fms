@@ -1,8 +1,7 @@
 'use client'
 
-import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea, DropdownSection, Link, CircularProgress, Input, addToast } from "@heroui/react";
+import { Button, Link, CircularProgress, Input, addToast } from "@heroui/react";
 import { useEffect, useState } from 'react'
-import { BiCaretDown } from 'react-icons/bi';
 import { card_review } from '@/lib/types';
 import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
@@ -53,21 +52,15 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
     }
 
     const handleFeedback = async (familiarity: number) => {
-        if (!stateCard) {
-            return
-        }
+        if (!stateCard) return
         if (user_id !== stateCard.user_id) {
-            addToast({
-                title: "this is not your card",
-                color: "danger",
-            });
+            addToast({ title: "this is not your card", color: "danger" });
             return
         }
 
         let { repetitions, interval_days, ease_factor } = stateCard;
-
         if (interval_days == null) interval_days = 0
-        if (ease_factor == null) ease_factor = 2.5 // SM-2 standard initial value
+        if (ease_factor == null) ease_factor = 2.5
         if (repetitions == null) repetitions = 0
 
         if (familiarity < 3) {
@@ -85,9 +78,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
         }
 
         ease_factor = ease_factor + (0.1 - (5 - familiarity) * (0.08 + (5 - familiarity) * 0.02));
-        if (ease_factor < 1.3) {
-            ease_factor = 1.3;
-        }
+        if (ease_factor < 1.3) ease_factor = 1.3;
 
         const next_review_at = new Date();
         next_review_at.setDate(next_review_at.getDate() + interval_days);
@@ -114,136 +105,150 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
         }
     }
 
+    if (!stateCard) {
+        return (
+            <div className="flex flex-col items-center justify-center py-24 gap-2 text-foreground-400">
+                <span className="text-2xl font-semibold">No cards due for review</span>
+                <span className="text-sm">Check back later or select a different tag</span>
+            </div>
+        )
+    }
+
     return (
-        <>
-            {!stateCard ? (
-                <div>no test available</div>
-            ) : (
-                <div className="flex flex-col my-5 mx-5">
-                    <div className="flex flex-row gap-4 items-center justify-center">
-                        <div className="w-full">Tag: {stateTag?.tag}</div>
-                        <Button as={Link} size="sm" target='_blank' color='secondary' href={`/card/${stateCard.card_uuid}/?edit=y`}>
-                            Edit
-                        </Button>
-                        <Button size="sm" color='secondary' onPress={loadNextCard}>
-                            Next
-                        </Button>
-                    </div>
-                    <div className={`flex flex-row w-full items-center justify-center p-2 ${getColor(stateCard.familiarity)}`}>
-                        <div
-                            className={stateCard.card.question.length < 30
-                                ? "my-5 font-bold text-xl sm:text-2xl md:text-4xl lg:text-6xl xl:text-8xl"
-                                : "my-5 font-bold text-sm sm:text-base md:text-xl lg:text-2xl xl:text-4xl"
-                            }
-                        >
-                            <Markdown2Html content={stateCard.card.question} withTOC />
-                        </div>
-                    </div>
-                    <div className='flex flex-wrap my-5 items-center justify-center gap-4'>
-                        {stateCard.card.suggestion.length > 0 ? (
-                            <Button
-                                color="primary"
-                                variant="solid"
-                                onPress={() => setStateSuggestion(!stateSuggestion)}
-                            >
-                                {stateSuggestion ? 'hide suggestion' : 'show suggestion'}
-                            </Button>
-                        ) : null}
-                        <Button
-                            color="primary"
-                            variant="solid"
-                            onPress={() => setStateAnswer(!stateAnswer)}
-                        >
-                            {stateAnswer ? 'hide answer' : 'show answer'}
-                        </Button>
-                        <ButtonGroup variant='solid' color='primary'>
-                            <Dropdown placement="bottom-end">
-                                <DropdownTrigger>
-                                    <Button>
-                                        feedback <BiCaretDown />
-                                    </Button>
-                                </DropdownTrigger>
-                                <DropdownMenu
-                                    disallowEmptySelection
-                                    className="max-w-[300px]"
-                                    selectionMode="single"
-                                    onSelectionChange={async (keys) => {
-                                        if (keys.currentKey) {
-                                            await handleFeedback(parseInt(keys.currentKey))
-                                        }
-                                    }}
-                                >
-                                    {/*
-                            Type 'Element[]' is not assignable to type 'CollectionElement<object>'
-                            https://github.com/nextui-org/nextui/issues/1691
-                             */}
-                                    <DropdownSection>
-                                        {FamiliarityList.map((v) => (
-                                            <DropdownItem key={v.value} description={v.description} className={`${getColor(v.value)}`}>
-                                                {`${v.value} - ${v.label}`}
-                                            </DropdownItem>
-                                        ))}
-                                    </DropdownSection>
-                                </DropdownMenu>
-                            </Dropdown>
-                        </ButtonGroup>
-                        <Input isClearable className="max-w-sm"
-                            placeholder="custom keyword"
-                            value={stateKeyword}
-                            onClear={() => setStateKeyword("")}
-                            onChange={(e) => setStateKeyword(e.target.value)}
-                            startContent={
-                                <Button color='primary' isDisabled={stateLoading}
-                                    onPress={async () => {
-                                        setStateLoading(true)
-                                        const result = await searchExample(stateKeyword.trim() || stateCard.card.question)
-                                        if (result.status === "success") {
-                                            setStateExamples(result.data)
-                                        }
-                                        setStateLoading(false)
-                                    }}
-                                >
-                                    View Examples
-                                </Button>
-                            }
-                            endContent={stateLoading ? <CircularProgress size="sm" aria-label="Loading..." /> : null}
-                        />
-                    </div>
-                    {stateSuggestion ? (
-                        <Textarea isDisabled
-                            classNames={{ input: 'text-2xl leading-tight font-roboto' }}
-                            defaultValue={stateCard.card.suggestion}
-                        />
-                    ) : null}
-                    {stateAnswer ? (
-                        <div className='text-xl bg-sand-300 rounded-md p-2'>
-                            <Markdown2Html content={stateCard.card.answer} withTOC />
-                        </div>
-                    ) : null}
-                    {stateAnswer ? (
-                        <Textarea isDisabled
-                            classNames={{ input: 'text-2xl leading-tight font-roboto' }}
-                            defaultValue={stateCard.card.note}
-                        />
-                    ) : null}
-                    {stateExamples.length > 0 && (
-                        <div className="flex flex-col w-full gap-4 py-4" >
-                            {stateExamples.map((v, i) => (
-                                <div key={i} className="flex flex-col w-full items-start bg-sand-300 rounded-md p-1">
-                                    <div className="text-xl whitespace-pre-wrap" >{v}</div>
-                                    <div className="flex flex-row w-full items-end justify-end gap-4">
-                                        <Link className='text-blue-600 hover:underline' target='_blank'
-                                            href={`/card/add?edit=y&question=${encodeURIComponent(v)}`}
-                                        >
-                                            Add to Card
-                                        </Link>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+        <div className="flex flex-col gap-5 w-full px-4 my-6">
+
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground-500 uppercase tracking-widest">
+                    {stateTag?.tag}
+                </span>
+                <div className="flex gap-2">
+                    <Button as={Link} size="sm" color="secondary" href={`/card/${stateCard.card_uuid}/?edit=y`} target="_blank">
+                        Edit
+                    </Button>
+                    <Button size="sm" color="secondary" onPress={loadNextCard}>
+                        Next
+                    </Button>
+                </div>
+            </div>
+
+            {/* Question */}
+            <div className={`rounded-2xl p-6 flex items-center justify-center min-h-[180px] ${getColor(stateCard.familiarity)}`}>
+                <div className={stateCard.card.question.length < 30
+                    ? "font-bold text-xl sm:text-2xl md:text-4xl lg:text-6xl xl:text-8xl text-center"
+                    : "font-bold text-sm sm:text-base md:text-xl lg:text-2xl xl:text-4xl text-center"
+                }>
+                    <Markdown2Html content={stateCard.card.question} withTOC />
+                </div>
+            </div>
+
+            {/* Toggles */}
+            <div className="flex gap-2 justify-center">
+                {stateCard.card.suggestion.length > 0 && (
+                    <Button
+                        size="sm"
+                        variant={stateSuggestion ? "solid" : "bordered"}
+                        color="default"
+                        onPress={() => setStateSuggestion(!stateSuggestion)}
+                    >
+                        {stateSuggestion ? 'hide hint' : 'hint'}
+                    </Button>
+                )}
+                <Button
+                    size="sm"
+                    variant={stateAnswer ? "solid" : "bordered"}
+                    color="default"
+                    onPress={() => setStateAnswer(!stateAnswer)}
+                >
+                    {stateAnswer ? 'hide answer' : 'answer'}
+                </Button>
+            </div>
+
+            {/* Rating */}
+            <div className="flex flex-wrap gap-2 justify-center">
+                {FamiliarityList.map((v) => (
+                    <Button
+                        key={v.value}
+                        size="sm"
+                        className={`${v.color} text-foreground font-medium`}
+                        onPress={() => handleFeedback(v.value)}
+                    >
+                        {v.value} · {v.label}
+                    </Button>
+                ))}
+            </div>
+
+            {/* Examples search */}
+            <div className="flex gap-2 items-center">
+                <Input
+                    isClearable
+                    placeholder="custom keyword"
+                    value={stateKeyword}
+                    onClear={() => setStateKeyword("")}
+                    onChange={(e) => setStateKeyword(e.target.value)}
+                    endContent={stateLoading ? <CircularProgress size="sm" aria-label="Loading..." /> : null}
+                />
+                <Button
+                    color="primary"
+                    variant="bordered"
+                    isDisabled={stateLoading}
+                    onPress={async () => {
+                        setStateLoading(true)
+                        const result = await searchExample(stateKeyword.trim() || stateCard.card.question)
+                        if (result.status === "success") setStateExamples(result.data)
+                        setStateLoading(false)
+                    }}
+                >
+                    Search Examples
+                </Button>
+            </div>
+
+            {/* Revealed: hint */}
+            {stateSuggestion && (
+                <div className="rounded-xl bg-sand-100 border border-sand-300 p-4">
+                    <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide mb-2">Hint</div>
+                    <div className="text-2xl leading-tight font-roboto whitespace-pre-wrap">{stateCard.card.suggestion}</div>
                 </div>
             )}
-        </>
+
+            {/* Revealed: answer */}
+            {stateAnswer && (
+                <div className="rounded-xl bg-sand-100 border border-sand-300 p-4">
+                    <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide mb-2">Answer</div>
+                    <div className="text-xl">
+                        <Markdown2Html content={stateCard.card.answer} withTOC />
+                    </div>
+                </div>
+            )}
+
+            {/* Revealed: note */}
+            {stateAnswer && stateCard.card.note && (
+                <div className="rounded-xl bg-sand-100 border border-sand-300 p-4">
+                    <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide mb-2">Note</div>
+                    <div className="text-2xl leading-tight font-roboto whitespace-pre-wrap">{stateCard.card.note}</div>
+                </div>
+            )}
+
+            {/* Examples list */}
+            {stateExamples.length > 0 && (
+                <div className="flex flex-col gap-3">
+                    <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide">Examples</div>
+                    {stateExamples.map((v, i) => (
+                        <div key={i} className="flex flex-col bg-sand-100 border border-sand-300 rounded-xl p-4 gap-2">
+                            <div className="text-xl whitespace-pre-wrap">{v}</div>
+                            <div className="flex justify-end">
+                                <Link
+                                    className="text-blue-600 hover:underline"
+                                    target="_blank"
+                                    href={`/card/add?edit=y&question=${encodeURIComponent(v)}`}
+                                >
+                                    Add to Card
+                                </Link>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }

@@ -46,6 +46,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
         setThemeState(t)
         applyTheme(t)
         localStorage.setItem(STORAGE_KEY, id)
+        document.cookie = `${STORAGE_KEY}=${id}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
     }
 
     return (
