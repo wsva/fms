@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { addToast, Button, Input, Select, SelectItem, Spinner } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
 import { toggleRecording } from '@/lib/recording';
@@ -44,6 +44,8 @@ export default function Page({ user_id: _user_id, name }: Props) {
     const [stateList, setStateList] = useState<just_speaking[]>([]);
     const [stateLoading, setStateLoading] = useState<boolean>(true);
     const [stateUploading, setStateUploading] = useState<boolean>(false);
+    const [stateProgress, setStateProgress] = useState<number>(0);
+    const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
         const saved = localStorage.getItem(AUTHOR_KEY);
@@ -105,10 +107,20 @@ export default function Page({ user_id: _user_id, name }: Props) {
         const audio_path = `/api/data/just-speaking/${uuid}.wav`;
         setStateUploading(true);
 
+        let progress = 0;
+        setStateProgress(0);
+        progressTimerRef.current = setInterval(() => {
+            progress += Math.random() * 6 + 2;
+            if (progress >= 85) { progress = 85; clearInterval(progressTimerRef.current!); }
+            setStateProgress(Math.round(progress));
+        }, 120);
+
         const audioResult = await saveAudio(statePending.blob, 'just-speaking', `${uuid}.wav`);
         if (audioResult.status === 'error') {
-            addToast({ title: 'Upload failed', color: 'danger' });
+            clearInterval(progressTimerRef.current!);
+            setStateProgress(0);
             setStateUploading(false);
+            addToast({ title: 'Upload failed', color: 'danger' });
             return;
         }
 
@@ -121,19 +133,25 @@ export default function Page({ user_id: _user_id, name }: Props) {
             updated_at: now,
         });
         if (dbResult.status === 'error') {
-            addToast({ title: 'Failed to save recording', color: 'danger' });
+            clearInterval(progressTimerRef.current!);
+            setStateProgress(0);
             setStateUploading(false);
+            addToast({ title: 'Failed to save recording', color: 'danger' });
             return;
         }
 
+        clearInterval(progressTimerRef.current!);
+        setStateProgress(100);
         setStateList(prev => [dbResult.data, ...prev]);
         URL.revokeObjectURL(statePending.url);
         setStatePending(undefined);
         setStateUploading(false);
         addToast({ title: 'Uploaded successfully', color: 'success' });
+        setTimeout(() => setStateProgress(0), 400);
     }
 
     const handleDelete = async (item: just_speaking) => {
+        if (!window.confirm(`Delete recording by "${item.author}"?`)) return;
         if (item.audio_path) {
             await removeAudio('just-speaking', `${item.uuid}.wav`);
         }
@@ -213,12 +231,19 @@ export default function Page({ user_id: _user_id, name }: Props) {
                             <Button
                                 variant="solid"
                                 color="primary"
-                                className="flex-1"
+                                className="flex-1 relative overflow-hidden"
                                 isDisabled={stateUploading}
-                                isLoading={stateUploading}
                                 onPress={handleUpload}
                             >
-                                Upload
+                                {stateUploading && (
+                                    <span
+                                        className="absolute inset-0 bg-white/20 transition-[width] duration-150 ease-out"
+                                        style={{ width: `${stateProgress}%` }}
+                                    />
+                                )}
+                                <span className="relative">
+                                    {stateUploading ? `${stateProgress}%` : 'Upload'}
+                                </span>
                             </Button>
                             <Button
                                 variant="bordered"
