@@ -8,7 +8,7 @@ import { menuList } from "./menu";
 import { authClient } from "@/lib/auth-client";
 import { User } from "better-auth";
 import ThemeSelector from '@/components/ThemeSelector'
-import NavIcon from '@/components/NavIcon'
+import NavIcon from '@/components/design/NavIcon'
 
 const ChevronDown = () => {
     return (

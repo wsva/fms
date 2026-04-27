@@ -1,0 +1,54 @@
+<svg width="100%" viewBox="0 0 680 200" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Just Speaking desktop banner</title>
+  <desc>Wide banner for Just Speaking – anytime, anything, anyone</desc>
+  <style>
+    .bg { fill: #0EA89A; }
+    .name-main {
+      fill: #ffffff;
+      font-family: 'Edwardian Script ITC','Monotype Corsiva','Apple Chancery',cursive;
+      font-style: italic;
+    }
+    .tagline {
+      fill: #D6F5F2;
+      font-family: sans-serif;
+      font-weight: 400;
+      letter-spacing: 3px;
+      font-size: 13px;
+    }
+    .spark { fill: #F5C842; }
+    .divider { stroke: #7ADDD6; stroke-width: 1.2; }
+    .wave { fill: none; stroke: rgba(255,255,255,0.22); stroke-width: 2.2; stroke-linecap: round; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="680" height="200" rx="24"/>
+
+  <!-- Waveform (right side) -->
+  <line class="wave" x1="430" y1="72" x2="430" y2="128"/>
+  <line class="wave" x1="455" y1="58" x2="455" y2="142"/>
+  <line class="wave" x1="480" y1="68" x2="480" y2="132"/>
+  <line class="wave" x1="505" y1="80" x2="505" y2="120"/>
+  <line class="wave" x1="530" y1="62" x2="530" y2="138"/>
+  <line class="wave" x1="555" y1="50" x2="555" y2="150"/>
+  <line class="wave" x1="580" y1="65" x2="580" y2="135"/>
+  <line class="wave" x1="605" y1="75" x2="605" y2="125"/>
+  <line class="wave" x1="630" y1="82" x2="630" y2="118"/>
+  <line class="wave" x1="655" y1="88" x2="655" y2="112"/>
+
+  <!-- Vertical divider -->
+  <line class="divider" x1="400" y1="38" x2="400" y2="162"/>
+
+  <!-- Text -->
+  <text x="200" y="115" class="name-main" font-size="72" text-anchor="middle">Just Speaking</text>
+  <text x="200" y="148" class="tagline" text-anchor="middle">anytime · anything · anyone</text>
+
+  <!-- Sparkles -->
+  <g transform="translate(42,42)">
+    <polygon class="spark" points="0,-10 2.5,-2.5 10,0 2.5,2.5 0,10 -2.5,2.5 -10,0 -2.5,-2.5"/>
+  </g>
+  <g transform="translate(368,32)">
+    <polygon class="spark" points="0,-7 2,-2 7,0 2,2 0,7 -2,2 -7,0 -2,-2" opacity="0.7"/>
+  </g>
+  <g transform="translate(48,168)">
+    <polygon class="spark" points="0,-7 2,-2 7,0 2,2 0,7 -2,2 -7,0 -2,-2" opacity="0.6"/>
+  </g>
+</svg>

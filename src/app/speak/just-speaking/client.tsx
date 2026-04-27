@@ -7,6 +7,8 @@ import { toggleRecording } from '@/lib/recording';
 import { saveAudio, removeAudio } from '@/app/actions/audio';
 import { getJustSpeakingAll, saveJustSpeaking, removeJustSpeaking } from '@/app/actions/just_speaking';
 import { just_speaking } from '@/generated/prisma/client';
+import JustSpeakingDesktop from '@/components/design/JustSpeakingDesktop';
+import JustSpeakingMobile from '@/components/design/JustSpeakingMobile';
 
 type Props = {
     user_id: string;
@@ -172,6 +174,10 @@ export default function Page({ user_id: _user_id, name }: Props) {
 
     return (
         <div className="flex flex-col items-center gap-6 my-6 w-full">
+            <div className="w-full max-w-xl">
+                <div className="hidden sm:block"><JustSpeakingDesktop /></div>
+                <div className="sm:hidden"><JustSpeakingMobile /></div>
+            </div>
             <div className="flex flex-col items-center gap-6 w-full max-w-xl">
 
                 <Input

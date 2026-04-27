@@ -1,0 +1,41 @@
+<svg width="100%" viewBox="0 0 400 220" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Just Speaking mobile icon</title>
+  <desc>Compact rectangular icon for Just Speaking – anytime, anything, anyone</desc>
+  <style>
+    .mbg { fill: #0EA89A; }
+    .mname {
+      fill: #ffffff;
+      font-family: 'Edwardian Script ITC','Monotype Corsiva','Apple Chancery',cursive;
+      font-style: italic;
+    }
+    .mtag {
+      fill: #D6F5F2;
+      font-family: sans-serif;
+      font-weight: 400;
+      letter-spacing: 2px;
+      font-size: 13px;
+    }
+    .mspark { fill: #F5C842; }
+    .mdivider { stroke: #7ADDD6; stroke-width: 1; }
+  </style>
+
+  <rect class="mbg" x="0" y="0" width="400" height="220" rx="24"/>
+
+  <!-- Divider -->
+  <line class="mdivider" x1="50" y1="158" x2="350" y2="158"/>
+
+  <!-- Text -->
+  <text x="200" y="118" class="mname" font-size="68" text-anchor="middle">Just Speaking</text>
+  <text x="200" y="183" class="mtag" text-anchor="middle">anytime · anything · anyone</text>
+
+  <!-- Sparkles (top-left, top-right, bottom-right) -->
+  <g transform="translate(36,36)">
+    <polygon class="mspark" points="0,-10 2.5,-2.5 10,0 2.5,2.5 0,10 -2.5,2.5 -10,0 -2.5,-2.5"/>
+  </g>
+  <g transform="translate(364,36)">
+    <polygon class="mspark" points="0,-8 2,-2 8,0 2,2 0,8 -2,2 -8,0 -2,-2" opacity="0.8"/>
+  </g>
+  <g transform="translate(364,184)">
+    <polygon class="mspark" points="0,-7 2,-2 7,0 2,2 0,7 -2,2 -7,0 -2,-2" opacity="0.6"/>
+  </g>
+</svg>
