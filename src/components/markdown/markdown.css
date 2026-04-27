@@ -154,9 +154,7 @@
     background-color: rgb(209 213 219);
     padding: 2px;
     margin: 5px 0 5px 0;
-    overflow: auto;
-    overflow-x: hidden;
-    overflow-y: hidden;
+    overflow: hidden;
     text-indent: 0;
     white-space: pre-wrap;
     overflow-wrap: break-word;
@@ -173,7 +171,7 @@
     margin: 0 auto;
 }
 
-.md-body th, td {
+.md-body th, .md-body td {
     border: 2px solid #aaa;
     word-break: break-all;
     word-wrap: break-word;
@@ -188,6 +186,20 @@
 .md-body td {
     min-width: 8%;
     max-width: 15%;
+}
+
+.md-body blockquote {
+    border-left: 4px solid #1e90ff;
+    margin: 0.8em 0;
+    padding: 0.4em 1em;
+    background-color: rgba(30, 144, 255, 0.06);
+    border-radius: 0 6px 6px 0;
+    color: inherit;
+}
+
+.md-body blockquote p {
+    font-style: italic;
+    padding: 2px 0;
 }
 
 .md-body ul {
