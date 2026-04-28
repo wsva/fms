@@ -57,8 +57,10 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
             el.style.height = ''
             return
         }
+        const scrollY = window.scrollY
         el.style.height = 'auto'
         el.style.height = el.scrollHeight + 'px'
+        window.scrollTo(0, scrollY)
     }
 
     const toggleFullscreen = () => {
