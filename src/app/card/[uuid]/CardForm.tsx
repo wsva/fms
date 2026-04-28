@@ -1,8 +1,9 @@
 'use client'
 
 import { getProperty, getUUID } from '@/lib/utils';
-import { addToast, Button, ButtonGroup, Checkbox, CheckboxGroup, Divider, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
+import { addToast, Button, Checkbox, CheckboxGroup, Divider, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
 import { useEffect, useRef, useState } from 'react'
+import MdEditor from '@/components/MdEditor'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
 import { qsa_card, qsa_tag } from "@/generated/prisma/client";
@@ -30,7 +31,6 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
     const formRef = useRef<HTMLFormElement>(null);
     const { ref: refAnswer, ...restAnswer } = register('answer');
-    const answerRef = useRef<HTMLTextAreaElement | null>(null);
 
     // 空依赖数组意味着仅在组件挂载时执行一次
     useEffect(() => {
@@ -107,36 +107,6 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
     const getColor = (familiarity: number) => {
         return FamiliarityList.map((v) => v.color)[familiarity]
-    }
-
-    const insertToAnswer = async (startText: string, endText: string) => {
-        if (!answerRef.current) return;
-
-        const textarea = answerRef.current;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const text = textarea.value;
-
-        // 在光标处插入文本
-        const newText = text.slice(0, start) + startText + text.slice(start, end) + endText + text.slice(end);
-        textarea.value = newText
-        answerRef.current.value = newText
-        /* console.log("answerRef.current", answerRef.current.innerHTML)
-        setValue("answer", newText, { shouldDirty: true })
-        console.log("answerRef.current 2", answerRef.current.innerHTML)
-        console.log("values", getValues()) */
-
-        // 让光标移动到插入文本的后面
-        setTimeout(() => {
-            textarea.focus();
-            const textLength = startText.length + endText.length
-            if (start < end) {
-                textarea.setSelectionRange(start, end + textLength);
-            } else {
-                textarea.setSelectionRange(start + textLength, end + textLength);
-            }
-
-        }, 0);
     }
 
     const onSubmit = async (formData: qsa_card) => {
@@ -282,58 +252,12 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                                 {...register('suggestion')}
                             />
                         )}
-                        {/** https://symbl.cc/en/collections/ */}
-                        {/* <div>characters: ≈, ⬌, ■, ➤, 🡆</div> */}
-                        <div className='flex flex-col gap-1 px-3 py-0.5 bg-default-100 hover:bg-default-200 rounded-medium'>
-                            <label className='text-foreground-500 text-small pb-0.5 pe-2 max-w-full text-ellipsis overflow-hidden'>
-                                answer
-                            </label>
-                            <ButtonGroup size='sm' radius="none" className='flex flex-row items-center justify-start gap-1'>
-                                {["#", "⬌", "■", "=", "≈", "➤", "🡆"].map((v, i) =>
-                                    <Button key={`char1-${i}`} isIconOnly className='text-xl' onPress={() => insertToAnswer(v, '')}>{v}</Button>
-                                )}
-                                {["ä", "Ä", "ö", "Ö", "ü", "Ü", "ß", "é", "€"].map((v, i) =>
-                                    <Button key={`char2-${i}`} isIconOnly className='text-xl' onPress={() => insertToAnswer(v, '')}>{v}</Button>
-                                )}
-                                {[["B", "**", "**"], ["„“", "„", "“"], ["‚‘", "‚", "‘"], ["C", "`````\n", "\n`````"]].map((v, i) =>
-                                    <Button key={`char3-${i}`} isIconOnly className='text-xl' onPress={() => insertToAnswer(v[1], v[2])}>{v[0]}</Button>
-                                )}
-                            </ButtonGroup>
-                            {/* 
-                            不知为什么，nextui 的 Textarea 无法通过 answerRef 设置内容
-                            <Textarea
-                                label='answer'
-                                classNames={{
-                                    input: 'text-xl leading-tight font-roboto'
-                                }}
-                                defaultValue={getDefault('answer') as string || ''}
-                                minRows={10}
-                                maxRows={999}
-                                autoComplete='off'
-                                autoCorrect='off'
-                                spellCheck='false'
-                                {...restAnswer}
-                                ref={(e) => {
-                                    refAnswer(e)
-                                    answerRef.current = e
-                                }}
-                            /> */}
-                            <textarea
-                                className='w-full text-xl leading-tight font-roboto px-1.5 outline-none bg-transparent resize-none'
-                                defaultValue={getDefault('answer') as string || ''}
-                                rows={10}
-                                autoComplete='off'
-                                autoCorrect='off'
-                                spellCheck='false'
-                                /* {...register('answer')} */
-                                //https://www.react-hook-form.com/faqs/#Howtosharerefusage
-                                {...restAnswer}
-                                ref={(e) => {
-                                    refAnswer(e)
-                                    answerRef.current = e
-                                }}
-                            />
-                        </div>
+                        <MdEditor
+                            label="answer"
+                            defaultValue={(getDefault('answer') as string) || ''}
+                            {...restAnswer}
+                            ref={refAnswer}
+                        />
                         <Textarea label='note'
                             classNames={{ input: 'text-xl leading-tight font-roboto' }}
                             defaultValue={getDefault('note') as string || ''}

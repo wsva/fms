@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { blog } from "@/generated/prisma/client";
 import { saveBlog } from '@/app/actions/blog';
 import Markdown2Html from '@/components/markdown/markdown';
+import MdEditor from '@/components/MdEditor';
 
 type Props = {
     blog_init: Partial<blog>,
@@ -36,6 +37,7 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
             content: getDefault('content'),
         }
     });
+    const { ref: refContent, ...restContent } = register('content');
 
     useEffect(() => {
         const blog_uuid = (!!blog_init.uuid && (create_new || blog_init.user_id === email))
@@ -108,16 +110,10 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
                             defaultValue={getDefault('description') as string | ''}
                             {...register('description')}
                         />
-                        <Textarea
-                            label='content'
-                            classNames={{ input: 'text-2xl leading-tight font-roboto' }}
-                            defaultValue={getDefault('content') as string | ''}
-                            minRows={10}
-                            maxRows={999}
-                            autoComplete='off'
-                            autoCorrect='off'
-                            spellCheck='false'
-                            {...register('content')}
+                        <MdEditor
+                            defaultValue={getDefault('content') || ''}
+                            {...restContent}
+                            ref={refContent}
                         />
                     </>
                 ) : (
