@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: "FmS",
     description: "Fremdsprachen machen Spaß!",
     icons: { icon: '/favicon.svg' },
+    manifest: '/manifest.webmanifest',
 };
 
 export default async function RootLayout({
