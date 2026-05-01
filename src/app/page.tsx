@@ -1,7 +1,7 @@
 import { IndexItem } from "@/components/IndexItem";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import PlanSimple from '@/app/plan/client_simple';
+import HomePopup from '@/app/plan/home_popup';
 
 export default async function Home() {
     const session = await auth.api.getSession({
@@ -11,12 +11,7 @@ export default async function Home() {
 
     return (
         <div>
-            {!!email && (
-                <div className="flex flex-col m-2">
-                    <PlanSimple user_id={email} />
-                    <div className="m-4 col-span-full"></div>
-                </div>
-            )}
+            {!!email && <HomePopup user_id={email} />}
             <div className="container grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
                 <IndexItem href='/listen/dictation' label='Dictation'
                     description='Upload audio and subtitle, and then do dictation.'

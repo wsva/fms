@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
+import { addToast, Button, Input, Select, SelectItem } from "@heroui/react";
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
 import Plan from './plan';
 import { getUUID } from '@/lib/utils';
@@ -13,6 +13,7 @@ type Props = {
 
 export default function Client({ user_id }: Props) {
     const [stateSaving, setStateSaving] = useState<boolean>(false);
+    const [stateShowOthers, setStateShowOthers] = useState<boolean>(false);
     const [stateTimeSpan, setStateTimeSpan] = useState<number>(15);
     const [statePlanContent, setStatePlanContent] = useState<string>("");
     const [stateData, setStateData] = useState<plan_plan[]>([]);
@@ -95,48 +96,62 @@ export default function Client({ user_id }: Props) {
         loadData()
     }, [user_id, stateReload]);
 
+    const favorites = stateData.filter(p => p.favorite === "Y");
+    const others = stateData.filter(p => p.favorite !== "Y");
+
     return (
-        <div>
-            <div className='flex flex-col gap-2 my-4 bg-sand-300 p-2 rounded-md'>
-                <Textarea size='lg' className='w-full' label="Plan content"
-                    classNames={{
-                        inputWrapper: "bg-sand-200",
-                        input: "text-md",
-                    }}
-                    placeholder="Do something"
-                    value={statePlanContent}
-                    onChange={(e) => setStatePlanContent(e.target.value)}
-                />
-                <div className='flex flex-row items-center justify-center gap-2'>
-                    <Select aria-label='time span' className='max-w-sm'
+        <div className="flex flex-col gap-4 my-4">
+            <div className='flex flex-col gap-1 bg-sand-200 p-2 rounded-md'>
+                <div className='flex flex-row items-center gap-2'>
+                    <Input className='flex-1' size='sm'
+                        classNames={{ inputWrapper: "bg-sand-100" }}
+                        placeholder="Plan content"
+                        value={statePlanContent}
+                        onChange={(e) => setStatePlanContent(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
+                    />
+                    <Select aria-label='time span' size='sm' className='w-36'
                         selectedKeys={[String(stateTimeSpan)]}
                         onChange={(e) => setStateTimeSpan(parseInt(e.target.value))}
-                        startContent={<div className="whitespace-nowrap font-bold">for</div>}
                     >
-                        <SelectItem key="15" textValue="15 minutes">15 minutes</SelectItem>
-                        <SelectItem key="30" textValue="30 minutes">30 minutes</SelectItem>
-                        <SelectItem key="60" textValue="1 hour">1 hour</SelectItem>
+                        <SelectItem key="15">15 min</SelectItem>
+                        <SelectItem key="30">30 min</SelectItem>
+                        <SelectItem key="60">1 hour</SelectItem>
                     </Select>
-                    <Button variant='solid' color='primary'
+                    <Button size='sm' variant='solid' color='primary'
                         isDisabled={stateSaving}
                         onPress={handleAdd}
                     >
-                        Add Plan
+                        Add
                     </Button>
                 </div>
+                <span className="text-xs text-foreground-400 px-1">Press Enter to add</span>
             </div>
 
-            {stateData.length > 0 && (
-                <div className="flex flex-col items-center justify-center w-full gap-2 my-4">
-                    {stateData.map((p) => (
-                        <Plan
-                            key={p.uuid}
-                            item={p}
-                            user_id={user_id}
-                            simple={false}
-                            handleDelete={handleDelete}
-                            handleUpdate={handleUpdate}
-                        />
+            {stateData.length === 0 && (
+                <div className="text-sm text-foreground-400 px-1">No plans yet. Add one above.</div>
+            )}
+
+            {favorites.length > 0 && (
+                <div className="flex flex-col gap-8">
+                    <div className="text-sm font-semibold text-foreground-500 px-1">Favorites</div>
+                    {favorites.map((p) => (
+                        <Plan key={p.uuid} item={p} user_id={user_id} simple={false}
+                            handleDelete={handleDelete} handleUpdate={handleUpdate} />
+                    ))}
+                </div>
+            )}
+
+            {others.length > 0 && (
+                <div className="flex flex-col gap-8">
+                    <Button size="sm" variant="light" className="text-sm font-semibold text-foreground-500 px-1 self-start"
+                        onPress={() => setStateShowOthers(v => !v)}
+                    >
+                        {stateShowOthers ? 'Hide Others' : 'Show Others'}
+                    </Button>
+                    {stateShowOthers && others.map((p) => (
+                        <Plan key={p.uuid} item={p} user_id={user_id} simple={false}
+                            handleDelete={handleDelete} handleUpdate={handleUpdate} />
                     ))}
                 </div>
             )}

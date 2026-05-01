@@ -22,8 +22,8 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
             <div className='flex flex-row items-center justify-end w-full gap-2'>
                 <Select aria-label="Select language" size="sm" className="max-w-xs"
                     isDisabled={item.user_id !== user_id || !stateEdit}
-                    selectedKeys={[item.language]}
-                    onChange={(e) => setStateData({ ...item, language: e.target.value })}
+                    selectedKeys={[stateData.language]}
+                    onChange={(e) => setStateData({ ...stateData, language: e.target.value })}
                 >
                     {languageOptions.map((v) => (
                         <SelectItem key={v.key} textValue={`${v.key} (${v.value})`}>{`${v.key} (${v.value})`}</SelectItem>
@@ -94,14 +94,14 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                     classNames={{
                         "input": 'text-xl leading-tight font-roboto',
                     }}
-                    value={item.transcript}
+                    value={stateData.transcript}
                     minRows={10}
                     maxRows={30}
                     autoComplete='off'
                     autoCorrect='off'
                     spellCheck='false'
                     onChange={(e) => {
-                        setStateData({ ...item, transcript: e.target.value })
+                        setStateData({ ...stateData, transcript: e.target.value })
                     }}
                 />
             ) : (

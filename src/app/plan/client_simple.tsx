@@ -46,7 +46,7 @@ export default function Client({ user_id }: Props) {
     return (
         <div>
             {stateData.length > 0 && (
-                <div className="flex flex-col items-center justify-center w-full gap-2 my-4">
+                <div className="flex flex-col items-center justify-center w-full gap-1 my-1">
                     {stateData.filter((v) => v.favorite == "Y").map((p) => (
                         <Plan
                             key={p.uuid}

@@ -4,10 +4,10 @@ import { Button, Tooltip } from '@heroui/react'
 import { plan_record } from "@/generated/prisma/client";
 import { MdClose, MdDone } from 'react-icons/md';
 
-const ColorMap = new Map<string, string>([
-    ["pending", "bg-sand-300"],
-    ["completed", "bg-green-200"],
-    ["failed", "bg-red-200"],
+const BorderMap = new Map<string, string>([
+    ["pending", "border-sand-400"],
+    ["completed", "border-green-400"],
+    ["failed", "border-red-400"],
 ]);
 
 export type Props = {
@@ -37,18 +37,16 @@ export default function Page({ item, handleUpdate }: Props) {
         }
     };
 
-    // hh:mm
     const formatTime = (date: Date) => {
-        const inputDate = new Date(date);
-        inputDate.setMinutes(inputDate.getMinutes());
-        return inputDate.getHours().toString().padStart(2, '0') + ':' + inputDate.getMinutes().toString().padStart(2, '0');
+        const d = new Date(date);
+        return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
     }
 
     return (
-        <div className={`flex flex-col lg:flex-row items-center justify-start w-full ${ColorMap.get(item.status)}`}>
-            <div className="flex flex-row items-center justify-center gap-4">
-                <div className="text-lg text-foreground-500 select-none">
-                    {item.start_at ? getDay(item.start_at) : ''}&emsp;from {item.start_at ? formatTime(item.start_at) : ''}
+        <div className={`flex flex-row items-center justify-start w-full px-2 py-1 border-l-4 bg-sand-300 ${BorderMap.get(item.status)}`}>
+            <div className="flex flex-row items-center gap-3 flex-1">
+                <div className="text-sm text-foreground-500 select-none">
+                    {item.start_at ? `${getDay(item.start_at)} ${formatTime(item.start_at)}` : ''}
                 </div>
                 {item.status === "pending" && (
                     <>

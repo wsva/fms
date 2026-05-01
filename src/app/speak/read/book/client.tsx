@@ -102,7 +102,10 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
                         />
                     ) : (
                         <div className="flex flex-row items-center gap-2 flex-wrap">
-                            <span className="font-medium">{node.title}</span>
+                            <div>
+                                <div className="font-medium">{node.title}</div>
+                                <div className="text-xs text-foreground-400 font-mono select-all">{node.uuid}</div>
+                            </div>
                             <div className="flex flex-row gap-1 flex-shrink-0">
                                 <Button isIconOnly size="sm" variant="light"
                                     className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -422,7 +425,10 @@ export default function Client({ email }: Props) {
                             </div>
                         ) : (
                             <div className="flex flex-row items-start justify-between gap-2">
-                                <div className="text-lg font-semibold">{item.title}</div>
+                                <div>
+                                    <div className="text-lg font-semibold">{item.title}</div>
+                                    <div className="text-xs text-foreground-400 font-mono select-all">{item.uuid}</div>
+                                </div>
                                 {item.user_id === email && (
                                     <div className="flex flex-row gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
                                         <Button size="sm" variant="flat"

@@ -1,17 +1,22 @@
 'use client'
 
 import { getTopword, searchTopword } from '@/app/actions/word'
-import { CircularProgress, Input, Pagination } from "@heroui/react"
+import { CircularProgress, Input, Link, Pagination } from "@heroui/react"
 import { useEffect, useState } from 'react'
 import { topword } from '@/lib/types'
 import Table from './table'
-import { BiSearch } from 'react-icons/bi'
+import { BiSearch, BiChevronLeft } from 'react-icons/bi'
 
 type Props = {
     email?: string;
     language: "" | "en" | "de";
     keyword: string;
     all: boolean;
+}
+
+const LANG_LABELS: Record<string, string> = {
+    de: 'Deutsch',
+    en: 'English',
 }
 
 export default function WordStore({ email, language, keyword, all }: Props) {
@@ -47,7 +52,30 @@ export default function WordStore({ email, language, keyword, all }: Props) {
     }, []);
 
     return (
-        <div className='flex flex-col w-full items-start justify-start my-4 gap-4'>
+        <div className='flex flex-col w-full items-start justify-start gap-4 py-4'>
+            {/* Breadcrumb header */}
+            <div className='w-full flex items-center justify-between'>
+                <div className='flex items-center gap-2 flex-wrap'>
+                    <Link href='/word/top' className='flex items-center gap-0.5 text-stone-400 hover:text-stone-600 text-sm no-underline'>
+                        <BiChevronLeft size={17} />
+                        <span>Word Store</span>
+                    </Link>
+                    <span className='text-stone-300 text-sm'>/</span>
+                    <span className='px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium'>
+                        {LANG_LABELS[language] || language.toUpperCase()}
+                    </span>
+                    <span className='px-2 py-0.5 rounded-md bg-stone-100 text-stone-500 text-xs'>
+                        {all ? 'all words' : 'new only'}
+                    </span>
+                </div>
+                {stateTotalPages > 0 && !stateLoading && (
+                    <span className='text-stone-400 text-xs tabular-nums'>
+                        {stateCurrentPage} / {stateTotalPages}
+                    </span>
+                )}
+            </div>
+
+            {/* Search */}
             <Input
                 isClearable
                 radius="lg"
@@ -60,21 +88,16 @@ export default function WordStore({ email, language, keyword, all }: Props) {
                     ],
                     innerWrapper: "bg-transparent",
                     inputWrapper: [
-                        "shadow-xl",
-                        "bg-default-200/50",
-                        "dark:bg-default/60",
-                        "backdrop-blur-xl",
-                        "backdrop-saturate-200",
-                        "hover:bg-default-200/70",
-                        "dark:hover:bg-default/70",
-                        "group-data-[focus=true]:bg-default-200/50",
-                        "dark:group-data-[focus=true]:bg-default/60",
+                        "shadow-sm",
+                        "bg-default-100",
+                        "hover:bg-amber-50/60",
+                        "group-data-[focus=true]:bg-amber-50/40",
                         "!cursor-text",
                     ],
                 }}
-                placeholder="Search in word store"
+                placeholder="Search word store..."
                 startContent={
-                    <BiSearch className="mb-0.5 text-foreground-400 pointer-events-none flex-shrink-0" />
+                    <BiSearch className="mb-0.5 text-stone-400 pointer-events-none flex-shrink-0" />
                 }
                 value={stateKeyword}
                 onClear={() => setStateKeyword("")}
@@ -88,36 +111,50 @@ export default function WordStore({ email, language, keyword, all }: Props) {
                 }}
             />
 
-            <div className='flex flex-row w-full items-center justify-center gap-4'>
-                <div>Page</div>
-                <Pagination showControls loop variant='bordered'
-                    total={stateTotalPages} page={stateCurrentPage}
-                    isDisabled={stateLoading}
-                    onChange={(page) => {
-                        setStateCurrentPage(page)
-                        loadData(stateKeyword, page)
-                    }}
-                />
-            </div >
-            {stateLoading
-                ? (
-                    <div className='flex flex-row w-full items-center justify-center gap-4'>
-                        <CircularProgress label="Loading..." />
-                    </div >
-                )
-                : (<Table words={stateWords} language={language} email={email} />)
-            }
-            <div className='flex flex-row w-full items-center justify-center gap-4'>
-                <div>Page</div>
-                <Pagination showControls loop variant='bordered'
-                    total={stateTotalPages} page={stateCurrentPage}
-                    isDisabled={stateLoading}
-                    onChange={(page) => {
-                        setStateCurrentPage(page)
-                        loadData(stateKeyword, page)
-                    }}
-                />
-            </div>
-        </div >
+            {/* Top pagination */}
+            {stateTotalPages > 1 && (
+                <div className='flex w-full items-center justify-center'>
+                    <Pagination
+                        showControls
+                        loop
+                        variant='bordered'
+                        total={stateTotalPages}
+                        page={stateCurrentPage}
+                        isDisabled={stateLoading}
+                        onChange={(page) => {
+                            setStateCurrentPage(page)
+                            loadData(stateKeyword, page)
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* Word list */}
+            {stateLoading ? (
+                <div className='flex w-full items-center justify-center py-16'>
+                    <CircularProgress size='md' label="Loading..." />
+                </div>
+            ) : (
+                <Table words={stateWords} language={language} email={email} />
+            )}
+
+            {/* Bottom pagination */}
+            {stateTotalPages > 1 && !stateLoading && (
+                <div className='flex w-full items-center justify-center py-2'>
+                    <Pagination
+                        showControls
+                        loop
+                        variant='bordered'
+                        total={stateTotalPages}
+                        page={stateCurrentPage}
+                        isDisabled={stateLoading}
+                        onChange={(page) => {
+                            setStateCurrentPage(page)
+                            loadData(stateKeyword, page)
+                        }}
+                    />
+                </div>
+            )}
+        </div>
     )
 }

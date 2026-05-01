@@ -4,13 +4,14 @@ import { ReactNode } from 'react';
 type Props = {
     isOpen: boolean;
     onClose: () => void;
-    header?: string;
+    header?: ReactNode;
     body: ReactNode;
     footerButtons?: ButtonProps[];
     imageModal?: boolean;
+    className?: string;
 }
 
-export default function AppModal({ isOpen, onClose, header, body, footerButtons, imageModal }: Props) {
+export default function AppModal({ isOpen, onClose, header, body, footerButtons, imageModal, className }: Props) {
     
     const handleClose = () => {
         setTimeout(() => onClose(), 10);
@@ -22,13 +23,13 @@ export default function AppModal({ isOpen, onClose, header, body, footerButtons,
             onClose={handleClose}
             placement='top-center'
             classNames={{
-                base: `${imageModal ? 'border-2 border-white' : ''}`,
+                base: `${imageModal ? 'border-2 border-white' : ''} ${className ?? ''}`,
                 body: `${imageModal ? 'p-0': ''}`
             }}
             motionProps={{
                 variants: {
-                    enter: { y: 0, opacity: 100, transition: { duration: 0.3 } },
-                    exit: { y: 100, opacity: 0, transition: { duration: 0.3 } }
+                    enter: { y: 0, scale: 1, opacity: 1, transition: { duration: 0.3 } },
+                    exit: { y: 100, scale: 1, opacity: 0, transition: { duration: 0.3 } }
                 }
             }}
         >
