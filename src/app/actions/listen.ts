@@ -477,9 +477,9 @@ export async function saveMediaTag(item: listen_media_ext): Promise<ActionResult
             })
         }
         if (item.tag_list_remove && item.tag_list_remove.length > 0) {
-            await prisma.qsa_card_tag.deleteMany({
+            await prisma.listen_media_tag.deleteMany({
                 where: {
-                    card_uuid: media_uuid,
+                    media_uuid: media_uuid,
                     tag_uuid: {
                         in: item.tag_list_remove,
                     }
@@ -488,6 +488,29 @@ export async function saveMediaTag(item: listen_media_ext): Promise<ActionResult
         }
 
         return { status: "success", data: true }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function setMediaTags(media_uuid: string, tag_uuids: string[]): Promise<ActionResult<string[]>> {
+    try {
+        await prisma.$transaction(async (tx) => {
+            await tx.listen_media_tag.deleteMany({ where: { media_uuid } })
+            if (tag_uuids.length > 0) {
+                await tx.listen_media_tag.createMany({
+                    data: tag_uuids.map((tag_uuid) => ({
+                        uuid: getUUID(),
+                        media_uuid,
+                        tag_uuid,
+                        created_at: new Date(),
+                        updated_at: new Date(),
+                    })),
+                })
+            }
+        })
+        return { status: "success", data: tag_uuids }
     } catch (error) {
         console.error(error)
         return { status: 'error', error: toErrorMessage(error) }

@@ -58,6 +58,9 @@ npm install
 npx prisma migrate deploy   # apply DB migrations
 npx prisma generate         # generate Prisma client
 npm run dev
+
+npx prisma@7.6.0 migrate dev --name add_settings_tag
+npx prisma@7.6.0 generate
 ```
 
 ---
