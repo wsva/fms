@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils"
-import { listen_media, listen_media_tag, listen_note, listen_subtitle, listen_tag, listen_transcript, Prisma } from "@/generated/prisma/client";
+import { listen_media, listen_media_tag, listen_note, listen_subtitle, listen_transcript, Prisma, settings_tag } from "@/generated/prisma/client";
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {
@@ -367,9 +367,9 @@ export async function removeNote(uuid: string): Promise<ActionResult<listen_note
     }
 }
 
-export async function getTag(uuid: string): Promise<ActionResult<listen_tag>> {
+export async function getTag(uuid: string): Promise<ActionResult<settings_tag>> {
     try {
-        const result = await prisma.listen_tag.findUnique({
+        const result = await prisma.settings_tag.findUnique({
             where: { uuid }
         })
         if (!result) {
@@ -382,19 +382,17 @@ export async function getTag(uuid: string): Promise<ActionResult<listen_tag>> {
     }
 }
 
-export async function getTagAll(email: string): Promise<ActionResult<listen_tag[]>> {
+export async function getTagAll(email: string): Promise<ActionResult<settings_tag[]>> {
     try {
-        const result = await prisma.listen_tag.findMany(
-            {
-                where: {
-                    OR: [
-                        { user_id: email },
-                        { user_id: "public" },
-                    ]
-                },
-                orderBy: { tag: 'asc' },
-            }
-        )
+        const result = await prisma.settings_tag.findMany({
+            where: {
+                AND: [
+                    { OR: [{ user_id: email }, { user_id: "public" }] },
+                    { scope: { contains: 'listen' } },
+                ]
+            },
+            orderBy: { tag: 'asc' },
+        })
         return { status: "success", data: result }
     } catch (error) {
         console.error(error)
@@ -402,10 +400,7 @@ export async function getTagAll(email: string): Promise<ActionResult<listen_tag[
     }
 }
 
-/**
- * if item.uuid is empty, then this is a new tag
- */
-export async function saveTag(item: listen_tag): Promise<ActionResult<listen_tag>> {
+export async function saveTag(item: settings_tag): Promise<ActionResult<settings_tag>> {
     if (item.tag.length === 0) {
         return { status: 'error', error: 'empty tag content' }
     }
@@ -413,13 +408,11 @@ export async function saveTag(item: listen_tag): Promise<ActionResult<listen_tag
         if (!item.uuid || item.uuid === '') {
             item.uuid = getUUID()
         }
-
-        const result = await prisma.listen_tag.upsert({
+        const result = await prisma.settings_tag.upsert({
             where: { uuid: item.uuid },
             create: item,
             update: item,
         })
-
         return { status: "success", data: result }
     } catch (error) {
         console.error(error)
@@ -427,30 +420,17 @@ export async function saveTag(item: listen_tag): Promise<ActionResult<listen_tag
     }
 }
 
-export async function createTag(item: listen_tag): Promise<ActionResult<listen_tag>> {
-    try {
-        const result = await prisma.listen_tag.create({
-            data: item,
-        })
-
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function removeTag(uuid: string): Promise<ActionResult<listen_tag>> {
+export async function removeTag(uuid: string): Promise<ActionResult<settings_tag>> {
     if (uuid.match(/_by_system$/)) {
         return { status: 'error', error: "cannot remove tag created by system" }
     }
     try {
-        const result = await prisma.listen_tag.delete({
-            where: { uuid }
-        })
-        await prisma.qsa_card_tag.deleteMany({
-            where: { tag_uuid: uuid }
-        })
+        const childCount = await prisma.settings_tag.count({ where: { parent_uuid: uuid } })
+        if (childCount > 0) {
+            return { status: 'error', error: "remove or reassign child tags first" }
+        }
+        await prisma.listen_media_tag.deleteMany({ where: { tag_uuid: uuid } })
+        const result = await prisma.settings_tag.delete({ where: { uuid } })
         return { status: "success", data: result }
     } catch (error) {
         console.error(error)
@@ -461,7 +441,7 @@ export async function removeTag(uuid: string): Promise<ActionResult<listen_tag>>
 export async function getMediaTag(email: string, media_uuid: string): Promise<ActionResult<string[]>> {
     try {
         const result = await prisma.$queryRaw<listen_media_tag[]>(
-            Prisma.sql`select t0.* from listen_media_tag t0, listen_tag t1 where
+            Prisma.sql`select t0.* from listen_media_tag t0, settings_tag t1 where
                 t0.tag_uuid = t1.uuid
                 and t0.media_uuid = ${media_uuid}
                 and t1.user_id in (${email}, 'public')

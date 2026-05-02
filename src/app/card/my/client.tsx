@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Chip, CircularProgress, Divider, Input, Pagination, Tooltip } from "@heroui/react"
-import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { qsa_card, settings_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';
 import { getCardAll } from '@/app/actions/card';
 import { FilterType, FilterTypeList, TagAll, TagUnspecified, TagNo } from "@/lib/card";
@@ -10,7 +10,7 @@ import { BiSearch } from 'react-icons/bi';
 
 type Props = {
     user_id: string
-    tag_list: qsa_tag[]
+    tag_list: settings_tag[]
 };
 
 export default function CardFilter({ user_id, tag_list }: Props) {

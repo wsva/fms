@@ -1,6 +1,6 @@
 'use client'
 
-import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { qsa_card, settings_tag } from "@/generated/prisma/client";
 import { useState } from 'react';
 import { FamiliarityList } from '@/lib/card';
 import { addToast, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger, Link, Popover, PopoverContent, PopoverTrigger, Tooltip } from '@heroui/react';
@@ -12,7 +12,7 @@ import Markdown2Html from '@/components/markdown/markdown';
 type Props = {
     user_id: string
     card: qsa_card
-    tag_list: qsa_tag[]
+    tag_list: settings_tag[]
 }
 
 export default function Card({ user_id, card, tag_list }: Props) {

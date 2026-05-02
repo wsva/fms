@@ -1,6 +1,6 @@
 'use client'
 
-import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { qsa_card, settings_tag } from "@/generated/prisma/client";
 import { useEffect, useState } from 'react';
 import { getTagAll } from '@/app/actions/card';
 import Card from './Card';
@@ -12,7 +12,7 @@ type Props = {
 }
 
 export default function CardList({ user_id, card_list }: Props) {
-    const [stateTagList, setStateTagList] = useState<qsa_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
 
     useEffect(() => {
         const loadData = async () => {

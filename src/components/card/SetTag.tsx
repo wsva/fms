@@ -3,14 +3,14 @@
 import { getCardTag, saveCardTag } from '@/app/actions/card';
 import { card_ext } from '@/lib/types';
 import { addToast, Checkbox, CheckboxGroup, CircularProgress, Link } from "@heroui/react"
-import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { qsa_card, settings_tag } from "@/generated/prisma/client";
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 type Props = {
     user_id: string;
     card: qsa_card;
-    tag_list: qsa_tag[];
+    tag_list: settings_tag[];
     onSuccess: () => void;
 }
 

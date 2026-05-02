@@ -3,7 +3,7 @@
 import { getTagAll, saveCard, saveCardTag } from '@/app/actions/card';
 import { getUUID } from '@/lib/utils';
 import { addToast, Checkbox, CheckboxGroup, Link } from "@heroui/react"
-import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { qsa_card, settings_tag } from "@/generated/prisma/client";
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -13,7 +13,7 @@ type Props = {
 }
 
 export default function Collect({ user_id, card }: Props) {
-    const [stateTagList, setStateTagList] = useState<qsa_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
     const [stateSelected, setStateSelected] = useState<string[]>([]);
     const { handleSubmit } = useForm();
 

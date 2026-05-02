@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { ActionResult, card_ext, card_review } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
-import { qsa_card, Prisma, qsa_tag, qsa_card_tag, qsa_card_review } from "@/generated/prisma/client";
+import { qsa_card, Prisma, qsa_card_tag, qsa_card_review, settings_tag } from "@/generated/prisma/client";
 import { FilterType, TagAll, TagUnspecified, TagNo } from "@/lib/card";
 
 export async function getCardAll(
@@ -302,9 +302,9 @@ export async function setCardFamiliarity(uuid: string, familiarity: number): Pro
     }
 }
 
-export async function getTag(uuid: string): Promise<ActionResult<qsa_tag>> {
+export async function getTag(uuid: string): Promise<ActionResult<settings_tag>> {
     try {
-        const result = await prisma.qsa_tag.findUnique({
+        const result = await prisma.settings_tag.findUnique({
             where: { uuid }
         })
         if (!result) {
@@ -317,44 +317,17 @@ export async function getTag(uuid: string): Promise<ActionResult<qsa_tag>> {
     }
 }
 
-export async function getTagAll(email: string): Promise<ActionResult<qsa_tag[]>> {
+export async function getTagAll(email: string): Promise<ActionResult<settings_tag[]>> {
     try {
-        const result = await prisma.qsa_tag.findMany(
-            {
-                where: {
-                    OR: [
-                        { user_id: email },
-                        { user_id: "public" },
-                    ]
-                },
-                orderBy: { tag: 'asc' },
-            }
-        )
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-/**
- * if item.uuid is empty, then this is a new tag
- */
-export async function saveTag(item: qsa_tag): Promise<ActionResult<qsa_tag>> {
-    if (item.tag.length === 0) {
-        return { status: 'error', error: 'empty tag content' }
-    }
-    try {
-        if (!item.uuid || item.uuid === '') {
-            item.uuid = getUUID()
-        }
-
-        const result = await prisma.qsa_tag.upsert({
-            where: { uuid: item.uuid },
-            create: item,
-            update: item,
+        const result = await prisma.settings_tag.findMany({
+            where: {
+                AND: [
+                    { OR: [{ user_id: email }, { user_id: "public" }] },
+                    { scope: { contains: 'card' } },
+                ]
+            },
+            orderBy: { tag: 'asc' },
         })
-
         return { status: "success", data: result }
     } catch (error) {
         console.error(error)
@@ -362,30 +335,17 @@ export async function saveTag(item: qsa_tag): Promise<ActionResult<qsa_tag>> {
     }
 }
 
-export async function createTag(item: qsa_tag): Promise<ActionResult<qsa_tag>> {
-    try {
-        const result = await prisma.qsa_tag.create({
-            data: item,
-        })
-
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function removeTag(uuid: string): Promise<ActionResult<qsa_tag>> {
+export async function removeTag(uuid: string): Promise<ActionResult<settings_tag>> {
     if (uuid.match(/_by_system$/)) {
         return { status: 'error', error: "cannot remove tag created by system" }
     }
     try {
-        const result = await prisma.qsa_tag.delete({
-            where: { uuid }
-        })
-        await prisma.qsa_card_tag.deleteMany({
-            where: { tag_uuid: uuid }
-        })
+        const childCount = await prisma.settings_tag.count({ where: { parent_uuid: uuid } })
+        if (childCount > 0) {
+            return { status: 'error', error: "remove or reassign child tags first" }
+        }
+        await prisma.qsa_card_tag.deleteMany({ where: { tag_uuid: uuid } })
+        const result = await prisma.settings_tag.delete({ where: { uuid } })
         return { status: "success", data: result }
     } catch (error) {
         console.error(error)
@@ -397,7 +357,7 @@ export async function removeTag(uuid: string): Promise<ActionResult<qsa_tag>> {
 export async function getCardTag(email: string, card_uuid: string): Promise<ActionResult<card_ext>> {
     try {
         const result = await prisma.$queryRaw<qsa_card_tag[]>(
-            Prisma.sql`select t0.* from qsa_card_tag t0, qsa_tag t1 where
+            Prisma.sql`select t0.* from qsa_card_tag t0, settings_tag t1 where
                 t0.tag_uuid = t1.uuid
                 and t0.card_uuid = ${card_uuid}
                 and t1.user_id in (${email}, 'public')

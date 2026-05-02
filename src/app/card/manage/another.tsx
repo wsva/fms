@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { addToast, Button, CircularProgress, Pagination, Select, SelectItem } from "@heroui/react"
-import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { qsa_card, settings_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';
 import { getCardAll, getTagAll } from '@/app/actions/card';
 import { FilterType } from '@/lib/card';
@@ -15,9 +15,9 @@ type Props = {
 
 export default function CardMarket({ user_id_my, user_id_another }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
-    const [stateTagsOfAnother, setStateTagsOfAnother] = useState<qsa_tag[]>([])
+    const [stateTagsOfAnother, setStateTagsOfAnother] = useState<settings_tag[]>([])
     const [stateTagUUIDOfAnother, setStateTagUUIDOfAnother] = useState<string>("")
-    const [stateMyTags, setStateMyTags] = useState<qsa_tag[]>([])
+    const [stateMyTags, setStateMyTags] = useState<settings_tag[]>([])
     const [stateMyTagUUID, setStateMyTagUUID] = useState<string>("")
     const [stateData, setStateData] = useState<qsa_card[]>([])
     const [stateReload, setStateReload] = useState<number>(1);

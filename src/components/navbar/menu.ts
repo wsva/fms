@@ -27,8 +27,7 @@ export const menuList: MenuGroup[] = [
     {
         name: "Listen",
         items: [
-            { key: "listen_tag", name: "Manage Tags", description: "manage tags", href: "/listen/tag" },
-            { key: "listen_dictation", name: "Dictation", description: "dictation", href: "/listen/dictation" },
+{ key: "listen_dictation", name: "Dictation", description: "dictation", href: "/listen/dictation" },
             { key: "listen_media", name: "My Media", description: "my media", href: "/listen/media" },
         ],
     },
@@ -54,8 +53,7 @@ export const menuList: MenuGroup[] = [
     {
         name: "Card",
         items: [
-            { key: "card_tag", name: "Manage Tags", description: "manage tags", href: "/card/tag" },
-            { key: "card_add", name: "Add Card", description: "add new card", href: "/card/add?edit=y" },
+{ key: "card_add", name: "Add Card", description: "add new card", href: "/card/add?edit=y" },
             { key: "card_my", name: "My Cards", description: "my cards", href: "/card/my" },
             { key: "card_manage", name: "Manage Cards", description: "manage cards", href: "/card/manage" },
             { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test" },
@@ -64,6 +62,7 @@ export const menuList: MenuGroup[] = [
     {
         name: "Settings",
         items: [
+            { key: "settings_tags", name: "Tags", description: "manage tags for all features", href: "/settings/tags" },
             { key: "settings_api", name: "API", description: "view APIs", href: "/settings/api" },
             { key: "settings_api_key", name: "API Key", description: "manage API key", href: "/settings/api-key" },
         ],

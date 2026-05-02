@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import MdEditor from '@/components/MdEditor'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
-import { qsa_card, qsa_tag } from "@/generated/prisma/client";
+import { qsa_card, settings_tag } from "@/generated/prisma/client";
 import { getCardTag, getTagAll, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
@@ -24,7 +24,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     const searchParams = useSearchParams()
     const [stateEdit, setStateEdit] = useState(edit_view);
     const [stateCard, setStateCard] = useState<qsa_card>();
-    const [stateTagList, setStateTagList] = useState<qsa_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
     const [stateTagSelected, setStateTagSelected] = useState<string[]>([]);
     const { register, handleSubmit, formState, watch } = useForm<qsa_card>({});

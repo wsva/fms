@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { addToast, Button, Chip, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
-import { listen_media, listen_note, listen_subtitle, listen_tag, listen_transcript } from "@/generated/prisma/client";
+import { listen_media, listen_note, listen_subtitle, listen_transcript, settings_tag } from "@/generated/prisma/client";
 import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia, saveMediaTag } from '@/app/actions/listen'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
@@ -42,7 +42,7 @@ type Props = { user_id: string; uuid: string }
 
 export default function Page({ user_id, uuid }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
-    const [stateTagList, setStateTagList] = useState<listen_tag[]>([])
+    const [stateTagList, setStateTagList] = useState<settings_tag[]>([])
     const [stateMediaList, setStateMediaList] = useState<listen_media[]>([])
     const [stateTagUUID, setStateTagUUID] = useState<string>("")
 

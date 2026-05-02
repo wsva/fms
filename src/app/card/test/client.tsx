@@ -6,7 +6,7 @@ import { card_review } from '@/lib/types';
 import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import { searchExample } from "@/app/actions/word";
-import { qsa_tag } from "@/generated/prisma/client";
+import { settings_tag } from "@/generated/prisma/client";
 import Markdown2Html from '@/components/markdown/markdown';
 
 type Props = {
@@ -16,7 +16,7 @@ type Props = {
 }
 
 export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
-    const [stateTag, setStateTag] = useState<qsa_tag>()
+    const [stateTag, setStateTag] = useState<settings_tag>()
     const [stateCard, setStateCard] = useState<card_review>()
     const [stateSuggestion, setStateSuggestion] = useState<boolean>(false)
     const [stateAnswer, setStateAnswer] = useState<boolean>(false)

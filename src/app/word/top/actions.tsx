@@ -1,10 +1,11 @@
 'use client'
 
 import { trashWord } from '@/app/actions/word';
-import { saveCard, saveCardTag, getTagAll, createTag } from '@/app/actions/card';
+import { saveCard, saveCardTag, getTagAll } from '@/app/actions/card';
+import { saveTag } from '@/app/actions/settings';
 import { getUUID } from '@/lib/utils';
 import { addToast, Button, ButtonGroup, Link, Tooltip, useDisclosure } from "@heroui/react"
-import { qsa_tag } from "@/generated/prisma/client";
+import { settings_tag } from "@/generated/prisma/client";
 import { useState } from 'react';
 import CardModal from './modal';
 import { card_ext, topword } from '@/lib/types';
@@ -18,7 +19,7 @@ type Props = {
 
 export default function Page({ word, language, email }: Props) {
     const [stateDisabled, setStateDisabled] = useState<boolean>(!email || word.in_card === "Y");
-    const [stateTagList, setStateTagList] = useState<qsa_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     const addCardEasy = async () => {
@@ -49,10 +50,12 @@ export default function Page({ word, language, email }: Props) {
         }
 
         const tag_uuid = `word_${language}_by_system`
-        await createTag({
+        await saveTag({
             uuid: tag_uuid,
             tag: `word_${language}`,
             description: "created by system",
+            scope: 'card',
+            parent_uuid: null,
             user_id: "public",
             created_at: new Date(),
             updated_at: new Date(),
@@ -105,10 +108,12 @@ export default function Page({ word, language, email }: Props) {
         }
 
         const tag_uuid = `word_${language}_by_system`
-        await createTag({
+        await saveTag({
             uuid: tag_uuid,
             tag: `word_${language}`,
             description: "created by system",
+            scope: 'card',
+            parent_uuid: null,
             user_id: "public",
             created_at: new Date(),
             updated_at: new Date(),
