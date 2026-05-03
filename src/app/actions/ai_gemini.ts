@@ -5,19 +5,22 @@ import { GoogleGenAI, createUserContent, createPartFromUri } from '@google/genai
 import fs from 'fs';
 import path from 'path';
 import { saveWaveFile } from './ai_utils';
+import { getKey } from './settings_general';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+async function getAI(): Promise<GoogleGenAI> {
+    const apiKey = await getKey('GEMINI_API_KEY');
+    return new GoogleGenAI({ apiKey: apiKey ?? undefined });
+}
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
+export async function callSTT(audioBlob: Blob, model?: string): Promise<ActionResult<string>> {
     try {
+        const ai = await getAI();
         const myfile = await ai.files.upload({
             file: audioBlob,
             config: { mimeType: "audio/wav" },
         })
         const result = await ai.models.generateContent({
-            model: "gemini-2.0-flash-001",
+            model: model || "gemini-2.0-flash-001",
             contents: createUserContent([
                 createPartFromUri(myfile.uri!, myfile.mimeType!),
                 "Generate a transcript of the speech.",
@@ -32,6 +35,7 @@ export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
 
 export async function callTTS(uuid: string, text: string): Promise<ActionResult<string>> {
     try {
+        const ai = await getAI();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text }] }],

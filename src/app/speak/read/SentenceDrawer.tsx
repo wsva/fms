@@ -1,9 +1,8 @@
 'use client'
 
-import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Select, SelectItem, Textarea } from "@heroui/react"
+import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea } from "@heroui/react"
 import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle, MdUnfoldMore, MdUnfoldLess } from 'react-icons/md'
 import { highlightDifferences } from '@/app/speak/lcs'
-import { EngineList } from '@/lib/recording'
 import { DrawerState } from './types'
 import { useState, useRef, useEffect } from 'react'
 
@@ -76,7 +75,6 @@ export default function SentenceDrawer({
     drawer, content, onContentChange,
     bgColor, onBgColorChange,
     hasAudio, saving, recording, processing,
-    engine, onEngineChange,
     bookUUID, chapterPath,
     onClose, onPlay, onToggleRecording,
     onSaveAdd, onSaveEdit, onDelete,
@@ -252,15 +250,6 @@ export default function SentenceDrawer({
                                 <MdPlayCircle size={expanded ? 24 : 20} />
                             </Button>
                         )}
-                        <Select size="sm" className="w-36"
-                            selectedKeys={[engine]}
-                            onChange={e => onEngineChange(e.target.value)}
-                            aria-label="STT Engine"
-                        >
-                            {EngineList.map(v => (
-                                <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
-                            ))}
-                        </Select>
                         <Button size={expanded ? 'md' : 'sm'} color="primary" variant="flat"
                             isDisabled={!recording && processing}
                             onPress={onToggleRecording}

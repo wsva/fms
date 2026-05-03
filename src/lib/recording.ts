@@ -1,27 +1,17 @@
-//import { recognizeAudio } from "@/app/actions/ai_local_redis";
-//import { callSTT } from "@/app/actions/ai_gemini";
-import { ActionResult } from "./types";
+import type { ActionResult } from "./types";
+import { defaultSttSettings } from "./stt";
+import type { SttSettings } from "./stt";
 
-export interface EngineOption {
-    key: string;
-    value: string;
-}
-
-export const EngineList: EngineOption[] = [
-    { key: "none", value: "None" },
-    { key: "gemini", value: "Google Gemini" },
-    //{ key: "whisper", value: "OpenAI Whisper" },
-    { key: "local", value: "Local Whisper" },
-];
-
-export async function getCallSTT(engine: string) {
-    let mod;
-    if (engine === "gemini") {
-        mod = await import("@/app/actions/ai_gemini");
-    } else {
-        mod = await import("@/app/actions/ai_local_redis");
+export async function getCallSTT(settings: SttSettings) {
+    if (settings.engine === "gemini") {
+        const mod = await import("@/app/actions/ai_gemini");
+        return (blob: Blob) => mod.callSTT(blob, settings.gemini.model);
     }
-    return mod.callSTT;
+    if (settings.engine === "local") {
+        const mod = await import("@/app/actions/ai_local_redis");
+        return (blob: Blob) => mod.callSTT(blob, settings.local.timeout);
+    }
+    return null;
 }
 
 function playBeep() {
@@ -54,7 +44,7 @@ type RecordingProps = {
 
     // recognize text from audio
     recognize: boolean,
-    sttEngine?: string,
+    sttSettings?: SttSettings,
     setStateProcessing?: React.Dispatch<React.SetStateAction<boolean>>,
 
     handleLog?: (log: string) => void,
@@ -74,7 +64,13 @@ export const startRecording = async (props: RecordingProps) => {
             } else {
                 props.handleLog?.("Sending to STT service, waiting for response...");
                 props.setStateProcessing?.(true);
-                const callSTT = await getCallSTT(props.sttEngine || "local");
+                const callSTT = await getCallSTT(props.sttSettings ?? defaultSttSettings);
+                if (!callSTT) {
+                    props.handleLog?.("No STT engine configured.");
+                    await props.handleAudio({ status: "error", error: "no engine" }, audioBlob);
+                    props.setStateProcessing?.(false);
+                    return;
+                }
                 const result = await callSTT(audioBlob);
                 if (result.status === "success") {
                     props.handleLog?.("STT recognition completed.");

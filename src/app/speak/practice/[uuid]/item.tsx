@@ -1,7 +1,7 @@
 'use client'
 
 import { getUUID } from '@/lib/utils';
-import { addToast, Button, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { addToast, Button, Spinner, Textarea } from "@heroui/react";
 import { useEffect, useState } from 'react'
 import { practice_audio, practice_text } from "@/generated/prisma/client";
 import { getAudioDBAll, getText, removeAudioDB, saveAudioDB, saveText } from '@/app/actions/practice';
@@ -11,7 +11,7 @@ import { MdDelete, MdPlayCircle } from 'react-icons/md';
 import { cacheBlobInMemory, dropWeakCache, getBlobFromWeakCache } from '../../weak-cache';
 import { deleteBlobFromIndexedDB, getBlobFromIndexedDB, saveBlobToIndexedDB } from '../../idb-blob-store';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
-import { EngineList, toggleRecording } from '@/lib/recording';
+import { toggleRecording } from '@/lib/recording';
 
 type Props = {
     uuid: string,
@@ -25,7 +25,6 @@ export default function Item({ uuid, user_id }: Props) {
     const [stateReload, setStateReload] = useState<number>(1);
     const [stateLoading, setStateLoading] = useState<boolean>(false);
     const [stateSaving, setStateSaving] = useState<boolean>(false);
-    const [stateEngine, setStateEngine] = useState<string>("local");
     const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
     const [stateRecording, setStateRecording] = useState<boolean>(false);
     const [stateProcessing, setStateProcessing] = useState<boolean>(false);
@@ -163,7 +162,6 @@ export default function Item({ uuid, user_id }: Props) {
             stateRecording,
             setStateRecording,
             recognize: true,
-            sttEngine: stateEngine,
             setStateProcessing,
             handleAudio,
         });
@@ -235,15 +233,6 @@ export default function Item({ uuid, user_id }: Props) {
             )}
 
             <div className='flex flex-col md:flex-row items-center justify-center gap-4 my-4'>
-                <Select className='max-w-sm'
-                    selectedKeys={[stateEngine]}
-                    onChange={(e) => setStateEngine(e.target.value)}
-                    startContent={<div className="whitespace-nowrap font-bold">AI Engine</div>}
-                >
-                    {EngineList.map((v) => (
-                        <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
-                    ))}
-                </Select>
                 <Button variant='solid' color='primary' id='button-toggel-recording'
                     isDisabled={!stateRecording && stateProcessing}
                     onPress={async () => {

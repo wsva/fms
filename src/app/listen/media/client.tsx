@@ -365,7 +365,7 @@ export default function Page({ user_id, uuid }: Props) {
 
                 {/* Active cue bar — mobile only (desktop version is in right panel) */}
                 {stateCues.length > 0 && (
-                    <div className={`lg:hidden rounded-xl px-4 py-3 border-l-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
+                    <div className={`lg:hidden rounded-xl px-4 py-3 border-l-4 border-r-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
                         <p className="text-xl font-semibold leading-snug">
                             {stateDictation
                                 ? <span className="italic text-foreground-400 text-base">Dictation mode</span>
@@ -599,7 +599,7 @@ export default function Page({ user_id, uuid }: Props) {
 
                     {/* Active cue — desktop only */}
                     {stateCues.length > 0 && (
-                        <div className={`hidden lg:block rounded-xl px-4 py-3 border-l-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
+                        <div className={`hidden lg:block rounded-xl px-4 py-3 border-l-4 border-r-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
                             <p className="text-lg font-semibold leading-snug">
                                 {stateDictation
                                     ? <span className="italic text-foreground-400 text-base">Dictation mode</span>

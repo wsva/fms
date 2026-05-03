@@ -8,8 +8,9 @@ import { ActionResult } from "@/lib/types";
 const REDIS_HOST = process.env.REDIS_HOST
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD
 
-export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
+export async function callSTT(audioBlob: Blob, timeoutSec?: number): Promise<ActionResult<string>> {
     const uuid = getUUID();
+    const timeoutMs = (timeoutSec ?? 30) * 1000;
 
     // 1. 连接 Redis
     const client = createClient({ url: `redis://default:${REDIS_PASSWORD}@${REDIS_HOST}:6379` });
@@ -39,8 +40,7 @@ export async function callSTT(audioBlob: Blob): Promise<ActionResult<string>> {
                 resolve({ status: "success", data: await safeText(result) });
                 return;
             }
-            // timeout 30s
-            if (Date.now() - start > 30000) {
+            if (Date.now() - start > timeoutMs) {
                 await client.quit();
                 resolve({ status: "error", error: "Recognition timed out" });
                 return;

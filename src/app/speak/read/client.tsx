@@ -158,8 +158,7 @@ export default function Client({ email }: Props) {
             mode: 'audio',
             stateRecorder, setStateRecorder,
             stateRecording, setStateRecording,
-            recognize: stateEngine !== 'none',
-            sttEngine: stateEngine,
+            recognize: true,
             setStateProcessing,
             handleAudio,
         })

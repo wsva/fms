@@ -5,7 +5,7 @@ import { addToast, Button, Input, Select, SelectItem, Spinner, Textarea } from "
 import { getUUID } from '@/lib/utils';
 import { ask_question } from "@/generated/prisma/client";
 import { getQuestionAll, removeQuestion, saveQuestion } from '@/app/actions/ask';
-import { EngineList, toggleRecording } from '@/lib/recording';
+import { toggleRecording } from '@/lib/recording';
 import { ActionResult } from '@/lib/types';
 import { removeAudio, saveAudio } from '@/app/actions/audio';
 import Question from './question';
@@ -15,7 +15,6 @@ type Props = {
 }
 
 export default function Page({ user_id }: Props) {
-    const [stateEngine, setStateEngine] = useState<string>("local");
     const [stateMode, setStateMode] = useState<"video" | "audio">("video");
     const [stateStream, setStateStream] = useState<MediaStream>();
     const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
@@ -182,7 +181,6 @@ export default function Page({ user_id }: Props) {
             stateRecording,
             setStateRecording,
             recognize: true,
-            sttEngine: stateEngine,
             setStateProcessing,
             handleVideo,
             handleAudio,
@@ -215,15 +213,6 @@ export default function Page({ user_id }: Props) {
     return (
         <div>
             <div className='flex flex-col sm:flex-row items-center justify-center gap-4 my-4'>
-                <Select aria-label='stt engine' className='w-full sm:max-w-sm'
-                    selectedKeys={[stateEngine]}
-                    onChange={(e) => setStateEngine(e.target.value)}
-                    startContent={<div className="whitespace-nowrap font-bold">AI Engine</div>}
-                >
-                    {EngineList.map((v) => (
-                        <SelectItem key={v.key} textValue={v.value}>{v.value}</SelectItem>
-                    ))}
-                </Select>
                 <Select aria-label='stt engine' className='w-full sm:max-w-sm'
                     selectedKeys={[stateMode]}
                     onChange={(e) => setStateMode(e.target.value as "video" | "audio")}

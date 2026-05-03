@@ -90,7 +90,6 @@ export default function Page({ user_id: _user_id, name }: Props) {
             stateRecording,
             setStateRecording,
             recognize: false,
-            sttEngine: 'none',
             setStateProcessing,
             handleAudio: async (_result, audioBlob) => {
                 setStatePending({

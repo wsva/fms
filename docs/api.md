@@ -92,6 +92,102 @@ curl -X POST http://localhost:3000/api/card \
 
 ---
 
+## Card Improvements
+
+The improvement workflow: an external script fetches cards that need processing, runs AI, and writes improvements back via the API. The web UI at `/card/improve` is used to review and accept/reject each suggestion.
+
+### List cards needing improvement
+
+```
+GET /api/card/improve?todo=1
+```
+
+Returns all cards owned by the user that have no pending or approved improvement record yet.
+
+**Authentication:** Required (session cookie or `x-api-key` header)
+
+**Response:** Array of `qsa_card` objects.
+
+### List improvement records
+
+```
+GET /api/card/improve
+GET /api/card/improve?status=pending
+GET /api/card/improve?status=approved
+GET /api/card/improve?status=rejected
+GET /api/card/improve?page=1&limit=20
+```
+
+Returns improvement records with embedded card data.
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "uuid": "...",
+      "card_uuid": "...",
+      "current": "{\"question\":\"...\",\"suggestion\":\"...\",\"answer\":\"...\",\"note\":\"...\"}",
+      "improved": "{\"question\":\"...\",\"suggestion\":\"...\",\"answer\":\"...\",\"note\":\"...\"}",
+      "status": "pending",
+      "note": "",
+      "card": { ... }
+    }
+  ],
+  "page": 1,
+  "total_pages": 3,
+  "total_records": 25
+}
+```
+
+### Write an improvement
+
+```
+POST /api/card/improve
+```
+
+Creates a new improvement record with `status: "pending"`.
+
+**Authentication:** Required
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `card_uuid` | string | Yes | UUID of the card being improved |
+| `current` | string | Yes | JSON of current card content `{question, suggestion, answer, note}` |
+| `improved` | string | Yes | JSON of AI-improved card content `{question, suggestion, answer, note}` |
+| `note` | string | No | Optional note about the improvement |
+
+**Example request:**
+
+```python
+import requests, json
+
+session = "your-session-token"
+headers = {"Cookie": f"better-auth.session_token={session}", "Content-Type": "application/json"}
+# or: headers = {"x-api-key": "your-api-key", "Content-Type": "application/json"}
+
+card = requests.get("https://your-host/api/card/improve?todo=1", headers=headers).json()[0]
+
+current = {"question": card["question"], "suggestion": card["suggestion"],
+           "answer": card["answer"], "note": card["note"]}
+improved = {**current, "answer": "AI-improved answer here"}
+
+requests.post("https://your-host/api/card/improve", headers=headers,
+    json={"card_uuid": card["uuid"], "current": json.dumps(current), "improved": json.dumps(improved)})
+```
+
+**Response:** The created `qsa_card_improve` object with status `201 Created`.
+
+**Notes:**
+- `user_id` is set from the session.
+- `uuid` is generated server-side.
+- `status` is always set to `"pending"` — use the `/card/improve` web UI to accept or reject.
+
+---
+
 ## Books
 
 ### List books
@@ -392,7 +488,9 @@ Creates a new listen media item for the authenticated user.
 
 **Authentication:** Required
 
-**Request body:**
+Accepts either `application/json` or `multipart/form-data`. When a file is uploaded the server saves it to `/fms_data/listen/media/<uuid>.<ext>` and auto-sets `source` if not provided.
+
+**JSON body fields:**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -400,7 +498,16 @@ Creates a new listen media item for the authenticated user.
 | `source` | string | Yes | URL or path to the media file |
 | `note` | string | No | Additional notes (defaults to `""`) |
 
-**Example request:**
+**Multipart form fields:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | Yes | Display title of the media |
+| `file` | file | No | Audio or video file to upload |
+| `source` | string | No | URL or path; defaults to `/api/data/listen/media/<uuid>.<ext>` when `file` is provided, required otherwise |
+| `note` | string | No | Additional notes (defaults to `""`) |
+
+**Example request (JSON):**
 
 ```bash
 curl -X POST http://localhost:3000/api/listen/media \
@@ -408,9 +515,19 @@ curl -X POST http://localhost:3000/api/listen/media \
   -H "Cookie: better-auth.session_token=<your-session-token>" \
   -d '{
     "title": "Nachrichten vom 01.05.2026",
-    "source": "/media/news/2026-05-01.mp3",
+    "source": "/api/data/listen/media/a1b2c3d4.mp3",
     "note": "B2 level"
   }'
+```
+
+**Example request (file upload):**
+
+```bash
+curl -X POST http://localhost:3000/api/listen/media \
+  -H "Cookie: better-auth.session_token=<your-session-token>" \
+  -F "title=Nachrichten vom 01.05.2026" \
+  -F "note=B2 level" \
+  -F "file=@/path/to/news-2026-05-01.mp3"
 ```
 
 **Success response — `201 Created`:**
@@ -420,7 +537,7 @@ curl -X POST http://localhost:3000/api/listen/media \
   "uuid": "a1b2c3d4e5f6...",
   "user_id": "user@example.com",
   "title": "Nachrichten vom 01.05.2026",
-  "source": "/media/news/2026-05-01.mp3",
+  "source": "/api/data/listen/media/a1b2c3d4e5f6.mp3",
   "note": "B2 level",
   "created_at": "2026-05-01T10:00:00.000Z",
   "updated_at": "2026-05-01T10:00:00.000Z"
@@ -431,9 +548,9 @@ curl -X POST http://localhost:3000/api/listen/media \
 
 | Status | Cause |
 |---|---|
-| `400` | Missing required fields or invalid JSON |
+| `400` | Missing required fields, invalid JSON, or missing `source` when no file uploaded |
 | `401` | Not authenticated |
-| `500` | Database error |
+| `500` | Database error or file write failure |
 
 ---
 
@@ -551,7 +668,7 @@ Returns the subtitle file for a given subtitle UUID. Supports `vtt` and `srt` fo
 
 ### Bulk import audio files with subtitles
 
-The following script iterates over all audio files in a directory, creates a media entry for each one, uploads the matching `.vtt` subtitle file (same base name) if it exists, and optionally assigns tags.
+The following script iterates over all audio files in a directory, uploads each file to the server, uploads the matching `.vtt` subtitle file (same base name) if it exists, and optionally assigns tags.
 
 **Prerequisites:** Python 3, `requests` (`pip install requests`)
 
@@ -571,7 +688,7 @@ TAG_UUIDS = [t for t in os.environ.get("TAG_UUIDS", "").split(",") if t]
 
 AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".flac"}
 
-headers = {"x-api-key": API_KEY, "Content-Type": "application/json"}
+auth_headers = {"x-api-key": API_KEY}
 
 for audio_file in sorted(AUDIO_DIR.iterdir()):
     if audio_file.suffix.lower() not in AUDIO_EXTENSIONS:
@@ -580,11 +697,14 @@ for audio_file in sorted(AUDIO_DIR.iterdir()):
     title = audio_file.stem
     vtt_file = audio_file.with_suffix(".vtt")
 
-    # Create media entry
-    r = requests.post(f"{BASE_URL}/api/listen/media", headers=headers, json={
-        "title": title,
-        "source": str(audio_file),
-    })
+    # Create media entry and upload audio file
+    with audio_file.open("rb") as f:
+        r = requests.post(
+            f"{BASE_URL}/api/listen/media",
+            headers=auth_headers,
+            data={"title": title},
+            files={"file": (audio_file.name, f)},
+        )
     data = r.json()
     media_uuid = data.get("uuid")
     if not media_uuid:
