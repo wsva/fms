@@ -1,5 +1,5 @@
 import { Avatar, Button, Input, Link, Tooltip } from "@heroui/react"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MdOutlineAddCircleOutline, MdOutlineHelpOutline, MdOutlineLightbulbCircle, MdOutlinePlayCircle } from 'react-icons/md'
 import { pureContent, splitContent, hideWord, playMediaPart } from '@/lib/listen/utils'
 import { Cue } from "@/lib/listen/subtitle"
@@ -7,12 +7,18 @@ import { Cue } from "@/lib/listen/subtitle"
 type Props = {
     cue: Cue;
     media: HTMLMediaElement | null;
+    initialSuccess?: boolean;
+    onSuccess?: (index: number, success: boolean) => void;
 }
 
-export default function Page({ cue, media }: Props) {
+export default function Page({ cue, media, initialSuccess, onSuccess }: Props) {
     const [stateInput, setStateInput] = useState<string>('')
-    const [stateSuccess, setStateSuccess] = useState<boolean>(false)
+    const [stateSuccess, setStateSuccess] = useState<boolean>(initialSuccess ?? false)
     const [stateTips, setStateTips] = useState<boolean>(false)
+
+    useEffect(() => {
+        setStateSuccess(initialSuccess ?? false)
+    }, [initialSuccess])
 
     const isSuccess = (answer: string) => {
         return answer === cue.text.join(" ")
@@ -35,7 +41,7 @@ export default function Page({ cue, media }: Props) {
         <div className='flex flex-row items-center justify-start w-full gap-1'>
             {/** show status */}
             <Tooltip content='turn green on success: punctuation does not matter'>
-                <Avatar size='md' radius="sm" name={`${cue.index}`} className={`text-md${stateSuccess ? '' : ' bg-sand-300'}`}
+                <Avatar size='md' radius="sm" name='' fallback={<span className="text-sm font-medium">{cue.index}</span>} className={`text-md${stateSuccess ? '' : ' bg-sand-300'}`}
                     color={stateSuccess ? 'success' : 'default'}
                 />
             </Tooltip>
@@ -83,10 +89,14 @@ export default function Page({ cue, media }: Props) {
                         } else {
                             // ❚ ▪ ◾ • 🔹
                             setStateInput(content)
-                            if (!stateSuccess && isSuccess(content))
+                            if (!stateSuccess && isSuccess(content)) {
                                 setStateSuccess(true)
-                            if (stateSuccess && !isSuccess(content))
+                                onSuccess?.(cue.index, true)
+                            }
+                            if (stateSuccess && !isSuccess(content)) {
                                 setStateSuccess(false)
+                                onSuccess?.(cue.index, false)
+                            }
                         }
                     }}
                     onFocus={() => { setStateTips(true) }}

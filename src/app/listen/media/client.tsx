@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { addToast, Button, Chip, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_transcript, settings_tag } from "@/generated/prisma/client";
-import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia, saveMediaTag } from '@/app/actions/listen'
+import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag } from '@/app/actions/listen'
 import { getKey } from '@/app/actions/settings_general'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
-import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdMovieCreation } from 'react-icons/md'
+import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdMovieCreation, MdCheckCircle } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
 import { Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
@@ -58,6 +58,9 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateCues, updateStateCues] = useImmer<Cue[]>([])
     const [stateActiveCue, setStateActiveCue] = useState<string>("")
     const [stateDictation, setStateDictation] = useState<boolean>(false)
+    const [stateDictSuccessSet, setStateDictSuccessSet] = useState<Set<number>>(new Set())
+    const [stateDictStatus, setStateDictStatus] = useState<'in_progress' | 'complete'>('in_progress')
+    const dictSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const [stateTranscriptList, setStateTranscriptList] = useState<listen_transcript[]>([])
     const [stateReloadTranscript, setStateReloadTranscript] = useState<number>(1)
@@ -209,6 +212,28 @@ export default function Page({ user_id, uuid }: Props) {
     }, [updateStateCues, stateSubtitle])
 
     useEffect(() => {
+        if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
+        if (!stateMediaUUID || !stateSubtitle?.uuid) {
+            setStateDictSuccessSet(new Set())
+            setStateDictStatus('in_progress')
+            return
+        }
+        const load = async () => {
+            const result = await getDictation(user_id, stateMediaUUID, stateSubtitle.uuid)
+            if (result.status === 'success' && result.data) {
+                setStateDictSuccessSet(new Set(
+                    result.data.completed.split(',').filter(Boolean).map(Number)
+                ))
+                setStateDictStatus(result.data.status as 'in_progress' | 'complete')
+            } else {
+                setStateDictSuccessSet(new Set())
+                setStateDictStatus('in_progress')
+            }
+        }
+        load()
+    }, [user_id, stateMediaUUID, stateSubtitle?.uuid])
+
+    useEffect(() => {
         const videoEl = videoRef.current
         if (!videoEl) return
         const onTimeUpdate = () => {
@@ -249,6 +274,33 @@ export default function Page({ user_id, uuid }: Props) {
             .catch(() => { if (!cancelled) setResolvedMediaSrc(source) })
         return () => { cancelled = true }
     }, [stateMedia.media.source, stateMediaFile, localServiceUrl])
+
+    const scheduleDictSave = (successSet: Set<number>, status: string) => {
+        if (!stateMediaUUID || !stateSubtitle?.uuid) return
+        if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
+        const mediaUUID = stateMediaUUID
+        const subtitleUUID = stateSubtitle.uuid
+        const completed = Array.from(successSet).sort((a, b) => a - b).join(',')
+        dictSaveTimer.current = setTimeout(() => {
+            saveDictation(user_id, mediaUUID, subtitleUUID, status, completed)
+        }, 1000)
+    }
+
+    const handleDictSuccess = (index: number, success: boolean) => {
+        const newSet = new Set(stateDictSuccessSet)
+        if (success) newSet.add(index); else newSet.delete(index)
+        setStateDictSuccessSet(newSet)
+        scheduleDictSave(newSet, stateDictStatus)
+    }
+
+    const handleDictStatusToggle = async () => {
+        if (!stateMediaUUID || !stateSubtitle?.uuid) return
+        if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
+        const newStatus = stateDictStatus === 'complete' ? 'in_progress' : 'complete'
+        setStateDictStatus(newStatus)
+        const completed = Array.from(stateDictSuccessSet).sort((a, b) => a - b).join(',')
+        await saveDictation(user_id, stateMediaUUID, stateSubtitle.uuid, newStatus, completed)
+    }
 
     const handleSave = async () => {
         setStateSaving(true)
@@ -534,6 +586,22 @@ export default function Page({ user_id, uuid }: Props) {
                                 ))}
                             </Select>
 
+                            {stateCues.length > 0 && (
+                                <div className="flex items-center justify-between px-1">
+                                    <span className="text-sm text-foreground-500">
+                                        {stateDictSuccessSet.size} / {stateCues.length} ✓
+                                    </span>
+                                    <Button size="sm"
+                                        variant={stateDictStatus === 'complete' ? 'solid' : 'bordered'}
+                                        color={stateDictStatus === 'complete' ? 'success' : 'default'}
+                                        startContent={stateDictStatus === 'complete' ? <MdCheckCircle size={16} /> : undefined}
+                                        onPress={handleDictStatusToggle}
+                                    >
+                                        {stateDictStatus === 'complete' ? 'Complete' : 'Mark Complete'}
+                                    </Button>
+                                </div>
+                            )}
+
                             {stateCues.map((cue, i) => (
                                 <div key={i}
                                     className={`rounded-xl border-2 p-3 transition-colors ${
@@ -545,7 +613,13 @@ export default function Page({ user_id, uuid }: Props) {
                                             {formatTime(cue.start_ms)}
                                         </span>
                                     </div>
-                                    <Dictation cue={cue} media={videoRef.current} />
+                                    <Dictation
+                                        key={`${stateSubtitle?.uuid}-${cue.index}`}
+                                        cue={cue}
+                                        media={videoRef.current}
+                                        initialSuccess={stateDictSuccessSet.has(cue.index)}
+                                        onSuccess={handleDictSuccess}
+                                    />
                                 </div>
                             ))}
                         </Tab>

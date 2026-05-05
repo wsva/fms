@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils"
-import { listen_media, listen_media_tag, listen_note, listen_subtitle, listen_transcript, Prisma, settings_tag } from "@/generated/prisma/client";
+import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_transcript, Prisma, settings_tag } from "@/generated/prisma/client";
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {
@@ -134,6 +134,9 @@ export async function removeMedia(uuid: string): Promise<ActionResult<boolean>> 
                 where: { media_uuid: uuid }
             })
             await prismaTx.listen_note.deleteMany({
+                where: { media_uuid: uuid }
+            })
+            await prismaTx.listen_dictation.deleteMany({
                 where: { media_uuid: uuid }
             })
         });
@@ -511,6 +514,32 @@ export async function setMediaTags(media_uuid: string, tag_uuids: string[]): Pro
             }
         })
         return { status: "success", data: tag_uuids }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function getDictation(user_id: string, media_uuid: string, subtitle_uuid: string): Promise<ActionResult<listen_dictation | null>> {
+    try {
+        const result = await prisma.listen_dictation.findUnique({
+            where: { user_id_media_uuid_subtitle_uuid: { user_id, media_uuid, subtitle_uuid } },
+        })
+        return { status: 'success', data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function saveDictation(user_id: string, media_uuid: string, subtitle_uuid: string, status: string, completed: string): Promise<ActionResult<listen_dictation>> {
+    try {
+        const result = await prisma.listen_dictation.upsert({
+            where: { user_id_media_uuid_subtitle_uuid: { user_id, media_uuid, subtitle_uuid } },
+            create: { uuid: getUUID(), user_id, media_uuid, subtitle_uuid, status, completed, created_at: new Date(), updated_at: new Date() },
+            update: { status, completed, updated_at: new Date() },
+        })
+        return { status: 'success', data: result }
     } catch (error) {
         console.error(error)
         return { status: 'error', error: toErrorMessage(error) }
