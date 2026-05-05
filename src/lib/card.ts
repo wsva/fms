@@ -2,7 +2,7 @@ export enum FilterType {
     Normal = "normal",
     Easy = "easy",
     Unspecified = "unspecified",
-    Uncomplete = "uncomplete",
+    Incomplete = "incomplete",
 }
 
 export const FilterTypeList = [
@@ -19,7 +19,7 @@ export const FilterTypeList = [
         description: "familiarity = 6",
     },
     {
-        value: FilterType.Uncomplete,
+        value: FilterType.Incomplete,
         description: "question or answer is empty",
     },
 ]

@@ -92,7 +92,7 @@ export async function getCardAll(
                 sql_body_keyword,
             ], " ")
             break
-        case FilterType.Uncomplete:
+        case FilterType.Incomplete:
             sql_body = Prisma.join([
                 Prisma.sql`
                     and (length(t0.question) = 0 or length(t0.answer) = 0)
@@ -143,7 +143,7 @@ export async function getCard(uuid: string): Promise<ActionResult<qsa_card>> {
  * if item.uuid is empty, then this is a new exampe
  */
 export async function saveCard(item: qsa_card): Promise<ActionResult<qsa_card>> {
-    if (item.question.length === 0 || item.answer.length === 0) {
+    if (item.question.length === 0) {
         return { status: 'error', error: 'invalid card' }
     }
     try {

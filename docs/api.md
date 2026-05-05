@@ -92,6 +92,91 @@ curl -X POST http://localhost:3000/api/card \
 
 ---
 
+### Update a card
+
+```
+PATCH /api/card
+```
+
+Updates fields on an existing flashcard owned by the authenticated user.
+
+**Authentication:** Required (API key or session)
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `uuid` | string (UUID) | Yes | UUID of the card to update |
+| `answer` | string | Yes | New answer content |
+| `question` | string | No | Replacement question text |
+| `suggestion` | string | No | Replacement hint text |
+| `note` | string | No | Replacement notes |
+
+**Example request (Python):**
+
+```python
+import requests
+requests.patch(
+    "https://your-host/api/card",
+    headers={"x-api-key": "<key>", "Content-Type": "application/json"},
+    json={"uuid": "<card-uuid>", "answer": "# English\n**noun** ..."},
+)
+```
+
+**Success response — `200 OK`:** the updated card object (same shape as POST 201).
+
+**Error responses:**
+
+| Status | Body | Cause |
+|---|---|---|
+| `400` | `{ "error": "Validation failed", "details": [...] }` | Missing or invalid fields |
+| `401` | `{ "error": "Unauthorized" }` | No valid session |
+| `403` | `{ "error": "Forbidden" }` | Card belongs to another user |
+| `404` | `{ "error": "..." }` | Card UUID not found |
+
+---
+
+## Incomplete Cards
+
+### List incomplete cards
+
+```
+GET /api/card/incomplete
+GET /api/card/incomplete?tag_uuid=<uuid>
+GET /api/card/incomplete?tag_uuid=<uuid>&page=1&limit=20
+```
+
+Returns cards owned by the authenticated user whose `answer` field is empty. Optionally filtered to cards that have a specific tag assigned.
+
+**Authentication:** Required (session cookie or `x-api-key` header)
+
+**Query params:**
+
+| Param | Required | Description |
+|---|---|---|
+| `tag_uuid` | No | UUID of a tag in `settings_tag`; when provided only cards with this tag are returned |
+| `page` | No | Page number (default `1`) |
+| `limit` | No | Results per page, 1–100 (default `20`) |
+
+**Success response — `200 OK`:**
+
+```json
+{
+  "data": [ ...qsa_card objects... ],
+  "page": 1,
+  "total_pages": 2,
+  "total_records": 35
+}
+```
+
+**Error responses:**
+
+| Status | Cause |
+|---|---|
+| `401` | Not authenticated |
+
+---
+
 ## Card Improvements
 
 The improvement workflow: an external script fetches cards that need processing, runs AI, and writes improvements back via the API. The web UI at `/card/improve` is used to review and accept/reject each suggestion.
