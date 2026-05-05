@@ -35,7 +35,7 @@ export default function Page({ cue, media }: Props) {
         <div className='flex flex-row items-center justify-start w-full gap-1'>
             {/** show status */}
             <Tooltip content='turn green on success: punctuation does not matter'>
-                <Avatar size='md' radius="sm" name={`${cue.index}`} className="text-md bg-sand-300"
+                <Avatar size='md' radius="sm" name={`${cue.index}`} className={`text-md${stateSuccess ? '' : ' bg-sand-300'}`}
                     color={stateSuccess ? 'success' : 'default'}
                 />
             </Tooltip>

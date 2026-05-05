@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { addToast, Button, Chip, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_transcript, settings_tag } from "@/generated/prisma/client";
 import { getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveMedia, saveMediaTag } from '@/app/actions/listen'
+import { getKey } from '@/app/actions/settings_general'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
 import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdMovieCreation } from 'react-icons/md'
@@ -65,6 +66,9 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateReloadNote, setStateReloadNote] = useState<number>(1)
 
     const videoRef = useRef<HTMLVideoElement>(null)
+
+    const [localServiceUrl, setLocalServiceUrl] = useState('')
+    const [resolvedMediaSrc, setResolvedMediaSrc] = useState('')
 
     const [sidebarWidth, setSidebarWidth] = useState<number>(208) // 208px = w-52
 
@@ -224,6 +228,28 @@ export default function Page({ user_id, uuid }: Props) {
         return () => videoEl.removeEventListener("timeupdate", onTimeUpdate)
     }, [stateCues, updateStateCues])
 
+    useEffect(() => {
+        getKey('local_service').then(url => setLocalServiceUrl(url ?? '')).catch(() => {})
+    }, [])
+
+    useEffect(() => {
+        if (stateMediaFile) {
+            const url = URL.createObjectURL(stateMediaFile)
+            setResolvedMediaSrc(url)
+            return () => URL.revokeObjectURL(url)
+        }
+        const source = stateMedia.media.source
+        if (!source) { setResolvedMediaSrc(''); return }
+        if (!localServiceUrl || !source.startsWith('/api/data/')) { setResolvedMediaSrc(source); return }
+        let cancelled = false
+        const localUrl = localServiceUrl.replace(/\/$/, '') + source
+        setResolvedMediaSrc('')
+        fetch(localUrl, { method: 'HEAD' })
+            .then(resp => { if (!cancelled) setResolvedMediaSrc(resp.ok ? localUrl : source) })
+            .catch(() => { if (!cancelled) setResolvedMediaSrc(source) })
+        return () => { cancelled = true }
+    }, [stateMedia.media.source, stateMediaFile, localServiceUrl])
+
     const handleSave = async () => {
         setStateSaving(true)
         const result = await saveMedia(stateMedia.media)
@@ -269,9 +295,8 @@ export default function Page({ user_id, uuid }: Props) {
             active ? 'bg-sand-300 text-foreground font-semibold' : 'hover:bg-sand-200 text-foreground-700'
         }`
 
-    const mediaSrc = stateMediaFile ? URL.createObjectURL(stateMediaFile) : stateMedia.media.source
     const audioMode = stateMediaFile ? isAudio(stateMediaFile.name) : isAudio(stateMedia.media.source)
-    const hasVideo = !!mediaSrc
+    const hasVideo = !!resolvedMediaSrc
 
     return (
         <div className="flex flex-col lg:flex-row w-full gap-3 py-3 px-3">
@@ -580,12 +605,12 @@ export default function Page({ user_id, uuid }: Props) {
                 <div className="lg:sticky lg:top-4 flex flex-col gap-3">
                     {hasVideo ? (
                         audioMode ? (
-                            <HlsPlayer videoRef={videoRef} src={mediaSrc} audioMode={true}
+                            <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
                                 subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
                             />
                         ) : (
                         <div className="rounded-xl overflow-hidden shadow-lg bg-black">
-                            <HlsPlayer className="w-full" videoRef={videoRef} src={mediaSrc}
+                            <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc}
                                 subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
                             />
                         </div>

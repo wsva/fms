@@ -7,16 +7,12 @@ export default async function Page() {
     const session = await auth.api.getSession({ headers: await headers() });
     const email = session?.user?.email || '';
 
-    const [gemini, openai] = await Promise.all([
-        getSetting(email, 'GEMINI_API_KEY'),
-        getSetting(email, 'OPENAI_API_KEY'),
-    ]);
+    const localService = await getSetting(email, 'local_service');
 
     return (
         <Client
             user_id={email}
-            initialGeminiKey={typeof gemini === 'string' ? gemini : ''}
-            initialOpenaiKey={typeof openai === 'string' ? openai : ''}
+            initialLocalService={localService.status === 'success' ? localService.data : ''}
         />
     );
 }
