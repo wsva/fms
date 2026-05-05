@@ -12,7 +12,7 @@ const CreateCardSchema = z.object({
 });
 
 const UpdateCardSchema = z.object({
-    uuid: z.string().uuid('uuid is required'),
+    uuid: z.string().min(1, 'uuid is required'),
     answer: z.string().min(1, 'answer is required'),
     question: z.string().optional(),
     suggestion: z.string().optional(),
