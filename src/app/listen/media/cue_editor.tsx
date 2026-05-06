@@ -46,7 +46,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
                     </div>
                 }
             >
-                <Input aria-label='input answer' variant='bordered'
+                <Input aria-label='input answer' variant='bordered' autoComplete="one-time-code"
                     id={`d-s-i-${cue.index}`}
                     classNames={{
                         mainWrapper: 'border-b-2 border-gray-400',
@@ -167,7 +167,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                         color={stateSuccess ? 'success' : 'default'}
                     />
                 </Tooltip>
-                <Input aria-label="start time" size="sm" className="w-fit"
+                <Input aria-label="start time" size="sm" className="w-fit" autoComplete="one-time-code"
                     classNames={{ inputWrapper: 'bg-sand-200' }}
                     color={!validateVttTime(stateStart) ? 'danger' : 'default'}
                     value={stateStart}
@@ -184,7 +184,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                     }
                 />
                 <div>{'-->'}</div>
-                <Input aria-label="end time" size="sm" className="w-fit"
+                <Input aria-label="end time" size="sm" className="w-fit" autoComplete="one-time-code"
                     classNames={{ inputWrapper: 'bg-sand-200' }}
                     color={!validateVttTime(stateEnd) ? 'danger' : 'default'}
                     value={stateEnd}
@@ -286,7 +286,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 />
             ) : (
                 (mode === "edit" || mode === "dictation_edit") && (
-                    <Input aria-label='text' variant='bordered'
+                    <Input aria-label='text' variant='bordered' autoComplete="one-time-code"
                         classNames={{
                             mainWrapper: 'border-b-2 border-gray-400',
                             inputWrapper: 'border-none pl-0 ml-0',
