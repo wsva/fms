@@ -209,45 +209,43 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                 )}
             </div>
 
-            {
-                stateEdit ? (
-                    <div className="flex flex-col items-center justify-center w-full">
-                        {stateEditAsText ? (
-                            <Textarea
-                                classNames={{
-                                    "input": 'text-xl leading-tight font-roboto',
-                                }}
-                                value={stateData.subtitle}
-                                minRows={10}
-                                maxRows={30}
-                                autoComplete='off'
-                                autoCorrect='off'
-                                spellCheck='false'
-                                onChange={(e) => {
-                                    const new_subtitle = {
-                                        ...stateData,
-                                        subtitle: e.target.value,
-                                    };
-                                    setStateData(new_subtitle);
-                                }}
-                            />
-                        ) : (
-                            <SubtitleCorrect
-                                stateCues={stateCues}
-                                updateStateCues={updateStateCues}
-                                media={media}
-                            />
-                        )}
+            {stateEdit ? (
+                <div className="flex flex-col items-center justify-center w-full">
+                    {stateEditAsText ? (
+                        <Textarea
+                            classNames={{
+                                "input": 'text-xl leading-tight font-roboto',
+                            }}
+                            value={stateData.subtitle}
+                            minRows={10}
+                            maxRows={30}
+                            autoComplete='off'
+                            autoCorrect='off'
+                            spellCheck='false'
+                            onChange={(e) => {
+                                const new_subtitle = {
+                                    ...stateData,
+                                    subtitle: e.target.value,
+                                };
+                                setStateData(new_subtitle);
+                            }}
+                        />
+                    ) : (
+                        <SubtitleCorrect
+                            stateCues={stateCues}
+                            updateStateCues={updateStateCues}
+                            media={media}
+                        />
+                    )}
+                </div>
+            ) : (
+                <div className='flex flex-col items-start justify-start w-full gap-0.5'>
+                    <div className='text-lg whitespace-pre-wrap'>
+                        {item.subtitle}
                     </div>
-                ) : (
-                    <div className='flex flex-col items-start justify-start w-full gap-0.5'>
-                        <div className='text-lg whitespace-pre-wrap'>
-                            {item.subtitle}
-                        </div>
-                        <div className='text-sm text-foreground-400'>by {item.user_id}</div>
-                    </div>
-                )
-            }
+                    <div className='text-sm text-foreground-400'>by {item.user_id}</div>
+                </div>
+            )}
         </div >
     );
 };

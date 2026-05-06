@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { addToast } from '@heroui/react'
-import { saveCard } from '@/app/actions/card'
+import { saveCard, saveCardTag } from '@/app/actions/card'
 import { getUUID } from '@/lib/utils'
 import { authClient } from '@/lib/auth-client'
+import { getKey } from '@/app/actions/settings_general';
 
 type MenuPos = { x: number; y: number }
 
@@ -41,8 +42,11 @@ export default function CardContextMenu() {
 
     const handleAddCard = async () => {
         setMenuPos(null)
+
+        const card_uuid = getUUID()
+        
         const result = await saveCard({
-            uuid: getUUID(),
+            uuid: card_uuid,
             user_id: email,
             question: selectedText,
             answer: '',
@@ -52,11 +56,22 @@ export default function CardContextMenu() {
             created_at: new Date(),
             updated_at: new Date(),
         })
-        if (result.status === 'success') {
-            addToast({ title: 'Card saved', color: 'success' })
-        } else {
-            addToast({ title: 'Save failed', color: 'danger' })
+        if (result.status !== 'success') {
+            addToast({ title: 'Save card failed', color: 'danger' })
+            return
         }
+
+        const default_tags = await getKey('default_card_tags')
+        const result_tag = await saveCardTag({
+            uuid: card_uuid,
+            tag_list_new: default_tags?.split(","),
+        })
+        if (result_tag.status !== 'success') {
+            addToast({ title: 'Save tags failed', color: 'danger' })
+            return
+        }
+
+        addToast({ title: 'Card saved', color: 'success' })
     }
 
     const menuStyle = menuPos ? {

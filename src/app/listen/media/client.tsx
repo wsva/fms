@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { addToast, Button, Chip, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_transcript, settings_tag } from "@/generated/prisma/client";
-import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag } from '@/app/actions/listen'
+import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag, saveSubtitle } from '@/app/actions/listen'
 import { getKey } from '@/app/actions/settings_general'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
 import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdMovieCreation, MdCheckCircle } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
-import { Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
+import { buildVTT, Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
 import { useImmer } from 'use-immer'
-import Dictation from './dictation'
+import CueEditor from './cue_editor'
 import Subtitle from './subtitle'
 import Note from './note'
 import Transcript from './transcript'
@@ -32,12 +32,6 @@ const newMedia = (user_id: string): listen_media_ext => ({
     tag_list_new: [],
     tag_list_remove: [],
 })
-
-const formatTime = (ms: number) => {
-    const s = Math.floor(ms / 1000)
-    const m = Math.floor(s / 60)
-    return `${m}:${String(s % 60).padStart(2, '0')}`
-}
 
 type Props = { user_id: string; uuid: string }
 
@@ -60,6 +54,8 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateDictation, setStateDictation] = useState<boolean>(false)
     const [stateDictSuccessSet, setStateDictSuccessSet] = useState<Set<number>>(new Set())
     const [stateDictStatus, setStateDictStatus] = useState<'in_progress' | 'complete'>('in_progress')
+    const [stateEditingCue, setStateEditingCue] = useState<number | null>(null)
+    const [stateDictSaving, setStateDictSaving] = useState(false)
     const dictSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const [stateTranscriptList, setStateTranscriptList] = useState<listen_transcript[]>([])
@@ -73,7 +69,7 @@ export default function Page({ user_id, uuid }: Props) {
     const [localServiceUrl, setLocalServiceUrl] = useState('')
     const [resolvedMediaSrc, setResolvedMediaSrc] = useState('')
 
-    const [sidebarWidth, setSidebarWidth] = useState<number>(208) // 208px = w-52
+    const [sidebarWidth, setSidebarWidth] = useState<number>(320)
 
     const handleSidebarDrag = useCallback((e: React.MouseEvent) => {
         e.preventDefault()
@@ -238,23 +234,21 @@ export default function Page({ user_id, uuid }: Props) {
         if (!videoEl) return
         const onTimeUpdate = () => {
             const currentTime = videoEl.currentTime
+            const ms = currentTime * 1000
             const currentCue = stateCues.find(
-                cue => currentTime * 1000 >= cue.start_ms && currentTime * 1000 <= cue.end_ms
+                cue => ms >= cue.start_ms && ms <= cue.end_ms
             )
-            if (currentCue) {
-                setStateActiveCue(currentCue.text.join(" "))
-                updateStateCues(d => {
-                    const ms = currentTime * 1000
-                    d.forEach(cue => { cue.active = ms >= cue.start_ms && ms <= cue.end_ms })
-                })
-            }
+            setStateActiveCue(currentCue ? currentCue.text.join(" ") : "")
+            updateStateCues(d => {
+                d.forEach(cue => { cue.active = ms >= cue.start_ms && ms <= cue.end_ms })
+            })
         }
         videoEl.addEventListener("timeupdate", onTimeUpdate)
         return () => videoEl.removeEventListener("timeupdate", onTimeUpdate)
     }, [stateCues, updateStateCues])
 
     useEffect(() => {
-        getKey('local_service').then(url => setLocalServiceUrl(url ?? '')).catch(() => {})
+        getKey('local_service').then(url => setLocalServiceUrl(url ?? '')).catch(() => { })
     }, [])
 
     useEffect(() => {
@@ -302,6 +296,41 @@ export default function Page({ user_id, uuid }: Props) {
         await saveDictation(user_id, stateMediaUUID, stateSubtitle.uuid, newStatus, completed)
     }
 
+    const handleExpandStart = (cue: Cue) => {
+        updateStateCues(draft => {
+            const index = draft.findIndex(c => c.index === cue.index)
+            if (index === 0) draft[index] = { ...draft[index], start_ms: 1 }
+            else if (index > 0) draft[index] = { ...draft[index], start_ms: draft[index - 1].end_ms + 1 }
+        })
+    }
+
+    const handleExpandEnd = (cue: Cue) => {
+        updateStateCues(draft => {
+            const index = draft.findIndex(c => c.index === cue.index)
+            if (index === draft.length - 1) draft[index] = { ...draft[index], end_ms: draft[index].start_ms + 3600000 }
+            else if (index >= 0) draft[index] = { ...draft[index], end_ms: draft[index + 1].start_ms - 1 }
+        })
+    }
+
+    const handleDictCueSave = async () => {
+        if (!stateSubtitle) return
+        setStateDictSaving(true)
+        const result = await saveSubtitle({
+            ...stateSubtitle,
+            subtitle: buildVTT(stateCues),
+            format: 'vtt',
+            updated_at: new Date(),
+        })
+        if (result.status === 'success') {
+            addToast({ title: 'save subtitle success', color: 'success' })
+            setStateReloadSubtitle(n => n + 1)
+            setStateEditingCue(null)
+        } else {
+            addToast({ title: 'save subtitle error', color: 'danger' })
+        }
+        setStateDictSaving(false)
+    }
+
     const handleSave = async () => {
         setStateSaving(true)
         const result = await saveMedia(stateMedia.media)
@@ -332,7 +361,7 @@ export default function Page({ user_id, uuid }: Props) {
     const handleRemove = async () => {
         if (!stateMedia) return
         setStateSaving(true)
-        const result = await removeMedia(uuid)
+        const result = await removeMedia(stateMediaUUID)
         if (result.status === "success") {
             addToast({ title: "remove data success", color: "success" })
         } else {
@@ -343,8 +372,7 @@ export default function Page({ user_id, uuid }: Props) {
     }
 
     const sidebarBtnClass = (active: boolean) =>
-        `w-full text-left px-2 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            active ? 'bg-sand-300 text-foreground font-semibold' : 'hover:bg-sand-200 text-foreground-700'
+        `w-full text-left px-2 py-1.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-sand-300 text-foreground font-semibold' : 'hover:bg-sand-200 text-foreground-700'
         }`
 
     const audioMode = stateMediaFile ? isAudio(stateMediaFile.name) : isAudio(stateMedia.media.source)
@@ -353,11 +381,44 @@ export default function Page({ user_id, uuid }: Props) {
     return (
         <div className="flex flex-col lg:flex-row w-full gap-3 py-3 px-3">
 
-            {/* LEFT SIDEBAR — desktop only */}
-            <aside className="hidden lg:flex flex-col shrink-0 self-start sticky top-3 relative"
+            {/* LEFT SIDEBAR — player always visible; library desktop only */}
+            <aside className="flex flex-col gap-3 shrink-0 lg:self-start lg:sticky lg:top-3 relative lg:max-h-[calc(100vh-1.5rem)] lg:overflow-hidden"
                 style={{ width: sidebarWidth }}
             >
-                <div className="bg-sand-100 rounded-xl p-3 flex flex-col gap-0.5 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
+                {/* Player */}
+                {hasVideo ? (
+                    audioMode ? (
+                        <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
+                            subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
+                        />
+                    ) : (
+                        <div className="rounded-xl overflow-hidden shadow-lg bg-black">
+                            <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc}
+                                subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
+                            />
+                        </div>
+                    )
+                ) : (
+                    <div className="rounded-xl bg-sand-100 flex items-center justify-center h-40 text-foreground-400 flex-col gap-2">
+                        <MdMovieCreation size={32} className="opacity-30" />
+                        <p className="text-xs">No media selected</p>
+                    </div>
+                )}
+
+                {/* Active cue */}
+                {stateCues.length > 0 && (
+                    <div className={`rounded-xl px-4 py-3 border-l-4 border-r-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
+                        <p className="text-lg font-semibold leading-snug">
+                            {stateDictation
+                                ? <span className="italic text-foreground-400 text-base">Dictation mode</span>
+                                : (stateActiveCue || ' ')
+                            }
+                        </p>
+                    </div>
+                )}
+
+                {/* Library — desktop only */}
+                <div className="hidden lg:flex flex-col bg-sand-100 rounded-xl p-3 gap-0.5 overflow-y-auto flex-1 min-h-0">
                     <div className="flex items-center justify-between px-1 mb-2">
                         <span className="text-xs font-semibold text-foreground-400 uppercase tracking-wider">Library</span>
                         {stateLoading && <CircularProgress size="sm" aria-label="Loading" />}
@@ -380,11 +441,10 @@ export default function Page({ user_id, uuid }: Props) {
                                 <div className="ml-2 mt-0.5 mb-1 flex flex-col gap-0.5 border-l-2 border-sand-300 pl-2">
                                     {stateMediaList.map(m => (
                                         <button key={m.uuid}
-                                            className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${
-                                                stateMediaUUID === m.uuid
-                                                    ? 'bg-sand-300 font-semibold text-foreground'
-                                                    : 'hover:bg-sand-200 text-foreground-600'
-                                            }`}
+                                            className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${stateMediaUUID === m.uuid
+                                                ? 'bg-sand-300 font-semibold text-foreground'
+                                                : 'hover:bg-sand-200 text-foreground-600'
+                                                }`}
                                             onClick={() => setStateMediaUUID(m.uuid)}
                                         >
                                             <span className="line-clamp-2">{m.title}</span>
@@ -396,9 +456,9 @@ export default function Page({ user_id, uuid }: Props) {
                     ))}
                 </div>
 
-                {/* Drag handle */}
+                {/* Drag handle — desktop only */}
                 <div
-                    className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize group flex items-center justify-center"
+                    className="hidden lg:flex absolute top-0 right-0 w-1.5 h-full cursor-col-resize group items-center justify-center"
                     onMouseDown={handleSidebarDrag}
                 >
                     <div className="w-0.5 h-8 rounded-full bg-sand-300 group-hover:bg-primary transition-colors" />
@@ -438,18 +498,6 @@ export default function Page({ user_id, uuid }: Props) {
                     >
                         {stateMedia.media.user_id}
                     </Link>
-                )}
-
-                {/* Active cue bar — mobile only (desktop version is in right panel) */}
-                {stateCues.length > 0 && (
-                    <div className={`lg:hidden rounded-xl px-4 py-3 border-l-4 border-r-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
-                        <p className="text-xl font-semibold leading-snug">
-                            {stateDictation
-                                ? <span className="italic text-foreground-400 text-base">Dictation mode</span>
-                                : (stateActiveCue || ' ')
-                            }
-                        </p>
-                    </div>
                 )}
 
                 {/* Tabs */}
@@ -604,19 +652,70 @@ export default function Page({ user_id, uuid }: Props) {
 
                             {stateCues.map((cue, i) => (
                                 <div key={i}
-                                    className={`rounded-xl border-2 p-3 transition-colors ${
-                                        cue.active ? 'border-primary bg-sand-200' : 'border-sand-300 bg-sand-100'
-                                    }`}
+                                    className={`rounded-xl border-2 py-1.5 px-2 transition-colors ${cue.active ? 'border-primary bg-sand-200' : 'border-sand-300 bg-sand-100'
+                                        }`}
                                 >
-                                    <div className="mb-2">
-                                        <span className="text-xs font-mono text-foreground-400 bg-sand-200 px-2 py-0.5 rounded-full">
-                                            {formatTime(cue.start_ms)}
-                                        </span>
-                                    </div>
-                                    <Dictation
-                                        key={`${stateSubtitle?.uuid}-${cue.index}`}
+                                    <CueEditor
                                         cue={cue}
                                         media={videoRef.current}
+
+                                        allowEdit={stateSubtitle?.user_id === user_id}
+                                        mode={stateEditingCue !== cue.index ? "dictation" : "dictation_edit"}
+
+                                        saving={stateDictSaving}
+                                        onUpdate={(updated) => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === updated.index)
+                                            if (idx !== -1) draft[idx] = updated
+                                        })}
+                                        onExpandStart={() => handleExpandStart(cue)}
+                                        onExpandEnd={() => handleExpandEnd(cue)}
+                                        onDelete={() => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === cue.index)
+                                            if (idx !== -1) draft.splice(idx, 1)
+                                            draft.forEach((item, i) => item.index = i + 1)
+                                        })}
+                                        onMergeNext={() => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === cue.index)
+                                            if (idx >= 0 && idx < draft.length - 1) {
+                                                if (draft[idx].text.length === 1 && draft[idx + 1].text.length === 1) {
+                                                    draft[idx].text = [draft[idx].text[0] + " " + draft[idx + 1].text[0]];
+                                                } else {
+                                                    draft[idx].text.push(...draft[idx + 1].text);
+                                                }
+                                                draft[idx].end_ms = draft[idx + 1].end_ms;
+                                                draft.splice(idx + 1, 1);
+
+                                                draft.forEach((item, i) => {
+                                                    item.index = i + 1;
+                                                });
+                                            }
+                                        })}
+                                        onInsert={(pos: number) => updateStateCues(draft => {
+                                            const newItem = {
+                                                index: 0,
+                                                start_ms: 0,
+                                                end_ms: 0,
+                                                text: [],
+                                                translation: [],
+                                                active: false,
+                                            };
+
+                                            if (pos < 1) {
+                                                draft.unshift(newItem);
+                                            } else if (pos > draft.length) {
+                                                draft.push(newItem);
+                                            } else {
+                                                draft.splice(pos - 1, 0, newItem);
+                                            }
+
+                                            draft.forEach((item, i) => {
+                                                item.index = i + 1;
+                                            });
+                                        })}
+                                        onSave={handleDictCueSave}
+                                        onEdit={() => setStateEditingCue(cue.index)}
+                                        onDone={() => setStateEditingCue(null)}
+
                                         initialSuccess={stateDictSuccessSet.has(cue.index)}
                                         onSuccess={handleDictSuccess}
                                     />
@@ -671,42 +770,6 @@ export default function Page({ user_id, uuid }: Props) {
                             ))}
                         </Tab>
                     </Tabs>
-                </div>
-            </div>
-
-            {/* RIGHT PANEL — video (order-1 = top on mobile, order-last = right on lg+) */}
-            <div className="order-1 lg:order-last lg:w-80 xl:w-96 shrink-0">
-                <div className="lg:sticky lg:top-4 flex flex-col gap-3">
-                    {hasVideo ? (
-                        audioMode ? (
-                            <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
-                                subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
-                            />
-                        ) : (
-                        <div className="rounded-xl overflow-hidden shadow-lg bg-black">
-                            <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc}
-                                subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
-                            />
-                        </div>
-                        )
-                    ) : (
-                        <div className="hidden lg:flex rounded-xl bg-sand-100 items-center justify-center h-40 text-foreground-400 flex-col gap-2">
-                            <MdMovieCreation size={32} className="opacity-30" />
-                            <p className="text-xs">No media selected</p>
-                        </div>
-                    )}
-
-                    {/* Active cue — desktop only */}
-                    {stateCues.length > 0 && (
-                        <div className={`hidden lg:block rounded-xl px-4 py-3 border-l-4 border-r-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
-                            <p className="text-lg font-semibold leading-snug">
-                                {stateDictation
-                                    ? <span className="italic text-foreground-400 text-base">Dictation mode</span>
-                                    : (stateActiveCue || ' ')
-                                }
-                            </p>
-                        </div>
-                    )}
                 </div>
             </div>
 

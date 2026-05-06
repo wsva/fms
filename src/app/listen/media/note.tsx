@@ -84,14 +84,14 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
                     classNames={{
                         "input": 'text-xl leading-tight font-roboto',
                     }}
-                    value={item.note}
+                    value={stateData.note}
                     minRows={10}
                     maxRows={30}
                     autoComplete='off'
                     autoCorrect='off'
                     spellCheck='false'
                     onChange={(e) => {
-                        setStateData({ ...item, note: e.target.value })
+                        setStateData({ ...stateData, note: e.target.value })
                     }}
                 />
             ) : (
