@@ -71,6 +71,7 @@ const OFFSET_X = 16;
 const OFFSET_Y = 16;
 
 export default function VoiceInputFloat() {
+    const [hasLocalService, setHasLocalService] = useState(false);
     const [visible, setVisible] = useState(false);
     const [recording, setRecording] = useState(false);
     const [processing, setProcessing] = useState(false);
@@ -95,14 +96,25 @@ export default function VoiceInputFloat() {
         return () => document.removeEventListener('mousemove', onMove);
     }, []);
 
-    // Load local service URL once
+    // Load local service URL once, and update live when the setting is saved
     useEffect(() => {
         getKey('local_service')
             .then(url => {
-                localServiceRef.current = url?.replace(/\/$/, '') ?? '';
-                enabledRef.current = !!url;
+                const cleaned = url?.replace(/\/$/, '') ?? '';
+                localServiceRef.current = cleaned;
+                enabledRef.current = !!cleaned;
+                setHasLocalService(!!cleaned);
             })
             .catch(() => {});
+
+        const onChanged = (e: Event) => {
+            const cleaned = ((e as CustomEvent<string>).detail ?? '').replace(/\/$/, '');
+            localServiceRef.current = cleaned;
+            enabledRef.current = !!cleaned;
+            setHasLocalService(!!cleaned);
+        };
+        window.addEventListener('local-service-changed', onChanged);
+        return () => window.removeEventListener('local-service-changed', onChanged);
     }, []);
 
     // Global focus tracking — registered once
@@ -176,6 +188,7 @@ export default function VoiceInputFloat() {
         }
     };
 
+    if (!hasLocalService) return null;
     if (!visible && !recording && !processing) return null;
 
     return (

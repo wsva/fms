@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { MdArrowBack, MdArrowForward } from "react-icons/md";
 import { menuList } from "./menu";
 import { authClient } from "@/lib/auth-client";
+import { deleteAuthTokens } from "@/app/actions/auth";
 import { User } from "better-auth";
 import ThemeSelector from '@/components/ThemeSelector'
 import NavIcon from '@/components/design/NavIcon'
+import { useSearchParams } from 'next/navigation'
 
 const ChevronDown = () => {
     return (
@@ -35,6 +37,9 @@ export default function TopNav() {
     const [stateUser, setStateUser] = useState<User>();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+    const searchParams = useSearchParams();
+    const redirectUrl = searchParams.get('redirect_url') ?? '/';
+
     const router = useRouter();
 
     useEffect(() => {
@@ -51,6 +56,24 @@ export default function TopNav() {
         const refreshTimer = setInterval(refresh, 60_000);
         return () => clearInterval(refreshTimer);
     }, []);
+
+    const handleSignOut = async () => {
+        await authClient.signOut({
+            fetchOptions: {
+                onSuccess: () => {
+                    router.push("/");
+                    setStateUser(undefined);
+                },
+            },
+        });
+        await deleteAuthTokens();
+        const formData = new FormData();
+        formData.append("user_id", stateUser!.email);
+        await fetch(`${process.env.OAUTH2_LOGOUT}`, {
+            method: "POST",
+            body: formData,
+        });
+    };
 
     return (
         <>
@@ -152,22 +175,7 @@ export default function TopNav() {
                                 <DropdownItem key="logout"
                                     className="text-danger"
                                     color="danger"
-                                    onPress={async () => {
-                                        await authClient.signOut({
-                                            fetchOptions: {
-                                                onSuccess: () => {
-                                                    router.push("/");
-                                                    setStateUser(undefined);
-                                                },
-                                            },
-                                        });
-                                        const formData = new FormData();
-                                        formData.append("user_id", stateUser.email);
-                                        await fetch(`${process.env.OAUTH2_LOGOUT}`, {
-                                            method: "POST",
-                                            body: formData,
-                                        });
-                                    }}
+                                    onPress={handleSignOut}
                                 >
                                     Sign Out
                                 </DropdownItem>
@@ -178,7 +186,7 @@ export default function TopNav() {
                             onPress={async () => {
                                 await authClient.signIn.social({
                                     provider: "wsva_oauth2",
-                                    callbackURL: window.location.href,
+                                    callbackURL: redirectUrl,
                                 });
                             }}
                         >
@@ -205,22 +213,7 @@ export default function TopNav() {
                                         </Button>
                                     </div>
                                     <Button color="danger" size="sm"
-                                        onPress={async () => {
-                                            await authClient.signOut({
-                                                fetchOptions: {
-                                                    onSuccess: () => {
-                                                        router.push("/");
-                                                        setStateUser(undefined);
-                                                    },
-                                                },
-                                            });
-                                            const formData = new FormData();
-                                            formData.append("user_id", stateUser.email);
-                                            await fetch(`${process.env.OAUTH2_LOGOUT}`, {
-                                                method: "POST",
-                                                body: formData,
-                                            });
-                                        }}
+                                        onPress={handleSignOut}
                                     >
                                         Sign Out
                                     </Button>
@@ -233,7 +226,7 @@ export default function TopNav() {
                                     onPress={async () => {
                                         await authClient.signIn.social({
                                             provider: "wsva_oauth2",
-                                            callbackURL: window.location.href,
+                                            callbackURL: redirectUrl,
                                         });
                                     }}
                                 >

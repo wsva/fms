@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ToastProvider } from "@heroui/toast";
 import ThemeProvider from '@/components/ThemeProvider'
 import VoiceInputFloat from '@/components/VoiceInputFloat'
+import CardContextMenu from '@/components/CardContextMenu'
 
 // Only if using TypeScript
 declare module "@react-types/shared" {
@@ -23,6 +24,7 @@ export default function Providers({ children }: { children: ReactNode }) {
             <ThemeProvider>
                 {children}
                 <VoiceInputFloat />
+                <CardContextMenu />
             </ThemeProvider>
         </HeroUIProvider>
     )

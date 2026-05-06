@@ -22,6 +22,7 @@ export const menuList: MenuGroup[] = [
         items: [
             { key: "word_top", name: "Top Words", description: "top words", href: "/word/top" },
             { key: "word_sentence", name: "Sentence", description: "search sentences", href: "/word/sentence" },
+            { key: "word_pdf_reader", name: "PDF Reader", description: "read a PDF file", href: "/word/pdf_reader" },
         ],
     },
     {
@@ -58,6 +59,7 @@ export const menuList: MenuGroup[] = [
             { key: "card_manage", name: "Manage Cards", description: "manage cards", href: "/card/manage" },
             { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test" },
             { key: "card_improve", name: "Improve Cards", description: "review AI-suggested improvements", href: "/card/improve" },
+            { key: "card_table", name: "Card Table", description: "all cards in a table view", href: "/card/table" },
         ],
     },
     {
@@ -66,7 +68,6 @@ export const menuList: MenuGroup[] = [
             { key: "settings_general", name: "General", description: "General settings", href: "/settings/general" },
             { key: "settings_tags", name: "Tags", description: "manage tags for all features", href: "/settings/tags" },
             { key: "settings_api", name: "API", description: "view APIs", href: "/settings/api" },
-            { key: "settings_api_key", name: "API Key", description: "manage API key", href: "/settings/api-key" },
         ],
     },
 ];

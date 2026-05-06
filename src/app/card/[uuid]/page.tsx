@@ -2,6 +2,7 @@ import CardForm from './CardForm';
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { getCard } from '@/app/actions/card';
+import { getKey } from '@/app/actions/settings_general';
 
 type Props = {
     params: Promise<{ uuid: string }>
@@ -18,12 +19,15 @@ export default async function ExamplePage({ params, searchParams }: Props) {
     const sp = await searchParams;
 
     const question = typeof sp.question === 'string' ? decodeURIComponent(sp.question) : ''
-    const tags = typeof sp.tags === 'string' ? decodeURIComponent(sp.tags) : ''
+    const tagsParam = typeof sp.tags === 'string' ? decodeURIComponent(sp.tags) : ''
     const suggestion = typeof sp.suggestion === 'string' ? decodeURIComponent(sp.suggestion) : ''
     const answer = typeof sp.answer === 'string' ? decodeURIComponent(sp.answer) : ''
     const note = typeof sp.note === 'string' ? decodeURIComponent(sp.note) : ''
     const simple = 'simple' in sp
-    const card = { uuid: p.uuid !== 'add' ? p.uuid : undefined, question, suggestion, answer, note, tag_list_suggestion: tags.split(",") }
+
+    const isNew = p.uuid === 'add'
+    const tags = tagsParam || (isNew ? (await getKey('default_card_tags') ?? '') : '')
+    const card = { uuid: !isNew ? p.uuid : undefined, question, suggestion, answer, note, tag_list_suggestion: tags.split(",").filter(Boolean) }
 
     const result = (typeof p.uuid === 'string' && p.uuid !== 'add')
         ? (await getCard(p.uuid)) : undefined

@@ -1,8 +1,7 @@
 import Link from 'next/link'
 
 const SECTIONS = [
-    { href: '/settings/general', title: 'General', description: 'API keys and other general settings' },
-    { href: '/settings/api-key', title: 'API Keys', description: 'Generate and manage API keys for terminal access' },
+    { href: '/settings/general', title: 'General', description: 'General settings and API key management' },
     { href: '/settings/api',     title: 'API Reference', description: 'List of all available API endpoints' },
 ]
 

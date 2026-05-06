@@ -11,16 +11,16 @@ type Props = {
 
 export const IndexItem = ({ href, label, description }: Props) => {
   return (
-    <Card className="flex bg-sand-300 max-w-[400px] m-2">
-      <CardHeader>
-        <Link href={href} className="font-bold text-blue-600 hover:underline select-none" >
-          {label}
-        </Link>
-      </CardHeader>
-      <Divider />
-      <CardBody>
-        <p className="select-none">{description}</p>
-      </CardBody>
-    </Card>
+    <Link href={href} className="block max-w-[400px] m-2">
+      <Card className="flex bg-sand-300 hover:bg-sand-400 transition-colors cursor-pointer h-full">
+        <CardHeader>
+          <span className="font-bold text-blue-600 select-none">{label}</span>
+        </CardHeader>
+        <Divider />
+        <CardBody>
+          <p className="select-none">{description}</p>
+        </CardBody>
+      </Card>
+    </Link>
   )
 }
