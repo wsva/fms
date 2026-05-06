@@ -57,7 +57,7 @@ export const splitContent = (content: string, onlyWord: boolean) => {
 }
 
 export const isAudio = (src: string): boolean => {
-    const AUDIO_EXT = ["mp3", "wav", "aac", "m4a", "ogg", "flac", "wma"];
+    const AUDIO_EXT = ["mp3", "wav", "aac", "m4a", "ogg", "flac", "wma", "m4b"];
     try {
         const url = new URL(src);
         const pathname = url.pathname;
