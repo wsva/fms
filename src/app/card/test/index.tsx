@@ -76,7 +76,7 @@ export default function CardTestPage({ user_id }: Props) {
     useEffect(() => {
         const loadData = async () => {
             if (!user_id) return
-            const result = await getTagAllUsed(user_id)
+            const result = await getTagAllUsed(user_id, "card")
             if (result.status === "success") {
                 setStateTagList(result.data)
             }

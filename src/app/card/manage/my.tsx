@@ -26,7 +26,7 @@ export default function Page({ user_id_my }: Props) {
     useEffect(() => {
         const loadTags = async () => {
             setStateLoading(true)
-            const result = await getTagAllOwned(user_id_my);
+            const result = await getTagAllOwned(user_id_my, "card");
             if (result.status === "success") {
                 setStateMyTags(result.data)
             } else {

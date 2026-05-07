@@ -20,7 +20,7 @@ export default function Collect({ user_id, card }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
-            const tag_list_result = await getTagAllOwned(user_id);
+            const tag_list_result = await getTagAllOwned(user_id, "card");
             if (tag_list_result.status !== "success") {
                 return
             }

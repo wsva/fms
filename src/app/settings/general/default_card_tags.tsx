@@ -15,7 +15,7 @@ export default function DefaultCardTagsSetting({ user_id }: { user_id: string })
 
     useEffect(() => {
         Promise.all([
-            getTagAllOwned(user_id),
+            getTagAllOwned(user_id, "card"),
             getKey('default_card_tags'),
         ]).then(([tagsResult, savedTags]) => {
             if (tagsResult.status === 'success') setTagList(tagsResult.data);

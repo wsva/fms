@@ -16,7 +16,7 @@ export default function CardList({ user_id, card_list }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
-            const result = await getTagAllOwned(user_id);
+            const result = await getTagAllOwned(user_id, "card");
             if (result.status === "success") {
                 setStateTagList(result.data)
             } else {

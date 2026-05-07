@@ -147,7 +147,7 @@ export default function Page({ user_id, uuid }: Props) {
     useEffect(() => {
         const load = async () => {
             setStateLoading(true)
-            const result = await getTagAllUsed(user_id)
+            const result = await getTagAllUsed(user_id, "listen")
             if (result.status === "success") {
                 setStateTagList(result.data)
             } else {

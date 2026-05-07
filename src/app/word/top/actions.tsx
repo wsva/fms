@@ -152,7 +152,7 @@ export default function Page({ word, language, email }: Props) {
                 <Tooltip color='primary' closeDelay={0} content='add card'>
                     <Button isIconOnly variant='light' isDisabled={stateDisabled}
                         onPress={async () => {
-                            const result = await getTagAllOwned(email || "")
+                            const result = await getTagAllOwned(email || "", "card")
                             if (result.status === "success") {
                                 setStateTagList(result.data)
                             }

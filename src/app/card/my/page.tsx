@@ -9,7 +9,7 @@ export default async function Page() {
     });
     const email = session?.user?.email || '';
 
-    const result = await getTagAllUsed(email)
+    const result = await getTagAllUsed(email, "card")
     const tag_list = result.status === 'success' ? result.data : []
 
     return (

@@ -7,11 +7,23 @@ import { getUUID } from "@/lib/utils";
 import { dataset_tag } from "@/generated/prisma/client";
 
 // tags owned by user
-export async function getTagAllOwned(email: string): Promise<ActionResult<dataset_tag[]>> {
+export async function getTagAllOwned(email: string, scope: string): Promise<ActionResult<dataset_tag[]>> {
     try {
+        if (!!scope) {
+            const result = await prisma.dataset_tag.findMany({
+                where: {
+                    AND: [
+                        { user_id: email },
+                        { scope: { contains: scope } },
+                    ],
+                },
+                orderBy: { tag: 'asc' },
+            });
+            return { status: "success", data: result };
+        }
         const result = await prisma.dataset_tag.findMany({
             where: {
-                OR: [
+                AND: [
                     { user_id: email },
                 ],
             },
@@ -25,7 +37,7 @@ export async function getTagAllOwned(email: string): Promise<ActionResult<datase
 }
 
 // tags used by user, include subscription 
-export async function getTagAllUsed(email: string): Promise<ActionResult<dataset_tag[]>> {
+export async function getTagAllUsed(email: string, scope: string): Promise<ActionResult<dataset_tag[]>> {
     try {
         const subs = await prisma.dataset_subscription.findMany({
             where: { user_id: email },
@@ -41,7 +53,7 @@ export async function getTagAllUsed(email: string): Promise<ActionResult<dataset
                             ...(subUuids.length > 0 ? [{ uuid: { in: subUuids } }] : []),
                         ]
                     },
-                    { scope: { contains: 'listen' } },
+                    { scope: { contains: scope } },
                 ]
             },
             orderBy: { tag: 'asc' },

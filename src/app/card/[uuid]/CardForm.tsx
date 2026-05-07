@@ -37,7 +37,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     useEffect(() => {
         const loadData = async () => {
             // init tag list
-            const tag_list_result = await getTagAllOwned(email);
+            const tag_list_result = await getTagAllOwned(email, "card");
             if (tag_list_result.status !== "success") {
                 return
             }

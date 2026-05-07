@@ -29,7 +29,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
     useEffect(() => {
         const loadMyTags = async () => {
             setStateLoading(true)
-            const result = await getTagAllOwned(user_id_my);
+            const result = await getTagAllOwned(user_id_my, "card");
             if (result.status === "success") {
                 setStateMyTags(result.data)
             } else {
@@ -44,7 +44,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
 
         const loadTagsOfAnother = async () => {
             setStateLoading(true)
-            const result = await getTagAllOwned(user_id_another);
+            const result = await getTagAllOwned(user_id_another, "card");
             if (result.status === "success") {
                 setStateTagsOfAnother(result.data)
             } else {

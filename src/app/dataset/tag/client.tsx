@@ -287,7 +287,7 @@ export default function Page({ user_id }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
-            const result = await getTagAllOwned(user_id);
+            const result = await getTagAllOwned(user_id, "");
             if (result.status === "success") {
                 setStateData(result.data);
             } else {
