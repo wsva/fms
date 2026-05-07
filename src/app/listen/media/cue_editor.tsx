@@ -38,11 +38,14 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
 
     return (
         <div className='flex flex-row items-center justify-start w-full gap-1'>
-            <Tooltip isOpen={stateTips} placement='top-start'
+            <Tooltip isOpen={stateTips} placement='top-end'
                 className='bg-slate-300'
                 content={
-                    <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5'>
-                        <div>{getTip(stateInput)}</div>
+                    <div className='flex flex-row justify-center text-xl'>
+                        {stateSuccess ? "👍" : ""}
+                        <div className='flex flex-col items-start justify-start px-4 py-0.5'>
+                            {getTip(stateInput)}
+                        </div>
                     </div>
                 }
             >

@@ -73,7 +73,6 @@ export const menuList: MenuGroup[] = [
         name: "Settings",
         items: [
             { key: "settings_general", name: "General", description: "General settings", href: "/settings/general" },
-            { key: "settings_tags", name: "Tags", description: "manage tags for all features", href: "/settings/tags" },
             { key: "settings_api", name: "API", description: "view APIs", href: "/settings/api" },
         ],
     },
