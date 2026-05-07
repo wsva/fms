@@ -3,11 +3,12 @@
 import { Button, Link, CircularProgress, Input, addToast } from "@heroui/react";
 import { useEffect, useState } from 'react'
 import { card_review } from '@/lib/types';
-import { getCardTest, getCardTestByUUID, getTag, saveCardReview } from '@/app/actions/card';
+import { getCardTest, getCardTestByUUID, saveCardReview } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import { searchExample } from "@/app/actions/word";
-import { settings_tag } from "@/generated/prisma/client";
+import { dataset_tag } from "@/generated/prisma/client";
 import Markdown2Html from '@/components/markdown/markdown';
+import { getTag } from "@/app/actions/dataset";
 
 type Props = {
     user_id: string;
@@ -16,7 +17,7 @@ type Props = {
 }
 
 export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
-    const [stateTag, setStateTag] = useState<settings_tag>()
+    const [stateTag, setStateTag] = useState<dataset_tag>()
     const [stateCard, setStateCard] = useState<card_review>()
     const [stateSuggestion, setStateSuggestion] = useState<boolean>(false)
     const [stateAnswer, setStateAnswer] = useState<boolean>(false)

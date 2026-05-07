@@ -1,8 +1,8 @@
 "use client"
 
-import { getTagAll } from '@/app/actions/card';
+import { getTagAllUsed } from '@/app/actions/dataset';
 import { useEffect, useState } from 'react'
-import { settings_tag } from "@/generated/prisma/client";
+import { dataset_tag } from "@/generated/prisma/client";
 import { Link } from '@heroui/react';
 
 type Props = {
@@ -10,8 +10,8 @@ type Props = {
 };
 
 type TreeNodeProps = {
-    tag: settings_tag;
-    allTags: settings_tag[];
+    tag: dataset_tag;
+    allTags: dataset_tag[];
     depth: number;
 }
 
@@ -71,12 +71,12 @@ function TreeNode({ tag, allTags, depth }: TreeNodeProps) {
 }
 
 export default function CardTestPage({ user_id }: Props) {
-    const [stateTagList, setStateTagList] = useState<settings_tag[]>([])
+    const [stateTagList, setStateTagList] = useState<dataset_tag[]>([])
 
     useEffect(() => {
         const loadData = async () => {
             if (!user_id) return
-            const result = await getTagAll(user_id)
+            const result = await getTagAllUsed(user_id)
             if (result.status === "success") {
                 setStateTagList(result.data)
             }

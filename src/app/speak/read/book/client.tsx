@@ -5,7 +5,7 @@ import { addToast, Button, Input, Spinner } from "@heroui/react"
 import { MdAdd, MdChevronRight, MdDelete, MdEdit, MdExpandMore } from 'react-icons/md'
 import { book_chapter, book_meta } from "@/generated/prisma/client"
 import { getBookMetaAll, saveBookMeta, removeBookMeta, getBookChapterAll, saveBookChapter, removeBookChapter } from "@/app/actions/book"
-import { saveTag } from "@/app/actions/settings"
+import { saveTag } from "@/app/actions/dataset"
 import { getUUID } from "@/lib/utils"
 
 // ─── Book section ─────────────────────────────────────────────────────────────
@@ -221,11 +221,12 @@ export default function Client({ email }: Props) {
         if (result.status === 'success') {
             await saveTag({
                 uuid,
+                user_id: email,
                 tag: stateAddForm.title,
                 description: '',
                 scope: 'card',
                 parent_uuid: null,
-                user_id: email,
+                shared: "N",
                 created_at: now,
                 updated_at: now,
             })

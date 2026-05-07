@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from 'react'
 import MdEditor from '@/components/MdEditor'
 import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form';
-import { qsa_card, settings_tag } from "@/generated/prisma/client";
-import { getCardTag, getTagAll, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
+import { qsa_card, dataset_tag } from "@/generated/prisma/client";
+import { getCardTag, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
+import { getTagAllOwned } from '@/app/actions/dataset';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
 import Markdown2Html from '@/components/markdown/markdown';
@@ -24,7 +25,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     const searchParams = useSearchParams()
     const [stateEdit, setStateEdit] = useState(edit_view);
     const [stateCard, setStateCard] = useState<qsa_card>();
-    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
     const [stateTagSelected, setStateTagSelected] = useState<string[]>([]);
     const { register, handleSubmit, formState, watch } = useForm<qsa_card>({});
@@ -36,7 +37,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     useEffect(() => {
         const loadData = async () => {
             // init tag list
-            const tag_list_result = await getTagAll(email);
+            const tag_list_result = await getTagAllOwned(email);
             if (tag_list_result.status !== "success") {
                 return
             }

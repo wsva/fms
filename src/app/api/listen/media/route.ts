@@ -10,7 +10,9 @@ const MEDIA_DIR = '/fms_data/listen/media';
 
 const CreateMediaSchema = z.object({
     title: z.string().min(1, 'title is required'),
-    source: z.string().optional(),
+    directory: z.string().regex(/^[a-zA-Z0-9_]+$/, {
+        message: 'Only letters, numbers, and underscores are allowed',
+    }),
     note: z.string().default(''),
 });
 
@@ -29,6 +31,7 @@ export async function POST(request: NextRequest) {
 
     const uuid = getUUID();
     let title: string;
+    let directory: string;
     let source: string;
     let note: string = '';
 
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         const raw = {
             title: formData.get('title'),
-            source: formData.get('source') ?? undefined,
+            directory: formData.get('directory') ?? undefined,
             note: formData.get('note') ?? undefined,
         };
 
@@ -57,56 +60,43 @@ export async function POST(request: NextRequest) {
         }
 
         title = parsed.data.title;
+        directory = parsed.data.directory;
         note = parsed.data.note;
 
         const file = formData.get('file');
         if (file && file instanceof Blob) {
-            const fileName = file instanceof File ? file.name : 'upload';
-            const ext = fileName.split('.').pop()?.toLowerCase() ?? 'bin';
-            const destPath = path.join(MEDIA_DIR, `${uuid}.${ext}`);
-
+            if (!(file instanceof File)) {
+                return NextResponse.json({ error: 'invalid file' }, { status: 500 });
+            }
+            let filename = file.name.trim();
+            const parts = filename.split('.');
+            const ext = parts.pop();
+            const stem = parts.join('.');
+            const valid = !!(ext && stem && /^[a-zA-Z0-9_]+$/.test(stem) && /^[a-zA-Z0-9_]+$/.test(ext));
+            if (!valid) {
+                if (!ext || !/^[a-zA-Z0-9_]+$/.test(ext)) {
+                    return NextResponse.json({ error: 'invalid filename' }, { status: 500 });
+                }
+                filename = `${uuid}.${ext}`;
+            }
             try {
-                fs.mkdirSync(MEDIA_DIR, { recursive: true });
+                fs.mkdirSync(path.join(MEDIA_DIR, directory), { recursive: true });
                 const buffer = Buffer.from(await file.arrayBuffer());
-                fs.writeFileSync(destPath, buffer);
+                fs.writeFileSync(path.join(MEDIA_DIR, directory, filename), buffer);
             } catch (err) {
                 console.error('File write error:', err);
                 return NextResponse.json({ error: 'Failed to save file' }, { status: 500 });
             }
 
-            source = parsed.data.source ?? `/api/data/listen/media/${uuid}.${ext}`;
+            source = `/api/data/listen/media/${directory}/${filename}`;
         } else {
-            if (!parsed.data.source) {
-                return NextResponse.json(
-                    { error: 'Validation failed', details: [{ message: 'source is required when no file is uploaded' }] },
-                    { status: 400 }
-                );
-            }
-            source = parsed.data.source;
-        }
-    } else {
-        let body: unknown;
-        try {
-            body = await request.json();
-        } catch {
-            return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-        }
-
-        const JsonSchema = CreateMediaSchema.extend({
-            source: z.string().min(1, 'source is required'),
-        });
-
-        const parsed = JsonSchema.safeParse(body);
-        if (!parsed.success) {
             return NextResponse.json(
-                { error: 'Validation failed', details: parsed.error.issues },
+                { error: 'Validation failed', details: [{ message: 'media file is required to create media' }] },
                 { status: 400 }
             );
         }
-
-        title = parsed.data.title;
-        source = parsed.data.source;
-        note = parsed.data.note;
+    } else {
+        return NextResponse.json({ error: "content-type is not multipart/form-data" }, { status: 500 });
     }
 
     const now = new Date();

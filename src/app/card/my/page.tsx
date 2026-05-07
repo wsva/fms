@@ -1,7 +1,7 @@
 import Client from './client';
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { getTagAll } from '@/app/actions/card';
+import { getTagAllUsed } from '@/app/actions/dataset';
 
 export default async function Page() {
     const session = await auth.api.getSession({
@@ -9,7 +9,7 @@ export default async function Page() {
     });
     const email = session?.user?.email || '';
 
-    const result = await getTagAll(email)
+    const result = await getTagAllUsed(email)
     const tag_list = result.status === 'success' ? result.data : []
 
     return (

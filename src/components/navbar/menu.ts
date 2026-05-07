@@ -63,6 +63,13 @@ export const menuList: MenuGroup[] = [
         ],
     },
     {
+        name: "Dataset",
+        items: [
+            { key: "dataset_tag", name: "Tags", description: "manage tags for all features", href: "/dataset/tag" },
+            { key: "dataset_market", name: "Market", description: "datasets shared by others", href: "/dataset/market" },
+        ],
+    },
+    {
         name: "Settings",
         items: [
             { key: "settings_general", name: "General", description: "General settings", href: "/settings/general" },

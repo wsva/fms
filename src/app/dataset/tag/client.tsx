@@ -2,9 +2,9 @@
 
 import { addToast, Button, Chip, Input, Select, SelectItem, Textarea } from "@heroui/react";
 import { useEffect, useState } from 'react'
-import { getTagAll, removeTag, saveTag } from '@/app/actions/settings';
+import { getTagAllOwned, removeTag, saveTag } from '@/app/actions/dataset';
 import { getUUID } from "@/lib/utils";
-import { settings_tag } from "@/generated/prisma/client";
+import { dataset_tag } from "@/generated/prisma/client";
 
 const SCOPE_OPTIONS = ['card', 'listen'] as const;
 
@@ -47,11 +47,11 @@ function ScopeChips({ scope, onChange, disabled }: { scope: string; onChange: (s
 }
 
 type PropsItem = {
-    item: settings_tag;
-    allTags: settings_tag[];
-    childrenOf: (uuid: string) => settings_tag[];
+    item: dataset_tag;
+    allTags: dataset_tag[];
+    childrenOf: (uuid: string) => dataset_tag[];
     getDescendantUuids: (uuid: string) => string[];
-    handleUpdate: (item: settings_tag) => Promise<boolean>;
+    handleUpdate: (item: dataset_tag) => Promise<boolean>;
     handleDelete: (uuid: string) => Promise<void>;
     onAddChild: (parentUuid: string) => void;
     index: number;
@@ -59,7 +59,7 @@ type PropsItem = {
 }
 
 function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, handleDelete, onAddChild, index, depth }: PropsItem) {
-    const [stateData, setStateData] = useState<settings_tag>(item);
+    const [stateData, setStateData] = useState<dataset_tag>(item);
     const [stateEdit, setStateEdit] = useState<boolean>(false);
     const isPublic = stateData.user_id === "public";
 
@@ -98,6 +98,20 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                             onChange={(s) => setStateData({ ...stateData, scope: s })}
                             disabled={isPublic || !stateEdit}
                         />
+                        {!isPublic && (
+                            <Chip
+                                size="sm"
+                                variant={stateData.shared === "Y" ? "solid" : "bordered"}
+                                color={stateData.shared === "Y" ? "primary" : "default"}
+                                classNames={{ base: `select-none ${stateEdit ? 'cursor-pointer' : 'cursor-default'}` }}
+                                onClick={() => {
+                                    if (!stateEdit) return;
+                                    setStateData({ ...stateData, shared: stateData.shared === "Y" ? "N" : "Y" });
+                                }}
+                            >
+                                Shared
+                            </Chip>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
@@ -206,9 +220,9 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
 type Props = { user_id: string }
 
 export default function Page({ user_id }: Props) {
-    const [stateData, setStateData] = useState<settings_tag[]>([]);
+    const [stateData, setStateData] = useState<dataset_tag[]>([]);
     const [stateReload, setStateReload] = useState<number>(1);
-    const [stateNew, setStateNew] = useState<Partial<settings_tag>>({ scope: 'card' });
+    const [stateNew, setStateNew] = useState<Partial<dataset_tag>>({ scope: 'card' });
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateShowForm, setStateShowForm] = useState<boolean>(false);
 
@@ -229,6 +243,7 @@ export default function Page({ user_id }: Props) {
             description: stateNew.description || "",
             scope: stateNew.scope || 'card',
             parent_uuid: stateNew.parent_uuid ?? null,
+            shared: "N",
             user_id: user_id,
             created_at: new Date(),
             updated_at: new Date(),
@@ -244,7 +259,7 @@ export default function Page({ user_id }: Props) {
         setStateSaving(false);
     };
 
-    const handleUpdate = async (new_item: settings_tag): Promise<boolean> => {
+    const handleUpdate = async (new_item: dataset_tag): Promise<boolean> => {
         setStateSaving(true);
         const result = await saveTag({ ...new_item, updated_at: new Date() });
         if (result.status === "success") {
@@ -272,7 +287,7 @@ export default function Page({ user_id }: Props) {
 
     useEffect(() => {
         const loadData = async () => {
-            const result = await getTagAll(user_id);
+            const result = await getTagAllOwned(user_id);
             if (result.status === "success") {
                 setStateData(result.data);
             } else {
@@ -282,9 +297,6 @@ export default function Page({ user_id }: Props) {
         };
         loadData();
     }, [user_id, stateReload]);
-
-    const userTags = stateData.filter(t => t.user_id !== "public");
-    const publicTags = stateData.filter(t => t.user_id === "public");
 
     // Build tree helpers
     const allRootTags = stateData.filter(t => !t.parent_uuid).sort((a, b) => a.tag.localeCompare(b.tag));
@@ -317,9 +329,6 @@ export default function Page({ user_id }: Props) {
             <div className="page-header flex items-end justify-between pb-4 border-b-2 border-sand-300">
                 <div>
                     <h1 className="page-title-font text-4xl text-sand-900 leading-tight">Tag Management</h1>
-                    <p className="text-sand-500 text-sm mt-2">
-                        {userTags.length} personal &middot; {publicTags.length} public
-                    </p>
                 </div>
                 <Button
                     variant={stateShowForm ? 'flat' : 'solid'}

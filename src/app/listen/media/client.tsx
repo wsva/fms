@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { addToast, Button, Chip, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
-import { listen_media, listen_note, listen_subtitle, listen_transcript, settings_tag } from "@/generated/prisma/client";
-import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTagAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag, saveSubtitle } from '@/app/actions/listen'
+import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag } from "@/generated/prisma/client";
+import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag, saveSubtitle } from '@/app/actions/listen'
+import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
-import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdMovieCreation, MdCheckCircle } from 'react-icons/md'
+import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdMovieCreation, MdCheckCircle, MdPeople } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
 import { buildVTT, Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
@@ -37,7 +38,7 @@ type Props = { user_id: string; uuid: string }
 
 export default function Page({ user_id, uuid }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
-    const [stateTagList, setStateTagList] = useState<settings_tag[]>([])
+    const [stateTagList, setStateTagList] = useState<dataset_tag[]>([])
     const [stateMediaList, setStateMediaList] = useState<listen_media[]>([])
     const [stateTagUUID, setStateTagUUID] = useState<string>("")
 
@@ -146,7 +147,7 @@ export default function Page({ user_id, uuid }: Props) {
     useEffect(() => {
         const load = async () => {
             setStateLoading(true)
-            const result = await getTagAll(user_id)
+            const result = await getTagAllUsed(user_id)
             if (result.status === "success") {
                 setStateTagList(result.data)
             } else {
@@ -173,7 +174,7 @@ export default function Page({ user_id, uuid }: Props) {
             setStateLoading(true)
             const result = stateTagUUID === "invalid-subtitle"
                 ? await getMediaByInvalidSubtitle(user_id)
-                : await getMediaByTag(user_id, stateTagUUID)
+                : await getMediaByTag(stateTagUUID)
             if (result.status === 'success') {
                 setStateMediaList(result.data)
             } else {
@@ -430,30 +431,36 @@ export default function Page({ user_id, uuid }: Props) {
                         Invalid Subtitle
                     </button>
 
-                    {stateTagList.map(tag => (
-                        <div key={tag.uuid}>
-                            <button className={sidebarBtnClass(stateTagUUID === tag.uuid)}
-                                onClick={() => { setStateTagUUID(stateTagUUID === tag.uuid ? '' : tag.uuid); setStateMediaUUID('') }}
-                            >
-                                {tag.tag}
-                            </button>
-                            {stateTagUUID === tag.uuid && stateMediaList.length > 0 && (
-                                <div className="ml-2 mt-0.5 mb-1 flex flex-col gap-0.5 border-l-2 border-sand-300 pl-2">
-                                    {stateMediaList.map(m => (
-                                        <button key={m.uuid}
-                                            className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${stateMediaUUID === m.uuid
-                                                ? 'bg-sand-300 font-semibold text-foreground'
-                                                : 'hover:bg-sand-200 text-foreground-600'
-                                                }`}
-                                            onClick={() => setStateMediaUUID(m.uuid)}
-                                        >
-                                            <span className="line-clamp-2">{m.title}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                    {stateTagList.map(tag => {
+                        const isSubscribed = tag.user_id !== user_id && tag.user_id !== 'public'
+                        return (
+                            <div key={tag.uuid}>
+                                <button className={sidebarBtnClass(stateTagUUID === tag.uuid)}
+                                    onClick={() => { setStateTagUUID(stateTagUUID === tag.uuid ? '' : tag.uuid); setStateMediaUUID('') }}
+                                >
+                                    <span className="flex items-center gap-1.5">
+                                        {isSubscribed && <MdPeople size={13} className="shrink-0 opacity-60" />}
+                                        <span className="truncate">{tag.tag}</span>
+                                    </span>
+                                </button>
+                                {stateTagUUID === tag.uuid && stateMediaList.length > 0 && (
+                                    <div className="ml-2 mt-0.5 mb-1 flex flex-col gap-0.5 border-l-2 border-sand-300 pl-2">
+                                        {stateMediaList.map(m => (
+                                            <button key={m.uuid}
+                                                className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${stateMediaUUID === m.uuid
+                                                    ? 'bg-sand-300 font-semibold text-foreground'
+                                                    : 'hover:bg-sand-200 text-foreground-600'
+                                                    }`}
+                                                onClick={() => setStateMediaUUID(m.uuid)}
+                                            >
+                                                <span className="line-clamp-2">{m.title}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
 
                 {/* Drag handle — desktop only */}

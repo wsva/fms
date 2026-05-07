@@ -1,9 +1,10 @@
 'use client'
 
-import { getTagAll, saveCard, saveCardTag } from '@/app/actions/card';
+import { saveCard, saveCardTag } from '@/app/actions/card';
+import { getTagAllOwned } from '@/app/actions/dataset';
 import { getUUID } from '@/lib/utils';
 import { addToast, Checkbox, CheckboxGroup, Link } from "@heroui/react"
-import { qsa_card, settings_tag } from "@/generated/prisma/client";
+import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -13,13 +14,13 @@ type Props = {
 }
 
 export default function Collect({ user_id, card }: Props) {
-    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
     const [stateSelected, setStateSelected] = useState<string[]>([]);
     const { handleSubmit } = useForm();
 
     useEffect(() => {
         const loadData = async () => {
-            const tag_list_result = await getTagAll(user_id);
+            const tag_list_result = await getTagAllOwned(user_id);
             if (tag_list_result.status !== "success") {
                 return
             }

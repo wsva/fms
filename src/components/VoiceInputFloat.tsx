@@ -17,10 +17,29 @@ function isVoiceTarget(el: EventTarget | null): el is HTMLInputElement | HTMLTex
     return false;
 }
 
+/** 
+// will replace existing text
 function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string) {
     const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
     setter?.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}*/
+
+function insertNativeValue(el: HTMLInputElement | HTMLTextAreaElement, text: string) {
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const newValue = el.value.slice(0, start) + text + el.value.slice(end);
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    setter?.call(el, newValue);
+    // Move caret to end of inserted text
+    const caret = start + text.length;
+    requestAnimationFrame(() => {
+        el.selectionStart = caret;
+        el.selectionEnd = caret;
+    });
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
 }
@@ -61,6 +80,9 @@ async function callLocalSTT(baseUrl: string, audioBlob: Blob): Promise<ActionRes
     const form = new FormData();
     form.append('audio', await toWav(audioBlob), 'audio.wav');
     const resp = await fetch(`${baseUrl.replace(/\/$/, '')}/api/stt`, { method: 'POST', body: form });
+    if (!resp.ok) {
+        return { status: 'error', error: `HTTP ${resp.status}` };
+    }
     const json = await resp.json();
     if (json.status === 'ok') return { status: 'success', data: json.text };
     return { status: 'error', error: json.text ?? 'STT failed' };
@@ -86,6 +108,9 @@ export default function VoiceInputFloat() {
     const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const mouseRef = useRef({ x: 0, y: 0 });
 
+    // floating container ref
+    const floatRef = useRef<HTMLDivElement | null>(null);
+
     // Keep recordingRef in sync with recording state
     useEffect(() => { recordingRef.current = recording; }, [recording]);
 
@@ -105,7 +130,7 @@ export default function VoiceInputFloat() {
                 enabledRef.current = !!cleaned;
                 setHasLocalService(!!cleaned);
             })
-            .catch(() => {});
+            .catch(() => { });
 
         const onChanged = (e: Event) => {
             const cleaned = ((e as CustomEvent<string>).detail ?? '').replace(/\/$/, '');
@@ -134,6 +159,14 @@ export default function VoiceInputFloat() {
         };
         const onFocusOut = (e: FocusEvent) => {
             if (!isVoiceTarget(e.target)) return;
+
+            // if focus moved into floating UI, do nothing
+            // ignore blur events when focus moves INTO the floating button
+            const next = e.relatedTarget as Node | null;
+            if (next && floatRef.current?.contains(next)) {
+                return;
+            }
+
             hideTimerRef.current = setTimeout(() => {
                 if (!recordingRef.current) setVisible(false);
             }, 200);
@@ -164,13 +197,26 @@ export default function VoiceInputFloat() {
                 recognize: false,
                 handleAudio: async (_result, audioBlob) => {
                     setProcessing(true);
-                    const result = await callLocalSTT(capturedUrl, audioBlob);
-                    setProcessing(false);
-                    if (result.status === 'success' && result.data && capturedTarget) {
-                        setNativeValue(capturedTarget, result.data.trim());
-                        capturedTarget.focus();
+                    try {
+                        const result = await callLocalSTT(capturedUrl, audioBlob);
+                        if (result.status === 'success' && result.data && capturedTarget) {
+                            insertNativeValue(capturedTarget, result.data.trim());
+                            capturedTarget.focus();
+                        } else {
+                            if (result.status === "success") {
+                                console.error('STT success but with data:', result.data);
+                            } else {
+                                console.error('STT failed:', result.error);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('STT request error:', err);
+                    } finally {
+                        // ALWAYS stop spinner
+                        setProcessing(false);
+                        // Hide floating UI after request completes/fails
+                        setVisible(false);
                     }
-                    setVisible(false);
                 },
             });
         } else {
@@ -183,7 +229,7 @@ export default function VoiceInputFloat() {
                 stateRecording: recordingRef.current,
                 setStateRecording: setRecording,
                 recognize: false,
-                handleAudio: async () => {},
+                handleAudio: async () => { },
             });
         }
     };
@@ -192,7 +238,16 @@ export default function VoiceInputFloat() {
     if (!visible && !recording && !processing) return null;
 
     return (
-        <div className="fixed z-[9999] flex flex-col items-start gap-2 pointer-events-none"
+        <div ref={floatRef}
+            onMouseDown={(e) => {
+                // Prevent input blur when clicking floating button
+                e.preventDefault();
+
+                if (hideTimerRef.current) {
+                    clearTimeout(hideTimerRef.current);
+                }
+            }}
+            className="fixed z-[9999] flex flex-col items-start gap-2 pointer-events-none"
             style={{ left: pos.x, top: pos.y }}
         >
             {processing && (
@@ -208,6 +263,13 @@ export default function VoiceInputFloat() {
                 size="lg"
                 radius="full"
                 isDisabled={processing}
+
+                // tabIndex={0} makes the button explicitly focusable by the browser.
+                // Without it, relatedTarget in this code:
+                // const next = e.relatedTarget as Node | null;
+                // can become null on some browsers/framework combinations when clicking the button
+                tabIndex={0}
+
                 onPress={handlePress}
                 onPointerDown={() => {
                     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);

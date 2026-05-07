@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils"
-import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_transcript, Prisma, settings_tag } from "@/generated/prisma/client";
+import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_transcript, Prisma } from "@/generated/prisma/client";
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {
@@ -52,14 +52,13 @@ export async function getMediaAll(user_id: string): Promise<ActionResult<listen_
     }
 }
 
-export async function getMediaByTag(user_id: string, tag_uuid: string): Promise<ActionResult<listen_media[]>> {
+export async function getMediaByTag(tag_uuid: string): Promise<ActionResult<listen_media[]>> {
     try {
         const result = await prisma.$queryRaw<listen_media[]>(Prisma.sql`
             select lm.*
             from listen_media lm
             join listen_media_tag lmt on lmt.media_uuid = lm.uuid
-            where lm.user_id = ${user_id}
-              and lmt.tag_uuid = ${tag_uuid}
+            where lmt.tag_uuid = ${tag_uuid}
             order by title asc
         `);
         return { status: "success", data: result }
@@ -363,77 +362,6 @@ export async function removeNote(uuid: string): Promise<ActionResult<listen_note
         await prisma.qsa_card_tag.deleteMany({
             where: { tag_uuid: uuid }
         })
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function getTag(uuid: string): Promise<ActionResult<settings_tag>> {
-    try {
-        const result = await prisma.settings_tag.findUnique({
-            where: { uuid }
-        })
-        if (!result) {
-            return { status: 'error', error: 'no data found' }
-        }
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function getTagAll(email: string): Promise<ActionResult<settings_tag[]>> {
-    try {
-        const result = await prisma.settings_tag.findMany({
-            where: {
-                AND: [
-                    { OR: [{ user_id: email }, { user_id: "public" }] },
-                    { scope: { contains: 'listen' } },
-                ]
-            },
-            orderBy: { tag: 'asc' },
-        })
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function saveTag(item: settings_tag): Promise<ActionResult<settings_tag>> {
-    if (item.tag.length === 0) {
-        return { status: 'error', error: 'empty tag content' }
-    }
-    try {
-        if (!item.uuid || item.uuid === '') {
-            item.uuid = getUUID()
-        }
-        const result = await prisma.settings_tag.upsert({
-            where: { uuid: item.uuid },
-            create: item,
-            update: item,
-        })
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function removeTag(uuid: string): Promise<ActionResult<settings_tag>> {
-    if (uuid.match(/_by_system$/)) {
-        return { status: 'error', error: "cannot remove tag created by system" }
-    }
-    try {
-        const childCount = await prisma.settings_tag.count({ where: { parent_uuid: uuid } })
-        if (childCount > 0) {
-            return { status: 'error', error: "remove or reassign child tags first" }
-        }
-        await prisma.listen_media_tag.deleteMany({ where: { tag_uuid: uuid } })
-        const result = await prisma.settings_tag.delete({ where: { uuid } })
         return { status: "success", data: result }
     } catch (error) {
         console.error(error)

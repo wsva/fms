@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { ActionResult, card_ext, card_review } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
-import { qsa_card, Prisma, qsa_card_tag, qsa_card_review, settings_tag } from "@/generated/prisma/client";
+import { qsa_card, Prisma, qsa_card_tag, qsa_card_review } from "@/generated/prisma/client";
 import { FilterType, TagAll, TagUnspecified, TagNo } from "@/lib/card";
 
 export async function getCardAll(
@@ -301,58 +301,6 @@ export async function setCardFamiliarity(uuid: string, familiarity: number): Pro
         return false
     }
 }
-
-export async function getTag(uuid: string): Promise<ActionResult<settings_tag>> {
-    try {
-        const result = await prisma.settings_tag.findUnique({
-            where: { uuid }
-        })
-        if (!result) {
-            return { status: 'error', error: 'no data found' }
-        }
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function getTagAll(email: string): Promise<ActionResult<settings_tag[]>> {
-    try {
-        const result = await prisma.settings_tag.findMany({
-            where: {
-                AND: [
-                    { OR: [{ user_id: email }, { user_id: "public" }] },
-                    { scope: { contains: 'card' } },
-                ]
-            },
-            orderBy: { tag: 'asc' },
-        })
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
-export async function removeTag(uuid: string): Promise<ActionResult<settings_tag>> {
-    if (uuid.match(/_by_system$/)) {
-        return { status: 'error', error: "cannot remove tag created by system" }
-    }
-    try {
-        const childCount = await prisma.settings_tag.count({ where: { parent_uuid: uuid } })
-        if (childCount > 0) {
-            return { status: 'error', error: "remove or reassign child tags first" }
-        }
-        await prisma.qsa_card_tag.deleteMany({ where: { tag_uuid: uuid } })
-        const result = await prisma.settings_tag.delete({ where: { uuid } })
-        return { status: "success", data: result }
-    } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
-    }
-}
-
 
 export async function getCardTag(email: string, card_uuid: string): Promise<ActionResult<card_ext>> {
     try {

@@ -1,15 +1,16 @@
 'use client'
 
 import { trashWord } from '@/app/actions/word';
-import { saveCard, saveCardTag, getTagAll } from '@/app/actions/card';
-import { saveTag } from '@/app/actions/settings';
+import { saveCard, saveCardTag } from '@/app/actions/card';
+import { getTagAllOwned } from '@/app/actions/dataset';
 import { getUUID } from '@/lib/utils';
 import { addToast, Button, ButtonGroup, Link, Tooltip, useDisclosure } from "@heroui/react"
-import { settings_tag } from "@/generated/prisma/client";
+import { dataset_tag } from "@/generated/prisma/client";
 import { useState } from 'react';
 import CardModal from './modal';
 import { card_ext, topword } from '@/lib/types';
 import { BiLinkExternal, BiPlus, BiSolidBolt, BiTrash } from 'react-icons/bi';
+import { getKey } from '@/app/actions/settings_general';
 
 type Props = {
     word: topword;
@@ -19,7 +20,7 @@ type Props = {
 
 export default function Page({ word, language, email }: Props) {
     const [stateDisabled, setStateDisabled] = useState<boolean>(!email || word.in_card === "Y");
-    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
     const addCardEasy = async () => {
@@ -49,21 +50,10 @@ export default function Page({ word, language, email }: Props) {
             });
         }
 
-        const tag_uuid = `word_${language}_by_system`
-        await saveTag({
-            uuid: tag_uuid,
-            tag: `word_${language}`,
-            description: "created by system",
-            scope: 'card',
-            parent_uuid: null,
-            user_id: "public",
-            created_at: new Date(),
-            updated_at: new Date(),
-        })
-
+        const default_tags = await getKey('default_card_tags')
         const result_tag = await saveCardTag({
             uuid: card_uuid,
-            tag_list_new: [tag_uuid],
+            tag_list_new: default_tags?.split(","),
         })
         if (result_tag.status === 'success') {
             addToast({
@@ -107,23 +97,14 @@ export default function Page({ word, language, email }: Props) {
             });
         }
 
-        const tag_uuid = `word_${language}_by_system`
-        await saveTag({
-            uuid: tag_uuid,
-            tag: `word_${language}`,
-            description: "created by system",
-            scope: 'card',
-            parent_uuid: null,
-            user_id: "public",
-            created_at: new Date(),
-            updated_at: new Date(),
-        })
-
+        const default_tags = await getKey('default_card_tags')
         if (!formData.tag_list_new) {
             formData.tag_list_new = []
         }
-        if (!formData.tag_list_new.includes(tag_uuid)) {
-            formData.tag_list_new.push(tag_uuid)
+        for (const tag_uuid in default_tags?.split(",")) {
+            if (!formData.tag_list_new.includes(tag_uuid)) {
+                formData.tag_list_new.push(tag_uuid)
+            }
         }
         const result_tag = await saveCardTag({
             uuid: card_uuid,
@@ -131,13 +112,13 @@ export default function Page({ word, language, email }: Props) {
         })
         if (result_tag.status === 'success') {
             addToast({
-                title: "save data success",
+                title: "save tags success",
                 color: "success",
             });
         } else {
             console.log(result_tag.error);
             addToast({
-                title: "save data error",
+                title: "save tags error",
                 color: "danger",
             });
         }
@@ -171,7 +152,7 @@ export default function Page({ word, language, email }: Props) {
                 <Tooltip color='primary' closeDelay={0} content='add card'>
                     <Button isIconOnly variant='light' isDisabled={stateDisabled}
                         onPress={async () => {
-                            const result = await getTagAll(email || "")
+                            const result = await getTagAllOwned(email || "")
                             if (result.status === "success") {
                                 setStateTagList(result.data)
                             }

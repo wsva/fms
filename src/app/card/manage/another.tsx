@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { addToast, Button, CircularProgress, Pagination, Select, SelectItem } from "@heroui/react"
-import { qsa_card, settings_tag } from "@/generated/prisma/client";
+import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';
-import { getCardAll, getTagAll } from '@/app/actions/card';
+import { getCardAll } from '@/app/actions/card';
+import { getTagAllOwned } from '@/app/actions/dataset';
 import { FilterType } from '@/lib/card';
 import { copyCardsByTag } from '@/app/actions/manage';
 
@@ -15,9 +16,9 @@ type Props = {
 
 export default function CardMarket({ user_id_my, user_id_another }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
-    const [stateTagsOfAnother, setStateTagsOfAnother] = useState<settings_tag[]>([])
+    const [stateTagsOfAnother, setStateTagsOfAnother] = useState<dataset_tag[]>([])
     const [stateTagUUIDOfAnother, setStateTagUUIDOfAnother] = useState<string>("")
-    const [stateMyTags, setStateMyTags] = useState<settings_tag[]>([])
+    const [stateMyTags, setStateMyTags] = useState<dataset_tag[]>([])
     const [stateMyTagUUID, setStateMyTagUUID] = useState<string>("")
     const [stateData, setStateData] = useState<qsa_card[]>([])
     const [stateReload, setStateReload] = useState<number>(1);
@@ -28,7 +29,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
     useEffect(() => {
         const loadMyTags = async () => {
             setStateLoading(true)
-            const result = await getTagAll(user_id_my);
+            const result = await getTagAllOwned(user_id_my);
             if (result.status === "success") {
                 setStateMyTags(result.data)
             } else {
@@ -43,7 +44,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
 
         const loadTagsOfAnother = async () => {
             setStateLoading(true)
-            const result = await getTagAll(user_id_another);
+            const result = await getTagAllOwned(user_id_another);
             if (result.status === "success") {
                 setStateTagsOfAnother(result.data)
             } else {

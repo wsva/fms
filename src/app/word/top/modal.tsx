@@ -7,13 +7,13 @@ import { card_ext, topword } from '@/lib/types';
 import { FamiliarityList } from '@/lib/card';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from "zod";
-import { settings_tag } from "@/generated/prisma/client";
+import { dataset_tag } from "@/generated/prisma/client";
 
 
 type Props = {
     word: topword;
     language: string;
-    tag_list: settings_tag[];
+    tag_list: dataset_tag[];
     isOpen: boolean;
     isDisabled: boolean;
     onOpenChange: () => void;

@@ -1,8 +1,8 @@
 'use client'
 
-import { qsa_card, settings_tag } from "@/generated/prisma/client";
+import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import { useEffect, useState } from 'react';
-import { getTagAll } from '@/app/actions/card';
+import { getTagAllOwned } from '@/app/actions/dataset';
 import Card from './Card';
 import { addToast } from '@heroui/react';
 
@@ -12,11 +12,11 @@ type Props = {
 }
 
 export default function CardList({ user_id, card_list }: Props) {
-    const [stateTagList, setStateTagList] = useState<settings_tag[]>([]);
+    const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
 
     useEffect(() => {
         const loadData = async () => {
-            const result = await getTagAll(user_id);
+            const result = await getTagAllOwned(user_id);
             if (result.status === "success") {
                 setStateTagList(result.data)
             } else {

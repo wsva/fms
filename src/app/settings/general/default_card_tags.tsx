@@ -4,18 +4,18 @@ import { addToast, Button, Checkbox, CheckboxGroup } from "@heroui/react";
 import { useState, useEffect } from 'react';
 import { MdOutlineSave } from 'react-icons/md';
 import { getKey, setKey } from '@/app/actions/settings_general';
-import { getTagAll } from '@/app/actions/card';
-import { settings_tag } from "@/generated/prisma/client";
+import { getTagAllOwned } from '@/app/actions/dataset';
+import { dataset_tag } from "@/generated/prisma/client";
 import Section from './section';
 
 export default function DefaultCardTagsSetting({ user_id }: { user_id: string }) {
-    const [tagList, setTagList] = useState<settings_tag[]>([]);
+    const [tagList, setTagList] = useState<dataset_tag[]>([]);
     const [selected, setSelected] = useState<string[]>([]);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         Promise.all([
-            getTagAll(user_id),
+            getTagAllOwned(user_id),
             getKey('default_card_tags'),
         ]).then(([tagsResult, savedTags]) => {
             if (tagsResult.status === 'success') setTagList(tagsResult.data);

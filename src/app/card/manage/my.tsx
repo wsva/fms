@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { addToast, Button, CircularProgress, Pagination, Select, SelectItem } from "@heroui/react"
-import { qsa_card, settings_tag } from "@/generated/prisma/client";
+import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';
-import { getCardAll, getTagAll } from '@/app/actions/card';
+import { getCardAll } from '@/app/actions/card';
+import { getTagAllOwned } from '@/app/actions/dataset';
 import { FilterType } from '@/lib/card';
 import { removeCardsByTag } from '@/app/actions/manage';
 
@@ -14,7 +15,7 @@ type Props = {
 
 export default function Page({ user_id_my }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
-    const [stateMyTags, setStateMyTags] = useState<settings_tag[]>([])
+    const [stateMyTags, setStateMyTags] = useState<dataset_tag[]>([])
     const [stateMyTagUUID, setStateMyTagUUID] = useState<string>("")
     const [stateData, setStateData] = useState<qsa_card[]>([])
     const [stateReload, setStateReload] = useState<number>(1);
@@ -25,7 +26,7 @@ export default function Page({ user_id_my }: Props) {
     useEffect(() => {
         const loadTags = async () => {
             setStateLoading(true)
-            const result = await getTagAll(user_id_my);
+            const result = await getTagAllOwned(user_id_my);
             if (result.status === "success") {
                 setStateMyTags(result.data)
             } else {
