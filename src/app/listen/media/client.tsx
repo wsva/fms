@@ -1,5 +1,45 @@
 'use client'
 
+/**
+ * Subtitle state flow:
+ *
+ * 1. Load subtitles from server when media changes
+ *    -> setStateSubtitleList(subtitles)
+ *
+ * 2. Select active subtitle
+ *    -> prefer current user's subtitle
+ *    -> otherwise use first available subtitle
+ *    -> setStateSubtitle(subtitle)
+ *
+ * 3. Parse subtitle only when switching subtitle UUID
+ *    -> parse VTT/SRT once
+ *    -> convert into editable Cue[]
+ *    -> setStateCues(cues)
+ *
+ * 4. During editing
+ *    -> stateCues becomes the single source of truth
+ *    -> all cue edits modify only stateCues
+ *    -> do NOT modify subtitle text directly
+ *
+ * 5. During playback
+ *    -> find active cue from current video time
+ *    -> UI reads active cue from stateCues
+ *
+ * 6. On save
+ *    -> serialize stateCues using buildVTT(stateCues)
+ *    -> save subtitle to backend
+ *    -> update local stateSubtitle + stateSubtitleList
+ *    -> do NOT reload subtitles from server
+ *    -> do NOT reparse cues
+ *
+ * Result:
+ *    - no unnecessary API reload
+ *    - no duplicate parsing
+ *    - smoother editing experience
+ *    - stateCues remains authoritative during editing
+ */
+
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { addToast, Button, Chip, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag } from "@/generated/prisma/client";
@@ -8,7 +48,7 @@ import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
-import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdMovieCreation, MdCheckCircle, MdPeople } from 'react-icons/md'
+import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdCheckCircle, MdPeople } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
 import { buildVTT, Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
@@ -48,7 +88,6 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateSaving, setStateSaving] = useState<boolean>(false)
 
     const [stateSubtitleList, setStateSubtitleList] = useState<listen_subtitle[]>([])
-    const [stateReloadSubtitle, setStateReloadSubtitle] = useState<number>(1)
     const [stateSubtitle, setStateSubtitle] = useState<listen_subtitle>()
     const [stateCues, updateStateCues] = useImmer<Cue[]>([])
     const [stateActiveCue, setStateActiveCue] = useState<string>("")
@@ -94,158 +133,312 @@ export default function Page({ user_id, uuid }: Props) {
     }, [sidebarWidth])
 
     useEffect(() => {
-        const load = async () => {
-            if (!stateMediaUUID) { setStateMedia(newMedia(user_id)); return }
-            setStateLoading(true)
-            const result = await getMedia(stateMediaUUID)
-            if (result.status === 'success') {
-                setStateMedia(result.data)
-            } else {
-                console.log(result.error)
-                addToast({ title: "load data error", color: "danger" })
+        // Load media data when the media UUID changes.
+        // If no UUID exists, initialize a new media object for the current user.
+        const loadMedia = async () => {
+            if (!stateMediaUUID) {
+                setStateMedia(newMedia(user_id))
+                return
             }
-            setStateLoading(false)
+
+            setStateLoading(true)
+
+            try {
+                const result = await getMedia(stateMediaUUID)
+
+                if (result.status === 'success') {
+                    setStateMedia(result.data)
+                } else {
+                    console.log(result.error)
+
+                    addToast({
+                        title: 'Load data error',
+                        color: 'danger',
+                    })
+                }
+            } finally {
+                setStateLoading(false)
+            }
         }
-        load()
+
+        loadMedia()
     }, [user_id, stateMediaUUID])
 
     useEffect(() => {
-        const load = async () => {
-            if (!stateMediaUUID) return
+        // Reload subtitles.
+        // Prefer the subtitle owned by the current user,
+        // otherwise fall back to the first available subtitle.
+        const loadSubtitles = async () => {
+            if (!stateMediaUUID) {
+                setStateSubtitleList([])
+                setStateSubtitle(undefined)
+                return
+            }
+
             setStateLoading(true)
-            const result = await getSubtitleAll(stateMediaUUID)
-            if (result.status === 'success') setStateSubtitleList(result.data)
-            setStateLoading(false)
+
+            try {
+                const result = await getSubtitleAll(stateMediaUUID)
+
+                if (result.status === 'success') {
+                    const subtitles = result.data
+
+                    setStateSubtitleList(subtitles)
+
+                    // subtitles[0] will naturally be undefined when the array is empty
+                    const subtitle =
+                        subtitles.find(v => v.user_id === user_id) ??
+                        subtitles[0]
+
+                    setStateSubtitle(subtitle)
+                } else {
+                    setStateSubtitleList([])
+                    setStateSubtitle(undefined)
+                }
+            } finally {
+                setStateLoading(false)
+            }
         }
-        setStateSubtitleList([])
-        setStateSubtitle(undefined)
-        load()
-    }, [stateMediaUUID, stateReloadSubtitle])
+
+        loadSubtitles()
+    }, [user_id, stateMediaUUID])
 
     useEffect(() => {
-        const load = async () => {
-            if (!stateMediaUUID) { setStateTranscriptList([]); return }
+        // Reload transcripts
+        const loadTranscripts = async () => {
+            if (!stateMediaUUID) {
+                setStateTranscriptList([])
+                return
+            }
+
             setStateLoading(true)
-            const result = await getTranscriptAll(stateMediaUUID)
-            if (result.status === 'success') setStateTranscriptList(result.data)
-            setStateLoading(false)
+
+            try {
+                const result = await getTranscriptAll(stateMediaUUID)
+
+                setStateTranscriptList(
+                    result.status === 'success' ? result.data : []
+                )
+            } finally {
+                setStateLoading(false)
+            }
         }
-        load()
+
+        loadTranscripts()
     }, [stateMediaUUID, stateReloadTranscript])
 
     useEffect(() => {
-        const load = async () => {
-            if (!stateMediaUUID) { setStateNoteList([]); return }
+        // Reload notes
+        const loadNotes = async () => {
+            if (!stateMediaUUID) {
+                setStateNoteList([])
+                return
+            }
+
             setStateLoading(true)
-            const result = await getNoteAll(stateMediaUUID)
-            if (result.status === 'success') setStateNoteList(result.data)
-            setStateLoading(false)
+
+            try {
+                const result = await getNoteAll(stateMediaUUID)
+
+                setStateNoteList(
+                    result.status === 'success' ? result.data : []
+                )
+            } finally {
+                setStateLoading(false)
+            }
         }
-        load()
+
+        loadNotes()
     }, [stateMediaUUID, stateReloadNote])
 
     useEffect(() => {
-        const load = async () => {
+        // Load all used tags for the current user.
+        // Keep tag_list_selected in sync with the currently available tag list.
+        const loadTags = async () => {
             setStateLoading(true)
-            const result = await getTagAllUsed(user_id, "listen")
-            if (result.status === "success") {
-                setStateTagList(result.data)
-            } else {
-                console.log(result.error)
-                addToast({ title: "load data error", color: "danger" })
+
+            try {
+                const result = await getTagAllUsed(user_id, 'listen')
+
+                if (result.status === 'success') {
+                    const tags = result.data
+
+                    setStateTagList(tags)
+
+                    const availableTagUUIDs = new Set(
+                        tags.map(v => v.uuid)
+                    )
+
+                    setStateMedia(current => ({
+                        ...current,
+                        tag_list_selected:
+                            current.tag_list_added.filter(uuid =>
+                                availableTagUUIDs.has(uuid)
+                            ),
+                    }))
+                } else {
+                    console.log(result.error)
+
+                    addToast({
+                        title: 'Load data error',
+                        color: 'danger',
+                    })
+                }
+            } finally {
+                setStateLoading(false)
             }
-            setStateLoading(false)
         }
-        load()
+
+        loadTags()
     }, [user_id])
 
     useEffect(() => {
-        const tag_list = stateTagList.map(v => v.uuid)
-        setStateMedia(current => ({
-            ...current,
-            tag_list_selected: current.tag_list_added.filter(v => tag_list.includes(v)),
-        }))
-    }, [stateTagList])
-
-    useEffect(() => {
-        const load = async () => {
+        // Reload media list whenever the selected tag changes.
+        // Special case:
+        // - "invalid-subtitle" loads media with invalid subtitles
+        // - otherwise load media by tagUUID
+        const loadMediaList = async () => {
             setStateMediaList([])
+
             if (!stateTagUUID) return
+
             setStateLoading(true)
-            const result = stateTagUUID === "invalid-subtitle"
-                ? await getMediaByInvalidSubtitle(user_id)
-                : await getMediaByTag(stateTagUUID)
-            if (result.status === 'success') {
-                setStateMediaList(result.data)
-            } else {
-                console.log(result.error)
-                addToast({ title: "load data error", color: "danger" })
+
+            try {
+                const result =
+                    stateTagUUID === 'invalid-subtitle'
+                        ? await getMediaByInvalidSubtitle(user_id)
+                        : await getMediaByTag(stateTagUUID)
+
+                if (result.status === 'success') {
+                    setStateMediaList(result.data)
+                } else {
+                    console.log(result.error)
+
+                    addToast({
+                        title: 'Load data error',
+                        color: 'danger',
+                    })
+                }
+            } finally {
+                setStateLoading(false)
             }
-            setStateLoading(false)
         }
-        load()
+
+        loadMediaList()
     }, [user_id, stateTagUUID])
 
     useEffect(() => {
-        setStateSubtitle(undefined)
-        const my_list = stateSubtitleList.filter(v => v.user_id === user_id)
-        if (my_list.length > 0) setStateSubtitle(my_list[0])
-        else if (stateSubtitleList.length > 0) setStateSubtitle(stateSubtitleList[0])
-    }, [stateSubtitleList, user_id])
+        // Parse subtitle only when switching subtitle files.
+        updateStateCues(draft => {
+            draft.length = 0
 
-    useEffect(() => {
-        if (!stateSubtitle) { updateStateCues(d => { d.length = 0 }); return }
-        let cue_list: Cue[] = []
-        switch (stateSubtitle.format) {
-            case "vtt": cue_list = parseVTT(stateSubtitle.subtitle, false); break
-            case "srt": cue_list = parseSRT(stateSubtitle.subtitle, false); break
-            default: addToast({ title: "invalid subtitle format", color: "danger" })
-        }
-        updateStateCues(d => {
-            d.length = 0
-            let index = 1
-            for (const item of cue_list) { d.push({ ...item, index: index++ }) }
+            if (!stateSubtitle) return
+
+            let cueList: Cue[] = []
+
+            switch (stateSubtitle.format) {
+                case 'vtt':
+                    cueList = parseVTT(stateSubtitle.subtitle, false)
+                    break
+
+                case 'srt':
+                    cueList = parseSRT(stateSubtitle.subtitle, false)
+                    break
+
+                default:
+                    addToast({
+                        title: 'Invalid subtitle format',
+                        color: 'danger',
+                    })
+                    return
+            }
+
+            cueList.forEach((item, index) => {
+                draft.push({
+                    ...item,
+                    index: index + 1,
+                })
+            })
         })
-    }, [updateStateCues, stateSubtitle])
+    }, [updateStateCues, stateSubtitle?.uuid])
 
     useEffect(() => {
-        if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
+        // Clear pending auto-save timer when switching media/subtitle.
+        if (dictSaveTimer.current) {
+            clearTimeout(dictSaveTimer.current)
+        }
+
+        // Reset dictation state when media or subtitle is unavailable.
         if (!stateMediaUUID || !stateSubtitle?.uuid) {
             setStateDictSuccessSet(new Set())
             setStateDictStatus('in_progress')
             return
         }
-        const load = async () => {
-            const result = await getDictation(user_id, stateMediaUUID, stateSubtitle.uuid)
+
+        // Load dictation progress for the current media/subtitle pair.
+        const loadDictation = async () => {
+            const result = await getDictation(
+                user_id,
+                stateMediaUUID,
+                stateSubtitle.uuid
+            )
+
             if (result.status === 'success' && result.data) {
-                setStateDictSuccessSet(new Set(
-                    result.data.completed.split(',').filter(Boolean).map(Number)
-                ))
-                setStateDictStatus(result.data.status as 'in_progress' | 'complete')
+                setStateDictSuccessSet(
+                    new Set(
+                        result.data.completed
+                            .split(',')
+                            .filter(Boolean)
+                            .map(Number)
+                    )
+                )
+
+                setStateDictStatus(
+                    result.data.status as 'in_progress' | 'complete'
+                )
             } else {
                 setStateDictSuccessSet(new Set())
                 setStateDictStatus('in_progress')
             }
         }
-        load()
+
+        loadDictation()
     }, [user_id, stateMediaUUID, stateSubtitle?.uuid])
 
     useEffect(() => {
         const videoEl = videoRef.current
+
         if (!videoEl) return
+
+        // Synchronize active subtitle cue with the current video playback time.
         const onTimeUpdate = () => {
-            const currentTime = videoEl.currentTime
-            const ms = currentTime * 1000
-            const currentCue = stateCues.find(
-                cue => ms >= cue.start_ms && ms <= cue.end_ms
+            const currentMs = videoEl.currentTime * 1000
+
+            const activeCue = stateCues.find(
+                cue =>
+                    currentMs >= cue.start_ms &&
+                    currentMs <= cue.end_ms
             )
-            setStateActiveCue(currentCue ? currentCue.text.join(" ") : "")
-            updateStateCues(d => {
-                d.forEach(cue => { cue.active = ms >= cue.start_ms && ms <= cue.end_ms })
+
+            setStateActiveCue(
+                activeCue ? activeCue.text.join(' ') : ''
+            )
+
+            updateStateCues(draft => {
+                draft.forEach(cue => {
+                    cue.active =
+                        currentMs >= cue.start_ms &&
+                        currentMs <= cue.end_ms
+                })
             })
         }
-        videoEl.addEventListener("timeupdate", onTimeUpdate)
-        return () => videoEl.removeEventListener("timeupdate", onTimeUpdate)
+
+        videoEl.addEventListener('timeupdate', onTimeUpdate)
+
+        return () => {
+            videoEl.removeEventListener('timeupdate', onTimeUpdate)
+        }
     }, [stateCues, updateStateCues])
 
     useEffect(() => {
@@ -314,22 +507,47 @@ export default function Page({ user_id, uuid }: Props) {
     }
 
     const handleDictCueSave = async () => {
+        // Save edited cues back to the subtitle as VTT format.
         if (!stateSubtitle) return
+
         setStateDictSaving(true)
-        const result = await saveSubtitle({
+
+        const updatedSubtitle = {
             ...stateSubtitle,
             subtitle: buildVTT(stateCues),
             format: 'vtt',
             updated_at: new Date(),
-        })
-        if (result.status === 'success') {
-            addToast({ title: 'save subtitle success', color: 'success' })
-            setStateReloadSubtitle(n => n + 1)
-            setStateEditingCue(null)
-        } else {
-            addToast({ title: 'save subtitle error', color: 'danger' })
         }
-        setStateDictSaving(false)
+
+        try {
+            const result = await saveSubtitle(updatedSubtitle)
+
+            if (result.status === 'success') {
+                setStateSubtitle(updatedSubtitle)
+
+                setStateSubtitleList(current =>
+                    current.map(v =>
+                        v.uuid === updatedSubtitle.uuid
+                            ? updatedSubtitle
+                            : v
+                    )
+                )
+
+                addToast({
+                    title: 'save subtitle success',
+                    color: 'success',
+                })
+
+                setStateEditingCue(null)
+            } else {
+                addToast({
+                    title: 'save subtitle error',
+                    color: 'danger',
+                })
+            }
+        } finally {
+            setStateDictSaving(false)
+        }
     }
 
     const handleSave = async () => {
@@ -387,7 +605,7 @@ export default function Page({ user_id, uuid }: Props) {
                 style={{ width: sidebarWidth }}
             >
                 {/* Player */}
-                {hasVideo ? (
+                {hasVideo && (
                     audioMode ? (
                         <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
                             subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
@@ -399,21 +617,13 @@ export default function Page({ user_id, uuid }: Props) {
                             />
                         </div>
                     )
-                ) : (
-                    <div className="rounded-xl bg-sand-100 flex items-center justify-center h-40 text-foreground-400 flex-col gap-2">
-                        <MdMovieCreation size={32} className="opacity-30" />
-                        <p className="text-xs">No media selected</p>
-                    </div>
                 )}
 
                 {/* Active cue */}
-                {stateCues.length > 0 && (
+                {stateCues.length > 0 && !stateDictation && (
                     <div className={`rounded-xl px-4 py-3 border-l-4 border-r-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
                         <p className="text-lg font-semibold leading-snug">
-                            {stateDictation
-                                ? <span className="italic text-foreground-400 text-base">Dictation mode</span>
-                                : (stateActiveCue || ' ')
-                            }
+                            {stateActiveCue || ' '}
                         </p>
                     </div>
                 )}
@@ -621,7 +831,8 @@ export default function Page({ user_id, uuid }: Props) {
                             </div>
                             {!!stateSubtitle && (
                                 <Subtitle item={stateSubtitle} user_id={user_id} media={videoRef.current}
-                                    setStateReloadSubtitle={setStateReloadSubtitle}
+                                    setStateSubtitle={setStateSubtitle}
+                                    setStateSubtitleList={setStateSubtitleList}
                                 />
                             )}
                         </Tab>

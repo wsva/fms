@@ -13,10 +13,11 @@ type Props = {
     item: listen_subtitle;
     user_id: string;
     media: HTMLMediaElement | null;
-    setStateReloadSubtitle: React.Dispatch<React.SetStateAction<number>>;
+    setStateSubtitle: React.Dispatch<React.SetStateAction<listen_subtitle | undefined>>
+    setStateSubtitleList: React.Dispatch<React.SetStateAction<listen_subtitle[]>>
 }
 
-export default function Page({ item, user_id, media, setStateReloadSubtitle }: Props) {
+export default function Page({ item, user_id, media, setStateSubtitle, setStateSubtitleList }: Props) {
     const [stateData, setStateData] = useState<listen_subtitle>(item);
     const [stateCues, updateStateCues] = useImmer<Cue[]>([]);
     const [stateEdit, setStateEdit] = useState<boolean>(false);
@@ -51,54 +52,6 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
         };
         loadCues();
     }, [item]);
-
-    // 每修改一个字符都重新生成字幕文本，再重新解析成Cue，性能太差
-
-    // reload Cues only when switch to correct mode, or on the first time
-    /* useEffect(() => {
-        const loadCues = () => {
-            let cue_list: Cue[] = [];
-            switch (stateData.format) {
-                case "vtt":
-                    cue_list = parseVTT(stateData.subtitle, false);
-                    break;
-                case "srt":
-                    cue_list = parseSRT(stateData.subtitle, false);
-                    break;
-                default:
-                    addToast({
-                        title: "invalid subtitle format",
-                        color: "danger",
-                    });
-            }
-            updateStateCues((draft) => {
-                draft.length = 0;
-                let index = 1;
-                for (const item of cue_list) {
-                    draft.push({ ...item, index: index });
-                    index++;
-                }
-            });
-        };
-        // stateCues.length === 0 会有 warning: 依赖 stateCues.length
-        // 但是又不能添加 stateCues.length 这个依赖，否则编辑时无法添加或删除行
-        if (stateMode === "correct" || stateCues.at(0) === undefined) {
-            loadCues();
-        }
-    }, [stateData, updateStateCues, stateMode]); */
-
-    // update stateData only when switch to edit mode and ignore the first time
-    /* useEffect(() => {
-        if (stateMode === "edit" && stateCues.at(0) !== undefined) {
-            setStateData(current => {
-                return {
-                    ...current,
-                    subtitle: buildVTT(stateCues),
-                    format: "vtt",
-                }
-            });
-        }
-    }, [stateCues, stateMode]); */
 
     return (
         <div className='flex flex-col items-center justify-start w-full my-2 gap-1'>
@@ -154,25 +107,44 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                                 isDisabled={stateSaving}
                                 onPress={async () => {
                                     setStateSaving(true);
-                                    const result = await saveSubtitle({
+                                    const updatedSubtitle = {
                                         ...stateData,
-                                        subtitle: stateEditAsText ? stateData.subtitle : buildVTT(stateCues),
+                                        subtitle: stateEditAsText
+                                            ? stateData.subtitle
+                                            : buildVTT(stateCues),
                                         updated_at: new Date(),
-                                    });
-                                    if (result.status === "success") {
-                                        addToast({
-                                            title: "save data success",
-                                            color: "success",
-                                        });
-                                        setStateReloadSubtitle(current => current + 1);
-                                    } else {
-                                        console.log(result.error);
-                                        addToast({
-                                            title: "save data error",
-                                            color: "danger",
-                                        });
                                     }
-                                    setStateSaving(false);
+                                    try {
+                                        const result = await saveSubtitle(updatedSubtitle)
+
+                                        if (result.status === 'success') {
+                                            // Keep local subtitle state synchronized
+                                            // without triggering a full reload.
+                                            setStateSubtitle(updatedSubtitle)
+
+                                            setStateSubtitleList(current =>
+                                                current.map(v =>
+                                                    v.uuid === updatedSubtitle.uuid
+                                                        ? updatedSubtitle
+                                                        : v
+                                                )
+                                            )
+
+                                            addToast({
+                                                title: 'save data success',
+                                                color: 'success',
+                                            })
+                                        } else {
+                                            console.log(result.error)
+
+                                            addToast({
+                                                title: 'save data error',
+                                                color: 'danger',
+                                            })
+                                        }
+                                    } finally {
+                                        setStateSaving(false)
+                                    }
                                 }}
                             >
                                 Save
@@ -186,21 +158,38 @@ export default function Page({ item, user_id, media, setStateReloadSubtitle }: P
                             isDisabled={stateSaving}
                             onPress={async () => {
                                 setStateSaving(true);
-                                const result = await removeSubtitle(item.uuid);
-                                if (result.status === "success") {
-                                    addToast({
-                                        title: "remove data success",
-                                        color: "success",
-                                    });
-                                    setStateReloadSubtitle(current => current + 1);
-                                } else {
-                                    console.log(result.error);
-                                    addToast({
-                                        title: "remove data error",
-                                        color: "danger",
-                                    });
+
+                                try {
+                                    const result = await removeSubtitle(item.uuid)
+
+                                    if (result.status === 'success') {
+                                        // Remove subtitle locally without triggering reload.
+                                        setStateSubtitleList(current =>
+                                            current.filter(v => v.uuid !== item.uuid)
+                                        )
+
+                                        // Clear current selection if the active subtitle was deleted.
+                                        setStateSubtitle(current =>
+                                            current?.uuid === item.uuid
+                                                ? undefined
+                                                : current
+                                        )
+
+                                        addToast({
+                                            title: 'remove data success',
+                                            color: 'success',
+                                        })
+                                    } else {
+                                        console.log(result.error)
+
+                                        addToast({
+                                            title: 'remove data error',
+                                            color: 'danger',
+                                        })
+                                    }
+                                } finally {
+                                    setStateSaving(false)
                                 }
-                                setStateSaving(false);
                             }}
                         >
                             Delete
