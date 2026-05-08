@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Avatar, Button, Input, Link, Tooltip } from '@heroui/react'
+import { Avatar, Button, Input, Link, Textarea, Tooltip } from '@heroui/react'
 import { Cue, formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
-import { MdContentCopy, MdExpand, MdDelete, MdOutlineAddCircleOutline, MdOutlineEdit, MdOutlineHelpOutline, MdOutlineLightbulbCircle, MdOutlinePlayCircle, MdClose, MdSave } from 'react-icons/md'
+import { MdContentCopy, MdExpand, MdDelete, MdOutlineAddCircleOutline, MdOutlineEdit, MdOutlineLightbulbCircle, MdOutlinePlayCircle, MdClose, MdSave } from 'react-icons/md'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,6 @@ type DictationProps = {
 
 function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: DictationProps) {
     const [stateInput, setStateInput] = useState<string>('')
-    const [stateTips, setStateTips] = useState<boolean>(false)
 
     const isSuccess = (answer: string) => {
         return answer === cue.text.join(" ")
@@ -37,18 +36,8 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
     }
 
     return (
-        <div className='flex flex-row items-center justify-start w-full gap-1'>
-            <Tooltip isOpen={stateTips} placement='top-end'
-                className='bg-slate-300'
-                content={
-                    <div className='flex flex-row justify-center text-xl'>
-                        {stateSuccess ? "👍" : ""}
-                        <div className='flex flex-col items-start justify-start px-4 py-0.5'>
-                            {getTip(stateInput)}
-                        </div>
-                    </div>
-                }
-            >
+        <div className='flex flex-col items-start justify-center w-full gap-1'>
+            <div className='flex flex-row items-center justify-start w-full gap-1'>
                 <Input aria-label='input answer' variant='bordered' autoComplete="one-time-code"
                     id={`d-s-i-${cue.index}`}
                     classNames={{
@@ -76,8 +65,6 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
                             }
                         }
                     }}
-                    onFocus={() => setStateTips(true)}
-                    onBlur={() => setStateTips(false)}
                     onKeyDown={(e) => {
                         if (!media) return
                         if (e.ctrlKey && 'sS'.includes(e.key)) {
@@ -92,34 +79,23 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
                         }
                     }}
                 />
-            </Tooltip>
-            {!!cue.translation && cue.translation.length > 0 && (
-                <Tooltip placement='top-end' className='bg-slate-300'
-                    content={
-                        <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
-                            {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
-                        </div>
-                    }
-                >
-                    <Button isIconOnly variant='light' tabIndex={-1}>
-                        <MdOutlineLightbulbCircle size={30} />
-                    </Button>
-                </Tooltip>
-            )}
-            <Tooltip placement='top-end' className='bg-slate-300'
-                content={<div className='text-xl px-4 py-0.5'>{cue.text}</div>}
-            >
-                <Button isIconOnly variant='light' tabIndex={-1}>
-                    <MdOutlineHelpOutline size={30} />
-                </Button>
-            </Tooltip>
-            <Tooltip content="add card">
-                <Button isIconOnly variant='light' tabIndex={-1} as={Link} target='_blank'
-                    href={`/card/add?edit=y&question=${encodeURIComponent(cue.text.join(" "))}`}
-                >
-                    <MdOutlineAddCircleOutline size={30} />
-                </Button>
-            </Tooltip>
+                {!!cue.translation && cue.translation.length > 0 && (
+                    <Tooltip placement='top-end' className='bg-slate-300'
+                        content={
+                            <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
+                                {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
+                            </div>
+                        }
+                    >
+                        <Button isIconOnly variant='light' tabIndex={-1}>
+                            <MdOutlineLightbulbCircle size={30} />
+                        </Button>
+                    </Tooltip>
+                )}
+            </div>
+            <div className='bg-slate-200 rounded-sm px-1 text-gray-400'>
+                {getTip(stateInput)}
+            </div>
         </div>
     )
 }
@@ -255,12 +231,23 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 )}
                 <div className="ml-auto flex gap-1.5">
                     {mode === "dictation" && allowEdit && (
-                        <Button isIconOnly variant="light" size="sm" tabIndex={-1} onPress={onEdit}>
-                            <MdOutlineEdit size={24} />
-                        </Button>
+                        <div>
+                            <Tooltip content="add card">
+                                <Button isIconOnly variant='light' tabIndex={-1} as={Link} target='_blank'
+                                    href={`/card/add?edit=y&question=${encodeURIComponent(cue.text.join(" "))}`}
+                                >
+                                    <MdOutlineAddCircleOutline size={24} />
+                                </Button>
+                            </Tooltip>
+                            <Tooltip content="edit subtitle">
+                                <Button isIconOnly variant="light" size="sm" tabIndex={-1} onPress={onEdit}>
+                                    <MdOutlineEdit size={24} />
+                                </Button>
+                            </Tooltip>
+                        </div>
                     )}
                     {mode === "dictation_edit" && allowEdit && (
-                        <>
+                        <div>
                             <Tooltip placement="bottom" content="save">
                                 <Button isIconOnly variant='light' tabIndex={-1} size="sm" isDisabled={saving}
                                     onPress={onSave}
@@ -275,7 +262,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                                     <MdClose size={24} />
                                 </Button>
                             </Tooltip>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
@@ -289,12 +276,13 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 />
             ) : (
                 (mode === "edit" || mode === "dictation_edit") && (
-                    <Input aria-label='text' variant='bordered' autoComplete="one-time-code"
+                    <Textarea aria-label='text' variant='bordered' autoComplete="one-time-code"
                         classNames={{
-                            mainWrapper: 'border-b-2 border-gray-400',
-                            inputWrapper: 'border-none pl-0 ml-0',
+                            inputWrapper: 'border-2 border-gray-400 group-data-[focus=true]:border-gray-400',
                             input: 'text-xl font-bold',
                         }}
+                        minRows={1}
+                        maxRows={20}
                         value={cue.text.join('\n')}
                         onChange={(e) => onUpdate({ ...cue, text: e.target.value.split('\n') })}
                     />
