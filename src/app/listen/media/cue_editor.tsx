@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { Avatar, Button, Input, Link, Textarea, Tooltip } from '@heroui/react'
 import { Cue, formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
-import { MdContentCopy, MdExpand, MdDelete, MdOutlineAddCircleOutline, MdOutlineEdit, MdOutlineLightbulbCircle, MdOutlinePlayCircle, MdClose, MdSave, MdKeyboardTab, MdOutlineLocationOn } from 'react-icons/md'
+import { MdDelete, MdOutlineAddCircleOutline, MdOutlineEdit, MdOutlineLightbulbCircle, MdOutlinePlayCircle, MdClose, MdSave, MdKeyboardTab, MdOutlineLocationOn } from 'react-icons/md'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
