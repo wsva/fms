@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { Avatar, Button, Input, Link, Textarea, Tooltip } from '@heroui/react'
 import { Cue, formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
-import { MdContentCopy, MdExpand, MdDelete, MdOutlineAddCircleOutline, MdOutlineEdit, MdOutlineLightbulbCircle, MdOutlinePlayCircle, MdClose, MdSave } from 'react-icons/md'
+import { MdContentCopy, MdExpand, MdDelete, MdOutlineAddCircleOutline, MdOutlineEdit, MdOutlineLightbulbCircle, MdOutlinePlayCircle, MdClose, MdSave, MdKeyboardTab, MdOutlineLocationOn } from 'react-icons/md'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
@@ -138,49 +138,86 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
         setStateSuccess(initialSuccess ?? false)
     }, [initialSuccess])
 
+    const timeEditorEl = (
+        <Input aria-label="start time" size="sm" className="w-sm" autoComplete="one-time-code"
+            classNames={{
+                inputWrapper: 'bg-sand-200',
+                input: 'text-center',
+                innerWrapper: 'justify-center'
+            }}
+            color={!!validateVttTime(stateStart) && !!validateVttTime(stateEnd) ? 'default' : 'danger'}
+            value={`${stateStart} ➔ ${stateEnd}`}
+            onChange={(e) => {
+                const parts = e.target.value.split(" ➔ ")
+                setStateStart(parts[0])
+                setStateEnd(parts[1])
+            }}
+            onBlur={() => {
+                if (validateVttTime(stateStart))
+                    onUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
+                if (validateVttTime(stateEnd))
+                    onUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
+            }}
+            startContent={
+                <div className='flex flex-row items-start justify-center'>
+                    <Tooltip content="expand to the end of former">
+                        <Button isIconOnly variant="light" tabIndex={-1} size="sm" onPress={onExpandStart}>
+                            <MdKeyboardTab size={24} className='scale-x-[-1]' />
+                        </Button>
+                    </Tooltip>
+                    <Tooltip content="use current time">
+                        <Button isIconOnly variant="light" tabIndex={-1} size="sm"
+                            onPress={() => {
+                                if (media) {
+                                    const startMs = Math.round(media.currentTime * 1000)
+                                    setStateStart(formatVttTime(startMs))
+                                    onUpdate({ ...cue, start_ms: startMs })
+                                }
+                            }}
+                        >
+                            <MdOutlineLocationOn size={24} className='scale-x-[-1]' />
+                        </Button>
+                    </Tooltip>
+                </div>
+            }
+            endContent={
+                <div className='flex flex-row items-end justify-center'>
+                    <Tooltip content="use current time">
+                        <Button isIconOnly variant="light" tabIndex={-1} size="sm"
+                            onPress={() => {
+                                if (media) {
+                                    const endMs = Math.round(media.currentTime * 1000)
+                                    setStateEnd(formatVttTime(endMs))
+                                    onUpdate({ ...cue, end_ms: endMs })
+                                }
+                            }}
+                        >
+                            <MdOutlineLocationOn size={24} className='scale-x-[-1]' />
+                        </Button>
+                    </Tooltip>
+                    <Tooltip content="expand to the start of next">
+                        <Button isIconOnly variant="light" tabIndex={-1} size="sm" onPress={onExpandEnd}>
+                            <MdKeyboardTab size={24} />
+                        </Button>
+                    </Tooltip>
+                </div>
+            }
+        />
+    )
+
     return (
         <div className="flex flex-col gap-0.5 w-full">
             <div className="flex flex-row items-center justify-start w-full gap-1">
-                <Tooltip content={mode === "dictation" ? 'turn green on success: punctuation does not matter' : 'order'}>
+                <Tooltip isDisabled={mode !== "dictation"} content={'turn green on success: punctuation does not matter'}>
                     <Avatar size='sm' radius="sm" name='' fallback={<span className="text-sm font-medium">{cue.index}</span>} className={`text-md${stateSuccess ? '' : ' bg-sand-200'}`}
                         color={stateSuccess ? 'success' : 'default'}
                     />
                 </Tooltip>
-                <Input aria-label="start time" size="sm" className="w-fit" autoComplete="one-time-code"
-                    classNames={{ inputWrapper: 'bg-sand-200' }}
-                    color={!validateVttTime(stateStart) ? 'danger' : 'default'}
-                    value={stateStart}
-                    onChange={(e) => setStateStart(e.target.value)}
-                    onBlur={() => {
-                        if (validateVttTime(stateStart)) onUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
-                    }}
-                    endContent={
-                        <Tooltip content="expand to the end of former">
-                            <Button isIconOnly variant="light" tabIndex={-1} size="sm" onPress={onExpandStart}>
-                                <MdExpand size={24} />
-                            </Button>
-                        </Tooltip>
-                    }
-                />
-                <div>{'-->'}</div>
-                <Input aria-label="end time" size="sm" className="w-fit" autoComplete="one-time-code"
-                    classNames={{ inputWrapper: 'bg-sand-200' }}
-                    color={!validateVttTime(stateEnd) ? 'danger' : 'default'}
-                    value={stateEnd}
-                    onChange={(e) => setStateEnd(e.target.value)}
-                    onBlur={() => {
-                        if (validateVttTime(stateEnd)) onUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
-                    }}
-                    endContent={
-                        <Tooltip content="expand to the start of next">
-                            <Button isIconOnly variant="light" tabIndex={-1} size="sm" onPress={onExpandEnd}>
-                                <MdExpand size={24} />
-                            </Button>
-                        </Tooltip>
-                    }
-                />
-                <Tooltip content={mode === "dictation" ? 'shortcut: Ctrl+S, Ctrl+D, or type two spaces at the end' : ''}>
-                    <Button isIconOnly variant='light' tabIndex={-1}
+                <div className="hidden lg:flex">
+                    {timeEditorEl}
+                </div>
+                <Tooltip isDisabled={mode !== "dictation"} content={'shortcut: Ctrl+S, Ctrl+D, or type two spaces at the end'}>
+                    <Button isIconOnly variant='light' size="sm" tabIndex={-1}
                         onPress={() => {
                             if (!media) return
                             if (media.paused) playMediaPart(cue, media, false)
@@ -192,15 +229,6 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 </Tooltip>
                 {(mode === "edit" || mode === "dictation_edit") && allowEdit && (
                     <>
-                        <Tooltip content="copy current time">
-                            <Button isIconOnly variant="light" size="sm" tabIndex={-1}
-                                onPress={() => {
-                                    if (media) navigator.clipboard.writeText(formatVttTime(Math.round(media.currentTime * 1000)))
-                                }}
-                            >
-                                <MdContentCopy size={24} />
-                            </Button>
-                        </Tooltip>
                         <Tooltip content="insert before">
                             <Button isIconOnly variant='light' tabIndex={-1} size="sm"
                                 onPress={() => onInsert(cue.index)}
@@ -233,7 +261,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                     {mode === "dictation" && allowEdit && (
                         <div>
                             <Tooltip content="add card">
-                                <Button isIconOnly variant='light' tabIndex={-1} as={Link} target='_blank'
+                                <Button isIconOnly variant='light' size="sm" tabIndex={-1} as={Link} target='_blank'
                                     href={`/card/add?edit=y&question=${encodeURIComponent(cue.text.join(" "))}`}
                                 >
                                     <MdOutlineAddCircleOutline size={24} />
@@ -248,23 +276,24 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                     )}
                     {mode === "dictation_edit" && allowEdit && (
                         <div>
-                            <Tooltip placement="bottom" content="save">
+                            <Tooltip content="save">
                                 <Button isIconOnly variant='light' tabIndex={-1} size="sm" isDisabled={saving}
                                     onPress={onSave}
                                 >
                                     <MdSave size={24} />
                                 </Button>
                             </Tooltip>
-                            <Tooltip placement="bottom" content="go back">
-                                <Button isIconOnly variant='light' size="sm"
-                                    onPress={onDone}
-                                >
-                                    <MdClose size={24} />
-                                </Button>
-                            </Tooltip>
+                            <Button isIconOnly variant='light' size="sm" tabIndex={-1}
+                                onPress={onDone}
+                            >
+                                <MdClose size={24} />
+                            </Button>
                         </div>
                     )}
                 </div>
+            </div>
+            <div className="lg:hidden flex">
+                {timeEditorEl}
             </div>
             {mode === "dictation" ? (
                 <Dictation
