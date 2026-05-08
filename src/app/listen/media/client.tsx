@@ -442,7 +442,26 @@ export default function Page({ user_id, uuid }: Props) {
     }, [stateCues, updateStateCues])
 
     useEffect(() => {
-        getKey('local_service').then(url => setLocalServiceUrl(url ?? '')).catch(() => { })
+        getKey('local_service')
+            .then(async (url) => {
+                const value = url ?? '';
+
+                if (!value) return;
+
+                try {
+                    const res = await fetch(value, {
+                        method: 'HEAD',
+                        mode: 'cors',
+                    });
+                    if (res.ok) {
+                        setLocalServiceUrl(value);
+                    }
+                    console.log('reachable:', res.ok);
+                } catch (err) {
+                    console.log('cannot access url');
+                }
+            })
+            .catch(() => { });
     }, [])
 
     useEffect(() => {

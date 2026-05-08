@@ -123,20 +123,33 @@ export default function VoiceInputFloat() {
 
     // Load local service URL once, and update live when the setting is saved
     useEffect(() => {
+        const initLocalService = async (cleaned: string) => {
+            try {
+                const res = await fetch(cleaned, {
+                    method: 'HEAD',
+                    mode: 'cors',
+                });
+                if (res.ok) {
+                    localServiceRef.current = cleaned;
+                    enabledRef.current = !!cleaned;
+                    setHasLocalService(!!cleaned);
+                }
+                console.log('local service reachable:', res.ok);
+            } catch (err) {
+                console.log('cannot access local service');
+            }
+        }
+
         getKey('local_service')
-            .then(url => {
+            .then(async (url) => {
                 const cleaned = url?.replace(/\/$/, '') ?? '';
-                localServiceRef.current = cleaned;
-                enabledRef.current = !!cleaned;
-                setHasLocalService(!!cleaned);
+                initLocalService(cleaned);
             })
             .catch(() => { });
 
-        const onChanged = (e: Event) => {
+        const onChanged = async (e: Event) => {
             const cleaned = ((e as CustomEvent<string>).detail ?? '').replace(/\/$/, '');
-            localServiceRef.current = cleaned;
-            enabledRef.current = !!cleaned;
-            setHasLocalService(!!cleaned);
+            initLocalService(cleaned);
         };
         window.addEventListener('local-service-changed', onChanged);
         return () => window.removeEventListener('local-service-changed', onChanged);
