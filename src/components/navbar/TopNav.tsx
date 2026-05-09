@@ -141,18 +141,27 @@ export default function TopNav() {
                                     </Button>
                                 </DropdownTrigger>
                             </NavbarItem>
-                            <DropdownMenu>
-                                {group.items.map((item) => (
-                                    <DropdownItem
-                                        className="bg-sand-300"
-                                        href={item.href}
-                                        key={item.key}
-                                        description={item.description}
-                                        onPress={() => router.push(item.href)}
-                                    >
-                                        {item.name}
-                                    </DropdownItem>
-                                ))}
+                            <DropdownMenu
+                                disabledKeys={group.items.filter(item => /^seperator_/.test(item.key)).map(item => item.key)}
+                            >
+                                {group.items.map((item) => {
+                                    return /^seperator_/.test(item.key) ? (
+                                        <DropdownItem key={item.key} >
+                                            <span className="font-bold select-none text-gray-500">{item.name}</span>
+                                            <Divider />
+                                        </DropdownItem>
+                                    ) : (
+                                        <DropdownItem
+                                            className="bg-sand-300"
+                                            href={item.href}
+                                            key={item.key}
+                                            description={item.description}
+                                            onPress={() => router.push(item.href)}
+                                        >
+                                            {item.name}
+                                        </DropdownItem>
+                                    )
+                                })}
                             </DropdownMenu>
                         </Dropdown>
                     ))}
@@ -238,7 +247,7 @@ export default function TopNav() {
                         )}
                     </div>
                     <NavbarMenuItem className="my-1">
-                        <Link className="w-full text-blue-600 underline font-bold" href={"/"}
+                        <Link className="w-full text-blue-600 underline font-bold text-xl" href={"/"}
                             onPress={() => setIsMenuOpen(!isMenuOpen)}
                         >
                             Home
@@ -246,21 +255,28 @@ export default function TopNav() {
                     </NavbarMenuItem>
                     {menuList.map((group) => (
                         <div key={group.name}>
-                            <div className="select-none font-bold">{group.name}</div>
+                            <div className="select-none font-bold text-xl">{group.name}</div>
                             <Divider />
-                            {group.items.map((item) => (
-                                <NavbarMenuItem key={item.key} className="my-1 pl-4">
-                                    <Link className="w-full text-blue-600 underline" href={item.href}
-                                        onPress={() => setIsMenuOpen(!isMenuOpen)}
-                                    >
-                                        {item.name}
-                                    </Link>
-                                </NavbarMenuItem>
-                            ))}
+                            {group.items.map((item) => {
+                                return /^seperator_/.test(item.key) ? (
+                                    <NavbarMenuItem key={item.key} className="my-1 pl-4">
+                                        <span className="font-bold select-none text-gray-500 text-lg">{item.name}</span>
+                                        <Divider />
+                                    </NavbarMenuItem>
+                                ) : (
+                                    <NavbarMenuItem key={item.key} className="my-1 pl-4">
+                                        <Link className="w-full text-blue-600 underline text-lg" href={item.href}
+                                            onPress={() => setIsMenuOpen(!isMenuOpen)}
+                                        >
+                                            {item.name}
+                                        </Link>
+                                    </NavbarMenuItem>
+                                )
+                            })}
                         </div>
                     ))}
                 </NavbarMenu>
-            </Navbar>
+            </Navbar >
         </>
     )
 }

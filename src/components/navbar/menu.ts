@@ -12,12 +12,6 @@ type MenuGroup = {
 
 export const menuList: MenuGroup[] = [
     {
-        name: "Plan",
-        items: [
-            { key: "plan_main", name: "My Plans", description: "set and view plans", href: "/plan" },
-        ],
-    },
-    {
         name: "Word",
         items: [
             { key: "word_top", name: "Top Words", description: "top words", href: "/word/top" },
@@ -26,29 +20,21 @@ export const menuList: MenuGroup[] = [
         ],
     },
     {
-        name: "Listen",
+        name: "Listen & Speak",
         items: [
+            { key: "seperator_listen", name: "Listen", description: "", href: "" },
             { key: "listen_dictation", name: "Dictation", description: "dictation", href: "/listen/dictation" },
             { key: "listen_media", name: "My Media", description: "my media", href: "/listen/media" },
-        ],
-    },
-    {
-        name: "Speak",
-        items: [
+
+            { key: "seperator_speak", name: "Speak", description: "", href: "" },
             { key: "speak_just_speaking", name: "Just Speaking", description: "record and upload audio", href: "/speak/just-speaking" },
             { key: "speak_practice", name: "Practice", description: "practice", href: "/speak/practice" },
             { key: "speak_ask", name: "Asking", description: "ask or answer a question", href: "/speak/ask" },
+
+            { key: "seperator_read", name: "Read", description: "", href: "" },
             { key: "read_book_main", name: "Reading", description: "read a book", href: "/speak/read" },
             { key: "read_book_manage", name: "Manage Books", description: "manage books and chapters", href: "/speak/read/book" },
             { key: "read_book_text", name: "View Book Text", description: "show content in pure text", href: "/speak/read/text" },
-        ],
-    },
-    {
-        name: "Blog",
-        items: [
-            { key: "blog_index", name: "Blog", description: "all blogs", href: "/blog" },
-            { key: "blog_add", name: "Add Blog", description: "add new blog", href: "/blog/add" },
-            { key: "blog_all_of_others", name: "View Blogs By Others", description: "blogs by others", href: "/blog/all_of_others" },
         ],
     },
     {
@@ -63,10 +49,25 @@ export const menuList: MenuGroup[] = [
         ],
     },
     {
+        name: "Blog",
+        items: [
+            { key: "blog_index", name: "Blog", description: "all blogs", href: "/blog" },
+            { key: "blog_add", name: "Add Blog", description: "add new blog", href: "/blog/add" },
+            { key: "blog_all_of_others", name: "View Blogs By Others", description: "blogs by others", href: "/blog/all_of_others" },
+        ],
+    },
+    {
         name: "Dataset",
         items: [
             { key: "dataset_tag", name: "Tags", description: "manage tags for all features", href: "/dataset/tag" },
             { key: "dataset_market", name: "Market", description: "datasets shared by others", href: "/dataset/market" },
+        ],
+    },
+    {
+        name: "Tools",
+        items: [
+            { key: "plan_main", name: "My Plans", description: "make plans", href: "/plan" },
+            { key: "word_pdf_reader", name: "PDF Reader", description: "PDF reader", href: "/word/pdf_reader" },
         ],
     },
     {
