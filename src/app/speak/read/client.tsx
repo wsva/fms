@@ -644,6 +644,7 @@ export default function Client({ email }: Props) {
             {/* Sentence drawer */}
             <SentenceDrawer
                 drawer={stateDrawer}
+                recognized={stateDrawerRecognized}
                 content={stateDrawerContent}
                 onContentChange={setStateDrawerContent}
                 bgColor={stateDrawerBgColor}

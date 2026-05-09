@@ -38,6 +38,7 @@ function loadRulesText(): string {
 
 type Props = {
     drawer: DrawerState
+    recognized: string
     content: string
     onContentChange: (v: string) => void
     hasAudio: boolean
@@ -73,7 +74,7 @@ const BG_COLORS: { key: string; label: string; swatch: string; bg: string }[] = 
 export { BG_COLORS }
 
 export default function SentenceDrawer({
-    drawer, content, onContentChange,
+    drawer, recognized, content, onContentChange,
     bgColor, onBgColorChange,
     hasAudio, saving, recording, processing,
     bookUUID, chapterPath,
@@ -197,10 +198,34 @@ export default function SentenceDrawer({
                 {/* Body */}
                 <div className="flex flex-col gap-3 p-4">
 
+                    {/* Audio + Recording */}
+                    <div className="flex flex-row flex-wrap items-center justify-start gap-2">
+                        {hasLocalService && (
+                            <Button size={expanded ? 'md' : 'sm'} color="primary" variant="flat"
+                                isDisabled={!recording && processing}
+                                onPress={onToggleRecording}
+                                startContent={recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
+                            >
+                                {recording ? 'Stop' : processing ? 'Processing…' : 'Record'}
+                            </Button>
+                        )}
+                        {hasAudio && (
+                            <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="flat" onPress={onPlay}>
+                                <MdPlayCircle size={expanded ? 24 : 20} />
+                            </Button>
+                        )}
+                    </div>
+
                     {/* STT diff (edit mode only) */}
                     {drawer.mode === 'edit' && drawer.sentence.recognized && (
                         <div className={`bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
                             {highlightDifferences(drawer.sentence.content ?? '', drawer.sentence.recognized ?? '')}
+                        </div>
+                    )}
+                    {/* STT diff (add mode only) */}
+                    {drawer.mode === 'add' && hasAudio && (
+                        <div className={`bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
+                            {highlightDifferences(content, recognized)}
                         </div>
                     )}
 
@@ -248,24 +273,6 @@ export default function SentenceDrawer({
                         onChange={e => onContentChange(e.target.value)}
                         classNames={{ input: expanded ? 'text-2xl font-bold' : 'text-base' }}
                     />
-
-                    {/* Audio + Recording */}
-                    <div className="flex flex-row flex-wrap items-center justify-center gap-2">
-                        {hasAudio && (
-                            <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="flat" onPress={onPlay}>
-                                <MdPlayCircle size={expanded ? 24 : 20} />
-                            </Button>
-                        )}
-                        {hasLocalService && (
-                            <Button size={expanded ? 'md' : 'sm'} color="primary" variant="flat"
-                                isDisabled={!recording && processing}
-                                onPress={onToggleRecording}
-                                startContent={recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
-                            >
-                                {recording ? 'Stop' : processing ? 'Processing…' : 'Record'}
-                            </Button>
-                        )}
-                    </div>
 
                     {/* Background color picker */}
                     <div className="flex flex-row items-center gap-2">
