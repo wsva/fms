@@ -216,14 +216,8 @@ export default function SentenceDrawer({
                         )}
                     </div>
 
-                    {/* STT diff (edit mode only) */}
-                    {drawer.mode === 'edit' && drawer.sentence.recognized && (
-                        <div className={`bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
-                            {highlightDifferences(drawer.sentence.content ?? '', drawer.sentence.recognized ?? '')}
-                        </div>
-                    )}
-                    {/* STT diff (add mode only) */}
-                    {drawer.mode === 'add' && hasAudio && (
+                    {/* STT diff */}
+                    {hasAudio && (
                         <div className={`bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
                             {highlightDifferences(content, recognized)}
                         </div>
