@@ -572,7 +572,7 @@ export default function Client({ email }: Props) {
 
             {/* Book + Chapter tree selector */}
             <div
-                className="sticky top-0 z-10 bg-sand-100 rounded-xl flex flex-col shadow-sm"
+                className="bg-sand-100 rounded-xl flex flex-col shadow-sm"
                 style={{ height: `${selectorHeight}px` }}
             >
                 <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">
