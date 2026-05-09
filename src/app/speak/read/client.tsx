@@ -240,7 +240,22 @@ export default function Client({ email }: Props) {
 
         updateStateData(d => {
             d.splice(insertIndex, 0, newSentence)
-            d.forEach((s, i) => { s.order_num = i + 1; s.modified = false })
+            /**
+             * Cannot assign to read only property 'order_num' of object '#<Object>'
+             * 
+             * Root cause: 
+             * Immer's array get trap only wraps an element in a draft proxy when copy_[i] === base_[i] — i.e., it hasn't moved. 
+             * After splice inserts or removes an element, every element at a higher index is shifted: 
+             * copy_[i] becomes a different object than base_[i], so Immer returns those elements as the raw frozen state objects. 
+             * Writing .order_num on a frozen object throws the "read only property" error.
+             * 
+             * Fix: Replace s.order_num = ... (which mutates the element directly) 
+             * with d[i] = { ...d[i], order_num: ..., modified: ... } (which replaces the element via the array draft's set trap). 
+             * Reading d[i] — whether it returns a draft proxy or a frozen object — is always safe; 
+             * only writing to the returned value is unsafe.
+             */
+            // d.forEach((s, i) => { s.order_num = i + 1; s.modified = false })
+            for (let i = 0; i < d.length; i++) { const s = d[i]; d[i] = { ...s, order_num: i + 1, modified: false } }
         })
 
         setStateSaving(false)
@@ -323,7 +338,7 @@ export default function Client({ email }: Props) {
             const idx = d.findIndex(s => s.uuid === sentence.uuid)
             if (idx !== -1) {
                 d.splice(idx, 1)
-                d.forEach((s, i) => { if (s.order_num !== i + 1) { s.order_num = i + 1; s.modified = true } })
+                for (let i = 0; i < d.length; i++) { const s = d[i]; if (s.order_num !== i + 1) d[i] = { ...s, order_num: i + 1, modified: true } }
             }
         })
         if (stateData.length > 1) setStateNeedSave(true)
@@ -369,7 +384,7 @@ export default function Client({ email }: Props) {
         if (r.status === 'success') {
             updateStateData(d => {
                 d.splice(insertIndex, 0, breakSentence)
-                d.forEach((s, i) => { if (s.order_num !== i + 1) { s.order_num = i + 1; s.modified = true } })
+                for (let i = 0; i < d.length; i++) { const s = d[i]; if (s.order_num !== i + 1) d[i] = { ...s, order_num: i + 1, modified: true } }
             })
             setStateNeedSave(true)
             setStateDrawer(null)
@@ -483,7 +498,7 @@ export default function Client({ email }: Props) {
         const deletedUUIDs = new Set(toDelete.map(s => s.uuid))
         updateStateData(d => {
             for (let i = d.length - 1; i >= 0; i--) { if (deletedUUIDs.has(d[i].uuid)) d.splice(i, 1) }
-            d.forEach((s, i) => { if (s.order_num !== i + 1) { s.order_num = i + 1; s.modified = true } })
+            for (let i = 0; i < d.length; i++) { const s = d[i]; if (s.order_num !== i + 1) d[i] = { ...s, order_num: i + 1, modified: true } }
         })
         const hasShifted = stateData.some((s, i) => !deletedUUIDs.has(s.uuid) && s.order_num !== i + 1)
         if (hasShifted) setStateNeedSave(true)
@@ -507,7 +522,7 @@ export default function Client({ email }: Props) {
             const idx = d.findIndex(s => s.uuid === breakSentence.uuid)
             if (idx !== -1) {
                 d.splice(idx, 1)
-                d.forEach((s, i) => { if (s.order_num !== i + 1) { s.order_num = i + 1; s.modified = true } })
+                for (let i = 0; i < d.length; i++) { const s = d[i]; if (s.order_num !== i + 1) d[i] = { ...s, order_num: i + 1, modified: true } }
             }
         })
         setStateNeedSave(true)

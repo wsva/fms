@@ -5,6 +5,7 @@ import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle, MdUnfoldM
 import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
 import { useState, useRef, useEffect } from 'react'
+import { getLocalServiceUrl } from '@/lib/local-stt'
 
 const LS_KEY = 'read_auto_replace_rules'
 const DEFAULT_RULES_TEXT = `\
@@ -83,10 +84,15 @@ export default function SentenceDrawer({
     const [expanded, setExpanded] = useState(false)
     const [rulesText, setRulesText] = useState(DEFAULT_RULES_TEXT)
     const [showRulesEditor, setShowRulesEditor] = useState(false)
+    const [hasLocalService, setHasLocalService] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
         setRulesText(loadRulesText())
+    }, [])
+
+    useEffect(() => {
+        getLocalServiceUrl().then(url => setHasLocalService(!!url))
     }, [])
 
     const openRulesEditor = () => {
@@ -235,7 +241,7 @@ export default function SentenceDrawer({
                     </div>
 
                     {/* Content editor */}
-                    <Textarea
+                    <Textarea data-no-voice
                         ref={textareaRef}
                         label="Content" size={expanded ? 'md' : 'sm'} minRows={expanded ? 6 : 2}
                         value={content}
@@ -250,13 +256,15 @@ export default function SentenceDrawer({
                                 <MdPlayCircle size={expanded ? 24 : 20} />
                             </Button>
                         )}
-                        <Button size={expanded ? 'md' : 'sm'} color="primary" variant="flat"
-                            isDisabled={!recording && processing}
-                            onPress={onToggleRecording}
-                            startContent={recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
-                        >
-                            {recording ? 'Stop' : processing ? 'Processing…' : 'Record'}
-                        </Button>
+                        {hasLocalService && (
+                            <Button size={expanded ? 'md' : 'sm'} color="primary" variant="flat"
+                                isDisabled={!recording && processing}
+                                onPress={onToggleRecording}
+                                startContent={recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
+                            >
+                                {recording ? 'Stop' : processing ? 'Processing…' : 'Record'}
+                            </Button>
+                        )}
                     </div>
 
                     {/* Background color picker */}

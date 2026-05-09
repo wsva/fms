@@ -1,6 +1,7 @@
 import type { ActionResult } from "./types";
 import { defaultSttSettings } from "./stt";
 import type { SttSettings } from "./stt";
+import { callLocalSTT, getLocalServiceUrl } from "./local-stt";
 
 export async function getCallSTT(settings: SttSettings) {
     if (settings.engine === "gemini") {
@@ -64,14 +65,20 @@ export const startRecording = async (props: RecordingProps) => {
             } else {
                 props.handleLog?.("Sending to STT service, waiting for response...");
                 props.setStateProcessing?.(true);
-                const callSTT = await getCallSTT(props.sttSettings ?? defaultSttSettings);
-                if (!callSTT) {
-                    props.handleLog?.("No STT engine configured.");
-                    await props.handleAudio({ status: "error", error: "no engine" }, audioBlob);
-                    props.setStateProcessing?.(false);
-                    return;
+                let result: ActionResult<string>;
+                const localUrl = await getLocalServiceUrl();
+                if (localUrl) {
+                    result = await callLocalSTT(localUrl, audioBlob);
+                } else {
+                    const callSTT = await getCallSTT(props.sttSettings ?? defaultSttSettings);
+                    if (!callSTT) {
+                        props.handleLog?.("No STT engine configured.");
+                        await props.handleAudio({ status: "error", error: "no engine" }, audioBlob);
+                        props.setStateProcessing?.(false);
+                        return;
+                    }
+                    result = await callSTT(audioBlob);
                 }
-                const result = await callSTT(audioBlob);
                 if (result.status === "success") {
                     props.handleLog?.("STT recognition completed.");
                     await props.handleAudio({ status: "success", data: result.data }, audioBlob);
