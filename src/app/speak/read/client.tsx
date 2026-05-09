@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useImmer } from 'use-immer'
-import { addToast, Button, Select, SelectItem, Spinner } from "@heroui/react"
-import { MdViewHeadline, MdViewStream } from 'react-icons/md'
+import { addToast, Button, Spinner } from "@heroui/react"
+import { MdLibraryBooks, MdViewHeadline, MdViewStream } from 'react-icons/md'
 import { book_chapter, book_meta } from "@/generated/prisma/client"
 import {
     getBookMetaAll, getBookChapterAll,
@@ -49,6 +49,27 @@ export default function Client({ email }: Props) {
     const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([])
     const [stateRecording, setStateRecording] = useState(false)
     const [stateProcessing, setStateProcessing] = useState(false)
+
+    const [selectorHeight, setSelectorHeight] = useState<number>(200)
+
+    const handleSelectorHeightDrag = useCallback((e: React.MouseEvent) => {
+        e.preventDefault()
+        const startY = e.clientY
+        const startHeight = selectorHeight
+        const onMove = (ev: MouseEvent) => {
+            setSelectorHeight(Math.min(600, Math.max(80, startHeight + ev.clientY - startY)))
+        }
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+            document.body.style.cursor = ''
+            document.body.style.userSelect = ''
+        }
+        document.body.style.cursor = 'row-resize'
+        document.body.style.userSelect = 'none'
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+    }, [selectorHeight])
 
     const flatChapters = useMemo(() => flattenChapters(stateChaptersFlat), [stateChaptersFlat])
     const paragraphs = useMemo(() => groupIntoParagraphs(stateData), [stateData])
@@ -539,32 +560,61 @@ export default function Client({ email }: Props) {
             : stateDrawerHasLocalAudio
         : false
 
+    const bookBtnClass = (active: boolean) =>
+        `w-full text-left px-2 py-1.5 rounded-lg text-xs sm:text-xl font-medium transition-colors ${active ? 'bg-sand-300 text-foreground font-semibold' : 'hover:bg-sand-200 text-foreground-700'}`
+
+    const chapterBtnClass = (active: boolean) =>
+        `w-full text-left px-2 py-1 rounded text-xs sm:text-lg transition-colors ${active ? 'bg-sand-300 font-semibold text-foreground' : 'hover:bg-sand-200 text-foreground-600'}`
+
     // ── Render ──────────────────────────────────────────────────────────────
     return (
         <div className="flex flex-col w-full gap-4 my-4 mb-100">
 
-            {/* Book + Chapter selectors */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <Select label="Book" className="w-full sm:w-1/2"
-                    selectedKeys={stateBookUUID ? [stateBookUUID] : []}
-                    onChange={e => setStateBookUUID(e.target.value)}
-                >
-                    {stateBooks.map(b => (
-                        <SelectItem key={b.uuid} textValue={b.title ?? ''}>{b.title}</SelectItem>
+            {/* Book + Chapter tree selector */}
+            <div
+                className="sticky top-0 z-10 bg-sand-100 rounded-xl flex flex-col shadow-sm"
+                style={{ height: `${selectorHeight}px` }}
+            >
+                <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between px-1 mb-2">
+                        <span className="text-xs font-semibold text-foreground-400 uppercase tracking-wider">Library</span>
+                        {stateLoading && <Spinner size="sm" variant="simple" />}
+                    </div>
+                    {stateBooks.map(book => (
+                        <div key={book.uuid}>
+                            <button
+                                className={bookBtnClass(stateBookUUID === book.uuid)}
+                                onClick={() => setStateBookUUID(book.uuid)}
+                            >
+                                <div className='flex flex-row items-center justify-start w-full gap-2'>
+                                    <MdLibraryBooks />
+                                    {book.title}
+                                </div>
+                            </button>
+                            {stateBookUUID === book.uuid && flatChapters.length > 0 && (
+                                <div className="ml-2 mt-0.5 mb-1 flex flex-col gap-0.5 border-l-2 border-sand-300 pl-2">
+                                    {flatChapters.map(c => (
+                                        <button
+                                            key={c.uuid}
+                                            className={chapterBtnClass(stateChapterUUID === c.uuid)}
+                                            onClick={() => setStateChapterUUID(c.uuid)}
+                                            style={{ paddingLeft: `${c.depth * 20}px` }}
+                                        >
+                                            <span className="line-clamp-1">{c.depth > 0 ? '└ ' : ''}{c.title}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     ))}
-                </Select>
+                </div>
 
-                <Select label="Chapter" className="w-full sm:w-1/2"
-                    selectedKeys={stateChapterUUID ? [stateChapterUUID] : []}
-                    onChange={e => setStateChapterUUID(e.target.value)}
-                    isDisabled={flatChapters.length === 0}
+                <div
+                    className="flex-shrink-0 h-3 cursor-row-resize flex items-center justify-center group"
+                    onMouseDown={handleSelectorHeightDrag}
                 >
-                    {flatChapters.map(c => (
-                        <SelectItem key={c.uuid} textValue={c.title ?? ''}>
-                            {'　'.repeat(c.depth)}{c.depth > 0 ? '└ ' : ''}{c.title}
-                        </SelectItem>
-                    ))}
-                </Select>
+                    <div className="h-0.5 w-12 rounded-full bg-sand-300 group-hover:bg-primary transition-colors" />
+                </div>
             </div>
 
             {/* Toolbar */}
