@@ -21,6 +21,8 @@ type Props = {
     create_new: boolean, // true: create new, false: modify old
 }
 
+const BACKUP_KEY = 'backup-card';
+
 export default function CardForm({ card_ext, email, edit_view, simple, create_new }: Props) {
     const searchParams = useSearchParams()
     const [stateEdit, setStateEdit] = useState(edit_view);
@@ -28,7 +30,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
     const [stateTagSelected, setStateTagSelected] = useState<string[]>([]);
-    const { register, handleSubmit, formState, watch } = useForm<qsa_card>({});
+    const { register, handleSubmit, formState, watch, reset } = useForm<qsa_card>({});
 
     const formRef = useRef<HTMLFormElement>(null);
     const { ref: refAnswer, ...restAnswer } = register('answer');
@@ -70,6 +72,24 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
         };
         loadData();
 
+        // load backup only on client
+        if (create_new) {
+            try {
+                const backup = localStorage.getItem(BACKUP_KEY)
+                if (backup) {
+                    const backupData = JSON.parse(backup)
+                    reset({
+                        question: backupData.question || '',
+                        suggestion: backupData.suggestion || '',
+                        answer: backupData.answer || '',
+                        note: backupData.note || '',
+                    })
+                }
+            } catch (error) {
+                console.error('load backup error:', error)
+            }
+        }
+
         const handleKeyDown = (event: KeyboardEvent) => {
             const isMac = navigator.userAgent.includes('Mac');
             const isCtrlS =
@@ -95,6 +115,27 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // auto save form data to localStorage
+    const watchQuestion = watch('question');
+    const watchSuggestion = watch('suggestion');
+    const watchAnswer = watch('answer');
+    const watchNote = watch('note');
+    useEffect(() => {
+        try {
+            localStorage.setItem(
+                BACKUP_KEY,
+                JSON.stringify({
+                    question: watchQuestion || '',
+                    suggestion: watchSuggestion || '',
+                    answer: watchAnswer || '',
+                    note: watchNote || '',
+                })
+            )
+        } catch (error) {
+            console.error('save backup error:', error)
+        }
+    }, [watchQuestion, watchSuggestion, watchAnswer, watchNote]);
 
     const getDefault = (field: keyof qsa_card): unknown => {
         if (card_ext) {
@@ -139,6 +180,9 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             });
             return
         }
+
+        // clear backup after successful save
+        localStorage.removeItem(BACKUP_KEY);
 
         const result_tag = await saveCardTag({
             uuid: stateCard!.uuid,

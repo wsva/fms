@@ -197,7 +197,9 @@ export default function TopNav() {
 
                 <NavbarMenu className="pt-4 pb-20 bg-sand-200">
                     <div className="flex justify-center">
-                        <NavIcon size={280} />
+                        <Link href='/' onPress={() => setIsMenuOpen(!isMenuOpen)}>
+                            <NavIcon size={280} />
+                        </Link>
                     </div>
                     <div className="flex flex-row items-center justify-center px-1 mb-3">
                         Select Theme:

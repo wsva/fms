@@ -17,6 +17,8 @@ type Props = {
     create_new: boolean,
 }
 
+const BACKUP_KEY = 'backup-blog';
+
 export default function BlogForm({ blog_init, email, edit_view, create_new }: Props) {
     const searchParams = useSearchParams()
     const [stateUUID, setStateUUID] = useState<string>("");
@@ -44,8 +46,44 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
             ? blog_init.uuid
             : getUUID()
         setStateUUID(blog_uuid)
+
+        // load backup only on client
+        if (create_new) {
+            try {
+                const backup = localStorage.getItem(BACKUP_KEY)
+                if (backup) {
+                    const backupData = JSON.parse(backup)
+                    reset({
+                        title: backupData.title || '',
+                        description: backupData.description || '',
+                        content: backupData.content || '',
+                    })
+                }
+            } catch (error) {
+                console.error('load backup error:', error)
+            }
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // auto save form data to localStorage
+    const watchTitle = watch('title');
+    const watchDescription = watch('description');
+    const watchContent = watch('content');
+    useEffect(() => {
+        try {
+            localStorage.setItem(
+                BACKUP_KEY,
+                JSON.stringify({
+                    title: watchTitle || '',
+                    description: watchDescription || '',
+                    content: watchContent || '',
+                })
+            )
+        } catch (error) {
+            console.error('save backup error:', error)
+        }
+    }, [watchTitle, watchDescription, watchContent]);
 
     const onSubmit = async (formData: blog) => {
         const result = await saveBlog({
@@ -56,6 +94,9 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
             updated_at: new Date(),
         })
         if (result.status === 'success') {
+            // clear backup after successful save
+            localStorage.removeItem(BACKUP_KEY);
+
             if (create_new) {
                 window.location.href = `/blog/${stateUUID}`
             } else {
