@@ -39,7 +39,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
     return (
         <div className='flex flex-col items-start justify-center w-full gap-1'>
             <div className='flex flex-row items-center justify-start w-full gap-1'>
-                <Input data-no-voice aria-label='input answer' autoComplete="one-time-code"
+                <Input aria-label='input answer' autoComplete="one-time-code"
                     id={`d-s-i-${cue.index}`}
                     className='text-xl font-bold border-b-2 border-b-gray-400 bg-sand-100 rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
                     value={stateInput}
