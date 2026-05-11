@@ -1,17 +1,18 @@
 'use client'
 
 import { getProperty, getUUID } from '@/lib/utils';
-import { addToast, Button, Checkbox, CheckboxGroup, Divider, Link, Select, SelectItem, SelectSection, Textarea } from "@heroui/react";
+import { toast, Button, Checkbox, CheckboxGroup, Separator, Link, Select, TextArea, ListBox, Label } from "@heroui/react";
 import { useEffect, useRef, useState } from 'react'
 import MdEditor from '@/components/MdEditor'
 import { useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import { getCardTag, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
 import { getTagAllOwned } from '@/app/actions/dataset';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
 import Markdown2Html from '@/components/markdown/markdown';
+import AppModal from '@/components/AppModal';
 
 type Props = {
     card_ext: Partial<card_ext>,
@@ -21,19 +22,55 @@ type Props = {
     create_new: boolean, // true: create new, false: modify old
 }
 
-const BACKUP_KEY = 'backup-card';
-
 export default function CardForm({ card_ext, email, edit_view, simple, create_new }: Props) {
     const searchParams = useSearchParams()
+    // Card-specific key prevents cross-card backup contamination
+    const BACKUP_KEY = `backup-card-${create_new ? 'new' : (card_ext.uuid || 'new')}`
     const [stateEdit, setStateEdit] = useState(edit_view);
     const [stateCard, setStateCard] = useState<qsa_card>();
+    const [stateBackupData, setStateBackupData] = useState<Record<string, unknown> | null>(null);
     const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
     const [stateTagSelected, setStateTagSelected] = useState<string[]>([]);
-    const { register, handleSubmit, formState, watch, reset } = useForm<qsa_card>({});
+    const { register, handleSubmit, formState, watch, reset, getValues, control } = useForm<qsa_card>({});
 
     const formRef = useRef<HTMLFormElement>(null);
     const { ref: refAnswer, ...restAnswer } = register('answer');
+
+    const getDefault = (field: keyof qsa_card): unknown => {
+        if (card_ext) {
+            const value = getProperty(card_ext, field)
+            if (value) return value
+        }
+        const value = searchParams.get(field)
+        if (value) return decodeURIComponent(value)
+        return undefined
+    }
+
+    const handleBackupLoad = () => {
+        if (!stateBackupData || !stateCard) return;
+        const card: qsa_card = {
+            uuid: String(stateBackupData.uuid || stateCard.uuid),
+            user_id: email,
+            question: String(stateBackupData.question || ''),
+            suggestion: String(stateBackupData.suggestion || ''),
+            answer: String(stateBackupData.answer || ''),
+            familiarity: parseInt(String(stateBackupData.familiarity || '0'), 10),
+            note: String(stateBackupData.note || ''),
+            created_at: stateBackupData.created_at ? new Date(String(stateBackupData.created_at)) : stateCard.created_at,
+            updated_at: new Date(),
+        }
+        setStateCard(card)
+        reset({ question: card.question, suggestion: card.suggestion, answer: card.answer, familiarity: card.familiarity, note: card.note })
+        setStateBackupData(null)
+    }
+
+    const handleBackupIgnore = () => setStateBackupData(null)
+
+    const handleBackupDelete = () => {
+        localStorage.removeItem(BACKUP_KEY)
+        setStateBackupData(null)
+    }
 
     // 空依赖数组意味着仅在组件挂载时执行一次
     useEffect(() => {
@@ -45,21 +82,39 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             }
             setStateTagList(tag_list_result.data)
 
-            // to avoid new uuid after save
+            // detect backup and prompt user — do not auto-load
+            const backup = localStorage.getItem(BACKUP_KEY)
+            if (backup) {
+                try {
+                    setStateBackupData(JSON.parse(backup))
+                } catch {
+                    localStorage.removeItem(BACKUP_KEY)
+                }
+            }
+
+            // always load card from server data
             const card_uuid = (!!card_ext.uuid && (create_new || card_ext.user_id === email)) ? card_ext.uuid : getUUID()
-            setStateCard({
+            const card: qsa_card = {
                 uuid: card_uuid,
                 user_id: email,
-                question: card_ext.question || "",
-                suggestion: card_ext.suggestion || "",
-                answer: card_ext.answer || "",
-                familiarity: (!!card_ext.familiarity && card_ext.user_id === email) ? card_ext.familiarity : 0,
-                note: card_ext.note || "",
+                question: getDefault("question") as string || "",
+                suggestion: getDefault("suggestion") as string || "",
+                answer: getDefault("answer") as string || "",
+                familiarity: (card_ext.user_id === email) ? getDefault('familiarity') as number || 0 : 0,
+                note: getDefault("note") as string || "",
                 created_at: card_ext.created_at || new Date(),
                 updated_at: card_ext.updated_at || new Date(),
+            }
+            setStateCard(card)
+            reset({
+                question: card.question,
+                suggestion: card.suggestion,
+                answer: card.answer,
+                familiarity: card.familiarity,
+                note: card.note,
             })
 
-            const card_tag_result = await getCardTag(email, card_uuid)
+            const card_tag_result = await getCardTag(email, card.uuid)
             if (card_tag_result.status === "success"
                 && !!card_tag_result.data.tag_list_added) {
                 setStateTagAdded(card_tag_result.data.tag_list_added)
@@ -71,24 +126,6 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             }
         };
         loadData();
-
-        // load backup only on client
-        if (create_new) {
-            try {
-                const backup = localStorage.getItem(BACKUP_KEY)
-                if (backup) {
-                    const backupData = JSON.parse(backup)
-                    reset({
-                        question: backupData.question || '',
-                        suggestion: backupData.suggestion || '',
-                        answer: backupData.answer || '',
-                        note: backupData.note || '',
-                    })
-                }
-            } catch (error) {
-                console.error('load backup error:', error)
-            }
-        }
 
         const handleKeyDown = (event: KeyboardEvent) => {
             const isMac = navigator.userAgent.includes('Mac');
@@ -117,35 +154,26 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     }, []);
 
     // auto save form data to localStorage
-    const watchQuestion = watch('question');
-    const watchSuggestion = watch('suggestion');
-    const watchAnswer = watch('answer');
-    const watchNote = watch('note');
     useEffect(() => {
+        // Skip until stateCard is ready — avoids overwriting a valid backup on mount
+        if (!stateCard) return;
         try {
             localStorage.setItem(
                 BACKUP_KEY,
                 JSON.stringify({
-                    question: watchQuestion || '',
-                    suggestion: watchSuggestion || '',
-                    answer: watchAnswer || '',
-                    note: watchNote || '',
+                    uuid: stateCard.uuid,
+                    created_at: stateCard.created_at.toISOString(),
+                    question: getValues("question"),
+                    suggestion: getValues("suggestion"),
+                    answer: getValues("answer"),
+                    familiarity: getValues("familiarity"),
+                    note: getValues("note"),
                 })
             )
         } catch (error) {
             console.error('save backup error:', error)
         }
-    }, [watchQuestion, watchSuggestion, watchAnswer, watchNote]);
-
-    const getDefault = (field: keyof qsa_card): unknown => {
-        if (card_ext) {
-            const value = getProperty(card_ext, field)
-            if (value) return value
-        }
-        const value = searchParams.get(field)
-        if (value) return decodeURIComponent(value)
-        return undefined
-    }
+    }, [stateCard, watch('question'), watch('suggestion'), watch('answer'), watch('familiarity'), watch('note')]);
 
     const getColor = (familiarity: number) => {
         return FamiliarityList.map((v) => v.color)[familiarity]
@@ -153,18 +181,12 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
     const onSubmit = async (formData: qsa_card) => {
         if (!stateCard) {
-            addToast({
-                title: "loading",
-                color: "danger",
-            });
+            toast.danger("loading");
             return
         }
         if (!formData.familiarity) {
-            // can be undefined when simple is true
+            // undefined when simple is true (Controller not mounted)
             formData.familiarity = 0
-        }
-        if (typeof formData.familiarity === "string") {
-            formData.familiarity = parseInt(formData.familiarity || '0', 10)
         }
         const result_card = await saveCard({
             ...stateCard,
@@ -174,10 +196,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
         })
         if (result_card.status !== 'success') {
             console.log(result_card.error);
-            addToast({
-                title: "save card error",
-                color: "danger",
-            });
+            toast.danger("save card error");
             return
         }
 
@@ -193,10 +212,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             setStateTagAdded(stateTagSelected)
         } else {
             console.log(result_tag.error);
-            addToast({
-                title: "save tag error",
-                color: "danger",
-            });
+            toast.danger("save tag error");
             return
         }
 
@@ -206,14 +222,29 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             }, 1000);
         }
 
-        addToast({
-            title: "save data success",
-            color: "success",
-        });
+        toast.success("save data success");
     }
 
     return (
         <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
+            <AppModal
+                isOpen={stateBackupData !== null}
+                onClose={handleBackupIgnore}
+                header="Unsaved backup found"
+                body={
+                    <div className='space-y-2'>
+                        <p>A local backup of this card exists. Do you want to restore it?</p>
+                        {stateBackupData?.question ? (
+                            <p className='text-sm text-gray-500 truncate'>{String(stateBackupData.question).slice(0, 80)}</p>
+                        ) : null}
+                    </div>
+                }
+                footerButtons={[
+                    { children: 'Load', variant: 'primary', onPress: handleBackupLoad },
+                    { children: 'Ignore', variant: 'ghost', onPress: handleBackupIgnore },
+                    { children: 'Delete', variant: 'danger', onPress: handleBackupDelete },
+                ]}
+            />
             <div className='w-full space-y-4 mb-10 px-2'>
                 {stateCard && stateCard.user_id !== email && (
                     <div className='flex flex-row my-1 items-start justify-start gap-4'>
@@ -225,34 +256,28 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                     </div>
                 )}
                 <div className='flex flex-row my-1 items-end justify-end gap-4'>
-                    <Button color="primary" variant="solid" size='sm'
+                    <Button variant="primary" size='sm'
                         onPress={() => setStateEdit(!stateEdit)}
                     >
                         {stateEdit ? 'View' : 'Edit'}
                     </Button>
-                    <Button color="primary" type='submit' variant="solid" size='sm'
-                        isLoading={formState.isSubmitting}
+                    <Button type='submit' variant="primary" size='sm'
+                        isPending={formState.isSubmitting}
                         isDisabled={!create_new && !formState.isDirty && [...stateTagSelected].sort().join() === [...stateTagAdded].sort().join()}
                     >
                         Save
                     </Button>
-                    <Button color="danger" variant="solid" size='sm'
+                    <Button variant="danger" size='sm'
                         onPress={async () => {
                             if (!stateCard?.uuid) {
                                 return
                             }
                             const result = await removeCard(stateCard.uuid)
                             if (result.status == "success") {
-                                addToast({
-                                    title: "remove data success",
-                                    color: "success",
-                                });
+                                toast.success("remove data success");
                             } else {
                                 console.log(result.error);
-                                addToast({
-                                    title: "remove data error",
-                                    color: "danger",
-                                });
+                                toast.danger("remove data error");
                             }
                         }}
                     >
@@ -261,51 +286,63 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                 </div>
                 {stateEdit ? (
                     <>
-                        <Textarea label='question'
-                            classNames={{ input: 'text-xl leading-tight font-roboto' }}
-                            defaultValue={getDefault('question') as string || ''}
+                        <TextArea className='w-full rounded-lg bg-sand-300 text-xl leading-tight font-roboto'
+                            placeholder='question'
                             {...register('question')}
                         />
                         {!simple && (
-                            <Select aria-label='select familiarity'
-                                selectionMode='single'
-                                defaultSelectedKeys={[`${watch('familiarity', getDefault('familiarity') as number || 0)}`]}
-                                {...register('familiarity')}
-                            >
-                                <SelectSection items={FamiliarityList}>
-                                    {FamiliarityList.map((v) =>
-                                        <SelectItem key={v.value} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</SelectItem>
-                                    )}
-                                </SelectSection>
-                            </Select>
+                            <Controller
+                                name="familiarity"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select aria-label='select familiarity'
+                                        selectedKey={String(field.value ?? 0)}
+                                        onSelectionChange={(key) => field.onChange(key !== null ? Number(key) : 0)}
+                                    >
+                                        <Select.Trigger>
+                                            <Select.Value />
+                                            <Select.Indicator />
+                                        </Select.Trigger>
+                                        <Select.Popover>
+                                            <ListBox>
+                                                {FamiliarityList.map((v) =>
+                                                    <ListBox.Item id={String(v.value)} key={v.value} textValue={`${v.value} - ${v.label}`} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</ListBox.Item>
+                                                )}
+                                            </ListBox>
+                                        </Select.Popover>
+                                    </Select>
+                                )}
+                            />
                         )}
                         <CheckboxGroup
-                            color="success"
                             value={stateTagSelected}
-                            onValueChange={setStateTagSelected}
-                            orientation="horizontal"
+                            onChange={(v) => setStateTagSelected(v)}
+                            className="flex flex-row flex-wrap gap-2"
                         >
-                            {stateTagList.map((v) => {
-                                return <Checkbox key={v.uuid} value={v.uuid}>{v.tag}</Checkbox>
-                            })}
+                            {stateTagList.map((v) => (
+                                <Checkbox key={v.uuid} value={v.uuid}>
+                                    <Checkbox.Control>
+                                        <Checkbox.Indicator />
+                                    </Checkbox.Control>
+                                    <Checkbox.Content>
+                                        <Label>{v.tag}</Label>
+                                    </Checkbox.Content>
+                                </Checkbox>
+                            ))}
                         </CheckboxGroup>
                         {!simple && (
-                            <Textarea label='suggestion'
-                                classNames={{ input: 'text-xl leading-tight font-roboto' }}
-                                minRows={1} maxRows={3}
-                                defaultValue={getDefault('suggestion') as string || ''}
+                            <TextArea className='w-full rounded-lg bg-sand-300 text-xl leading-tight font-roboto'
+                                placeholder='suggestion'
                                 {...register('suggestion')}
                             />
                         )}
                         <MdEditor
                             label="answer"
-                            defaultValue={(getDefault('answer') as string) || ''}
                             {...restAnswer}
                             ref={refAnswer}
                         />
-                        <Textarea label='note'
-                            classNames={{ input: 'text-xl leading-tight font-roboto' }}
-                            defaultValue={getDefault('note') as string || ''}
+                        <TextArea className='w-full rounded-lg bg-sand-300 text-xl leading-tight font-roboto'
+                            placeholder='note'
                             {...register('note')}
                         />
                     </>
@@ -314,38 +351,49 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                         <div className='text-xl bg-sand-300 rounded-md p-2'>
                             <Markdown2Html content={watch('question', getDefault('question') as string)} />
                         </div>
-                        <Divider />
+                        <Separator />
                         <Select aria-label='select familiarity'
-                            selectionMode='single' isDisabled
-                            defaultSelectedKeys={[`${watch('familiarity', getDefault('familiarity') as number || 0)}`]}
-                            {...register('familiarity')}
-                        >
-                            <SelectSection items={FamiliarityList}>
-                                {FamiliarityList.map((v) =>
-                                    <SelectItem key={v.value} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</SelectItem>
-                                )}
-                            </SelectSection>
-                        </Select>
-                        <CheckboxGroup
-                            color="success"
-                            value={stateTagSelected}
-                            onValueChange={setStateTagSelected}
-                            orientation="horizontal"
+                            selectedKey={String(watch('familiarity') ?? 0)}
                             isDisabled
                         >
-                            {stateTagList.filter((v) => stateTagSelected.includes(v.uuid)).map((v) => {
-                                return <Checkbox key={v.uuid} value={v.uuid}>{v.tag}</Checkbox>
-                            })}
+                            <Select.Trigger>
+                                <Select.Value />
+                                <Select.Indicator />
+                            </Select.Trigger>
+                            <Select.Popover>
+                                <ListBox>
+                                    {FamiliarityList.map((v) =>
+                                        <ListBox.Item id={String(v.value)} key={v.value} textValue={`${v.value} - ${v.label}`} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</ListBox.Item>
+                                    )}
+                                </ListBox>
+                            </Select.Popover>
+                        </Select>
+                        <CheckboxGroup
+                            value={stateTagSelected}
+                            onChange={(v) => setStateTagSelected(v)}
+                            className="flex flex-row flex-wrap gap-2"
+                            isDisabled
+                        >
+                            {stateTagList.filter((v) => stateTagSelected.includes(v.uuid)).map((v) => (
+                                <Checkbox key={v.uuid} value={v.uuid}>
+                                    <Checkbox.Control>
+                                        <Checkbox.Indicator />
+                                    </Checkbox.Control>
+                                    <Checkbox.Content>
+                                        <Label>{v.tag}</Label>
+                                    </Checkbox.Content>
+                                </Checkbox>
+                            ))}
                         </CheckboxGroup>
-                        <Divider />
+                        <Separator />
                         <div className='text-md font-roboto mx-8'>
                             {watch('suggestion', getDefault('suggestion') as string || '')}
                         </div>
-                        <Divider />
+                        <Separator />
                         <div className='text-xl bg-sand-300 rounded-md p-2'>
                             <Markdown2Html content={watch('answer', getDefault('answer') as string)} withTOC />
                         </div>
-                        <Divider />
+                        <Separator />
                         <pre className='text-md font-roboto mx-8 whitespace-pre-wrap'>
                             {watch('note', getDefault('note') as string || '')}
                         </pre>

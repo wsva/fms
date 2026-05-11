@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Avatar, Button, Input, Link, Textarea, Tooltip } from '@heroui/react'
+import { Button, Chip, Input, InputGroup, Link, TextArea, Tooltip } from '@heroui/react'
 import { Cue, formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
-import { MdDelete, MdOutlineAddCircleOutline, MdOutlineEdit, MdOutlineLightbulbCircle, MdOutlinePlayCircle, MdClose, MdSave, MdKeyboardTab, MdOutlineLocationOn } from 'react-icons/md'
+import { MdOutlineLightbulbCircle } from 'react-icons/md'
+import { ArrowLeftToLine, ArrowRightToLine, FloppyDisk, MapPin, PencilToSquare, Play, SquarePlus, TrashBin, Xmark } from '@gravity-ui/icons'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
@@ -38,13 +39,9 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
     return (
         <div className='flex flex-col items-start justify-center w-full gap-1'>
             <div className='flex flex-row items-center justify-start w-full gap-1'>
-                <Input data-no-voice aria-label='input answer' variant='bordered' autoComplete="one-time-code"
+                <Input data-no-voice aria-label='input answer' autoComplete="one-time-code"
                     id={`d-s-i-${cue.index}`}
-                    classNames={{
-                        mainWrapper: 'border-b-2 border-gray-400',
-                        inputWrapper: 'border-none pl-0 ml-0',
-                        input: 'text-xl font-bold',
-                    }}
+                    className='text-xl font-bold border-b-2 border-b-gray-400 bg-sand-100 rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
                     value={stateInput}
                     onChange={(e) => {
                         const content = e.target.value
@@ -80,20 +77,21 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
                     }}
                 />
                 {!!cue.translation && cue.translation.length > 0 && (
-                    <Tooltip placement='top-end' className='bg-slate-300'
-                        content={
+                    <Tooltip>
+                        <Tooltip.Trigger>
+                            <Button isIconOnly variant='ghost'>
+                                <MdOutlineLightbulbCircle size={30} />
+                            </Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content placement='top end' className='bg-slate-300'>
                             <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
                                 {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
                             </div>
-                        }
-                    >
-                        <Button isIconOnly variant='light' tabIndex={-1}>
-                            <MdOutlineLightbulbCircle size={30} />
-                        </Button>
+                        </Tooltip.Content>
                     </Tooltip>
                 )}
             </div>
-            <div className='bg-slate-200 rounded-sm px-1 text-gray-400'>
+            <div className='bg-slate-200 rounded-sm px-1 text-gray-400 font-normal'>
                 {getTip(stateInput)}
             </div>
         </div>
@@ -139,34 +137,21 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
     }, [initialSuccess])
 
     const timeEditorEl = (
-        <Input aria-label="start time" size="sm" className="w-sm" autoComplete="one-time-code"
-            classNames={{
-                inputWrapper: 'bg-sand-200',
-                input: 'text-center',
-                innerWrapper: 'justify-center'
-            }}
-            color={!!validateVttTime(stateStart) && !!validateVttTime(stateEnd) ? 'default' : 'danger'}
-            value={`${stateStart} ➔ ${stateEnd}`}
-            onChange={(e) => {
-                const parts = e.target.value.split(" ➔ ")
-                setStateStart(parts[0])
-                setStateEnd(parts[1])
-            }}
-            onBlur={() => {
-                if (validateVttTime(stateStart))
-                    onUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
-                if (validateVttTime(stateEnd))
-                    onUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
-            }}
-            startContent={
-                <div className='flex flex-row items-start justify-center'>
-                    <Tooltip content="expand to the end of former">
-                        <Button isIconOnly variant="light" tabIndex={-1} size="sm" onPress={onExpandStart}>
-                            <MdKeyboardTab size={24} className='scale-x-[-1]' />
+        <InputGroup className="w-sm shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
+            <InputGroup.Prefix className="p-0 bg-sand-100">
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant="ghost" size="sm" onPress={onExpandStart}>
+                            <ArrowLeftToLine />
                         </Button>
-                    </Tooltip>
-                    <Tooltip content="use current time">
-                        <Button isIconOnly variant="light" tabIndex={-1} size="sm"
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        expand to the end of former
+                    </Tooltip.Content>
+                </Tooltip>
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant="ghost" size="sm"
                             onPress={() => {
                                 if (media) {
                                     const startMs = Math.round(media.currentTime * 1000)
@@ -175,15 +160,33 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                                 }
                             }}
                         >
-                            <MdOutlineLocationOn size={24} className='scale-x-[-1]' />
+                            <MapPin />
                         </Button>
-                    </Tooltip>
-                </div>
-            }
-            endContent={
-                <div className='flex flex-row items-end justify-center'>
-                    <Tooltip content="use current time">
-                        <Button isIconOnly variant="light" tabIndex={-1} size="sm"
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        use current time
+                    </Tooltip.Content>
+                </Tooltip>
+            </InputGroup.Prefix>
+            <InputGroup.Input data-no-voice aria-label="start time" autoComplete="one-time-code"
+                className={`text-center font-normal bg-sand-100 ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
+                value={`${stateStart} ➔ ${stateEnd}`}
+                onChange={(e) => {
+                    const parts = e.target.value.split(" ➔ ")
+                    setStateStart(parts[0])
+                    setStateEnd(parts[1])
+                }}
+                onBlur={() => {
+                    if (validateVttTime(stateStart))
+                        onUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
+                    if (validateVttTime(stateEnd))
+                        onUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
+                }}
+            />
+            <InputGroup.Suffix className="p-0 bg-sand-100">
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant="ghost" size="sm"
                             onPress={() => {
                                 if (media) {
                                     const endMs = Math.round(media.currentTime * 1000)
@@ -192,101 +195,147 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                                 }
                             }}
                         >
-                            <MdOutlineLocationOn size={24} className='scale-x-[-1]' />
+                            <MapPin />
                         </Button>
-                    </Tooltip>
-                    <Tooltip content="expand to the start of next">
-                        <Button isIconOnly variant="light" tabIndex={-1} size="sm" onPress={onExpandEnd}>
-                            <MdKeyboardTab size={24} />
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        use current time
+                    </Tooltip.Content>
+                </Tooltip>
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant="ghost" size="sm" onPress={onExpandEnd}>
+                            <ArrowRightToLine />
                         </Button>
-                    </Tooltip>
-                </div>
-            }
-        />
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        expand to the start of next
+                    </Tooltip.Content>
+                </Tooltip>
+            </InputGroup.Suffix>
+        </InputGroup>
     )
 
     return (
         <div className="flex flex-col gap-0.5 w-full">
             <div className="flex flex-row items-center justify-start w-full gap-1">
-                <Tooltip isDisabled={mode !== "dictation"} content={'turn green on success: punctuation does not matter'}>
-                    <Avatar size='sm' radius="sm" name='' fallback={<span className="text-sm font-medium">{cue.index}</span>} className={`text-md${stateSuccess ? '' : ' bg-sand-200'}`}
-                        color={stateSuccess ? 'success' : 'default'}
-                    />
+                <Tooltip isDisabled={mode !== "dictation"}>
+                    <Tooltip.Trigger>
+                        <Chip size='lg' variant='primary' color={stateSuccess ? 'success' : undefined}><span className="text-sm font-medium">{cue.index}</span></Chip>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        'turn green on success: punctuation does not matter'
+                    </Tooltip.Content>
                 </Tooltip>
                 <div className="hidden lg:flex">
                     {timeEditorEl}
                 </div>
-                <Tooltip isDisabled={mode !== "dictation"} content={'shortcut: Ctrl+S, Ctrl+D, or type two spaces at the end'}>
-                    <Button isIconOnly variant='light' size="sm" tabIndex={-1}
-                        onPress={() => {
-                            if (!media) return
-                            if (media.paused) playMediaPart(cue, media, false)
-                            else media.pause()
-                        }}
-                    >
-                        <MdOutlinePlayCircle size={24} />
-                    </Button>
+                <Tooltip isDisabled={mode !== "dictation"}>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant='ghost' size="sm"
+                            onPress={() => {
+                                if (!media) return
+                                if (media.paused) playMediaPart(cue, media, false)
+                                else media.pause()
+                            }}
+                        >
+                            <Play />
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        shortcut: Ctrl+S, Ctrl+D, or type two spaces at the end
+                    </Tooltip.Content>
                 </Tooltip>
                 {(mode === "edit" || mode === "dictation_edit") && allowEdit && (
                     <>
-                        <Tooltip content="insert before">
-                            <Button isIconOnly variant='light' tabIndex={-1} size="sm"
-                                onPress={() => onInsert(cue.index)}
-                            >
-                                <div className="text-lg">#1</div>
-                            </Button>
+                        <Tooltip>
+                            <Tooltip.Trigger>
+                                <Button isIconOnly variant='ghost' size="sm"
+                                    onPress={() => onInsert(cue.index)}
+                                >
+                                    <div className="text-lg">#1</div>
+                                </Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>
+                                insert before
+                            </Tooltip.Content>
                         </Tooltip>
-                        <Tooltip content="insert after">
-                            <Button isIconOnly variant='light' tabIndex={-1} size="sm"
-                                onPress={() => onInsert(cue.index + 1)}
-                            >
-                                <div className="text-lg">#2</div>
-                            </Button>
+                        <Tooltip>
+                            <Tooltip.Trigger>
+                                <Button isIconOnly variant='ghost' size="sm"
+                                    onPress={() => onInsert(cue.index + 1)}
+                                >
+                                    <div className="text-lg">#2</div>
+                                </Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>
+                                insert after
+                            </Tooltip.Content>
                         </Tooltip>
-                        <Tooltip content="merge next">
-                            <Button isIconOnly variant='light' tabIndex={-1} size="sm"
-                                onPress={onMergeNext}
-                            >
-                                <div className="text-lg">#3</div>
-                            </Button>
+                        <Tooltip>
+                            <Tooltip.Trigger>
+                                <Button isIconOnly variant='ghost' size="sm"
+                                    onPress={onMergeNext}
+                                >
+                                    <div className="text-lg">#3</div>
+                                </Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>
+                                merge next
+                            </Tooltip.Content>
                         </Tooltip>
-                        <Button isIconOnly variant='light' tabIndex={-1} color="danger" size="sm"
+                        <Button isIconOnly variant="ghost" size="sm"
                             onPress={onDelete}
                         >
-                            <MdDelete size={24} />
+                            <TrashBin color='red' />
                         </Button>
                     </>
                 )}
                 <div className="ml-auto flex gap-1.5">
                     {mode === "dictation" && allowEdit && (
                         <div>
-                            <Tooltip content="add card">
-                                <Button isIconOnly variant='light' size="sm" tabIndex={-1} as={Link} target='_blank'
-                                    href={`/card/add?edit=y&question=${encodeURIComponent(cue.text.join(" "))}`}
-                                >
-                                    <MdOutlineAddCircleOutline size={24} />
-                                </Button>
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Link href={`/card/add?edit=y&question=${encodeURIComponent(cue.text.join(" "))}`} target='_blank'>
+                                        <Button isIconOnly variant='ghost' size="sm">
+                                            <SquarePlus />
+                                        </Button>
+                                    </Link>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    add card
+                                </Tooltip.Content>
                             </Tooltip>
-                            <Tooltip content="edit subtitle">
-                                <Button isIconOnly variant="light" size="sm" tabIndex={-1} onPress={onEdit}>
-                                    <MdOutlineEdit size={24} />
-                                </Button>
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button isIconOnly variant="ghost" size="sm" onPress={onEdit}>
+                                        <PencilToSquare />
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    edit subtitle
+                                </Tooltip.Content>
                             </Tooltip>
                         </div>
                     )}
                     {mode === "dictation_edit" && allowEdit && (
                         <div>
-                            <Tooltip content="save">
-                                <Button isIconOnly variant='light' tabIndex={-1} size="sm" isDisabled={saving}
-                                    onPress={onSave}
-                                >
-                                    <MdSave size={24} />
-                                </Button>
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button isIconOnly variant='ghost' size="sm" isDisabled={saving}
+                                        onPress={onSave}
+                                    >
+                                        <FloppyDisk />
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    save
+                                </Tooltip.Content>
                             </Tooltip>
-                            <Button isIconOnly variant='light' size="sm" tabIndex={-1}
+                            <Button isIconOnly variant='ghost' size="sm"
                                 onPress={onDone}
                             >
-                                <MdClose size={24} />
+                                <Xmark />
                             </Button>
                         </div>
                     )}
@@ -305,13 +354,8 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 />
             ) : (
                 (mode === "edit" || mode === "dictation_edit") && (
-                    <Textarea aria-label='text' variant='bordered' autoComplete="one-time-code"
-                        classNames={{
-                            inputWrapper: 'border-2 border-gray-400 group-data-[focus=true]:border-gray-400',
-                            input: 'text-xl font-bold',
-                        }}
-                        minRows={1}
-                        maxRows={20}
+                    <TextArea aria-label='text' autoComplete="one-time-code"
+                        className='text-xl font-bold border-2 border-gray-400'
                         value={cue.text.join('\n')}
                         onChange={(e) => onUpdate({ ...cue, text: e.target.value.split('\n') })}
                     />

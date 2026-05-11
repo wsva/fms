@@ -228,23 +228,21 @@ export default function VoiceInputFloat() {
             )}
             <Button
                 isIconOnly
-                variant="solid"
-                color={recording ? 'danger' : 'primary'}
+                variant={recording ? 'danger' : 'primary'}
                 size="lg"
-                radius="full"
                 isDisabled={processing}
 
                 // tabIndex={0} makes the button explicitly focusable by the browser.
                 // Without it, relatedTarget in this code:
                 // const next = e.relatedTarget as Node | null;
                 // can become null on some browsers/framework combinations when clicking the button
-                tabIndex={0}
+                // tabIndex={0}
 
                 onPress={handlePress}
                 onPointerDown={() => {
                     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
                 }}
-                className={`pointer-events-auto shadow-xl ${recording ? 'animate-pulse' : ''}`}
+                className={`pointer-events-auto shadow-xl rounded-full ${recording ? 'animate-pulse' : ''}`}
             >
                 {recording ? <MdOutlineStop size={24} /> : <MdOutlineMic size={24} />}
             </Button>

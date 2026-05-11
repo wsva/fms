@@ -1,10 +1,11 @@
 'use client';
 
-import { addToast, Button, Chip, Input, Select, SelectItem, Textarea } from "@heroui/react";
+import { toast, Button, Chip, Input, Select, TextArea, TextField, ListBox, Label } from "@heroui/react";
 import { useEffect, useState } from 'react'
 import { getTagAllOwned, removeTag, saveTag } from '@/app/actions/dataset';
 import { getUUID } from "@/lib/utils";
 import { dataset_tag } from "@/generated/prisma/client";
+import { FloppyDisk, PencilToSquare, TrashBin, Xmark } from "@gravity-ui/icons";
 
 const SCOPE_OPTIONS = ['card', 'listen'] as const;
 
@@ -19,16 +20,15 @@ function arrayToScope(arr: string[]): string {
 function ScopeChips({ scope, onChange, disabled }: { scope: string; onChange: (s: string) => void; disabled?: boolean }) {
     const selected = scopeToArray(scope);
     return (
-        <div className="flex gap-1.5 shrink-0">
+        <div className="flex gap-1.5">
             {SCOPE_OPTIONS.map(s => {
                 const checked = selected.includes(s);
                 return (
                     <Chip
                         key={s}
-                        size="sm"
-                        variant={checked ? "solid" : "bordered"}
+                        variant={checked ? "primary" : "secondary"}
                         color={checked ? "success" : "default"}
-                        classNames={{ base: `select-none ${disabled ? 'cursor-default' : 'cursor-pointer'}` }}
+                        className={`select-none ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
                         onClick={() => {
                             if (disabled) return;
                             const next = checked
@@ -77,112 +77,114 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                 style={{ animationDelay: `${index * 45}ms` }}
             >
                 {/* Main row */}
-                <div className='flex flex-row w-full items-center justify-between gap-3'>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {stateEdit ? (
+                <div className='flex flex-row w-full items-start justify-start gap-3'>
+                    {stateEdit ? (
+                        <TextField className='flex-1'>
+                            <Label>Tag Name</Label>
                             <Input
-                                label='Tag Name'
-                                size='sm'
-                                className='flex-1'
-                                classNames={{ inputWrapper: "bg-sand-50 border border-sand-300", input: "tag-name-font" }}
-                                defaultValue={stateData.tag}
+                                className='bg-sand-50 border border-sand-300 tag-name-font'
+                                value={stateData.tag}
                                 onChange={(e) => setStateData({ ...stateData, tag: e.target.value })}
                             />
-                        ) : (
-                            <h3 className={`text-sand-900 leading-tight tag-name-font truncate ${textSize}`}>
-                                {stateData.tag}
-                            </h3>
-                        )}
-                        <ScopeChips
-                            scope={stateData.scope}
-                            onChange={(s) => setStateData({ ...stateData, scope: s })}
-                            disabled={isPublic || !stateEdit}
-                        />
-                        {!isPublic && (
-                            <Chip
-                                size="sm"
-                                variant={stateData.shared === "Y" ? "solid" : "bordered"}
-                                color={stateData.shared === "Y" ? "primary" : "default"}
-                                classNames={{ base: `select-none ${stateEdit ? 'cursor-pointer' : 'cursor-default'}` }}
-                                onClick={() => {
-                                    if (!stateEdit) return;
-                                    setStateData({ ...stateData, shared: stateData.shared === "Y" ? "N" : "Y" });
-                                }}
-                            >
-                                Shared
-                            </Chip>
-                        )}
-                    </div>
+                        </TextField>
+                    ) : (
+                        <h3 className={`flex-1 text-sand-900 leading-tight tag-name-font truncate ${textSize}`}>
+                            {stateData.tag}
+                        </h3>
+                    )}
 
                     <div className="flex items-center gap-2 shrink-0">
                         {!stateEdit && (
-                            <Button variant='flat' size="sm" color='default' className="font-medium text-sand-500"
+                            <Button variant="ghost" size="sm" className="font-medium text-sand-500"
                                 onPress={() => onAddChild(item.uuid)}
                             >
                                 + Child
                             </Button>
                         )}
                         {isPublic ? (
-                            <Chip size="sm" variant="flat" classNames={{ base: "bg-sand-200 border border-sand-300", content: "text-sand-500 text-xs font-medium tracking-wide" }}>
-                                Public
+                            <Chip size="sm" variant="tertiary" className="bg-sand-200 border border-sand-300">
+                                <span className="text-sand-500 text-xs font-medium tracking-wide">Public</span>
                             </Chip>
                         ) : (
                             <>
-                                <Button
-                                    variant='flat' size="sm"
-                                    color={stateEdit ? 'default' : 'primary'}
-                                    className="min-w-16 font-medium"
-                                    onPress={() => setStateEdit(!stateEdit)}
+                                <Button isIconOnly variant="ghost" size="sm"
+                                    onPress={async () => { await handleDelete(stateData.uuid) }}
                                 >
-                                    {stateEdit ? "Cancel" : "Edit"}
+                                    <TrashBin color="red" />
                                 </Button>
                                 {stateEdit && (
-                                    <Button variant='solid' size="sm" color='primary' className="font-medium"
+                                    <Button isIconOnly variant="ghost" size="sm"
                                         onPress={async () => {
                                             const success = await handleUpdate(stateData);
                                             if (success) setStateEdit(false);
                                         }}
                                     >
-                                        Save
+                                        <FloppyDisk />
                                     </Button>
                                 )}
-                                <Button variant='flat' size="sm" color='danger' className="font-medium"
-                                    onPress={async () => { await handleDelete(stateData.uuid) }}
+                                <Button isIconOnly variant="ghost" size="sm"
+                                    onPress={() => setStateEdit(!stateEdit)}
                                 >
-                                    Delete
+                                    {stateEdit ? <Xmark /> : <PencilToSquare />}
                                 </Button>
                             </>
                         )}
                     </div>
                 </div>
 
+                <div className="flex flex-row items-center justify-start gap-2 flex-1 min-w-0">
+                    <ScopeChips
+                        scope={stateData.scope}
+                        onChange={(s) => setStateData({ ...stateData, scope: s })}
+                        disabled={isPublic || !stateEdit}
+                    />
+                    {!isPublic && (
+                        <Chip
+                            variant={stateData.shared === "Y" ? "primary" : "secondary"}
+                            color={stateData.shared === "Y" ? "accent" : "default"}
+                            className={`select-none ${stateEdit ? 'cursor-pointer' : 'cursor-default'}`}
+                            onClick={() => {
+                                if (!stateEdit) return;
+                                setStateData({ ...stateData, shared: stateData.shared === "Y" ? "N" : "Y" });
+                            }}
+                        >
+                            Shared
+                        </Chip>
+                    )}
+                </div>
+
                 {/* Parent selector — only in edit mode */}
                 {stateEdit && (
                     <Select
-                        label="Parent Tag"
                         placeholder="None (root tag)"
-                        size="sm"
-                        classNames={{ trigger: "bg-sand-50 border border-sand-300" }}
-                        selectedKeys={stateData.parent_uuid ? [stateData.parent_uuid] : []}
-                        onSelectionChange={(keys) => {
-                            const val = Array.from(keys)[0] as string | undefined;
-                            setStateData({ ...stateData, parent_uuid: val ?? null });
-                        }}
+                        value={stateData.parent_uuid ?? null}
+                        onChange={(v) => setStateData({ ...stateData, parent_uuid: v ? String(v) : null })}
                     >
-                        {parentOptions.map(t => (
-                            <SelectItem key={t.uuid}>{t.tag}</SelectItem>
-                        ))}
+                        <Label>Parent Tag</Label>
+                        <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                            <ListBox>
+                                {parentOptions.map(t => (
+                                    <ListBox.Item id={t.uuid} key={t.uuid} textValue={t.tag}>{t.tag}</ListBox.Item>
+                                ))}
+                            </ListBox>
+                        </Select.Popover>
                     </Select>
                 )}
 
                 {/* Description */}
                 {stateEdit ? (
-                    <Textarea
-                        label='Description' size='sm' className='w-full'
-                        classNames={{ inputWrapper: "bg-sand-50 border border-sand-300", input: "text-sm text-sand-800" }}
-                        defaultValue={stateData.description}
-                        onChange={(e) => setStateData({ ...stateData, description: e.target.value })}
-                    />
+                    <TextField className='w-full'>
+                        <Label>Description</Label>
+                        <TextArea
+                            className="bg-sand-50 border border-sand-300 text-sm text-sand-800"
+                            value={stateData.description}
+                            onChange={(e) => setStateData({ ...stateData, description: e.target.value })}
+                        />
+                    </TextField>
                 ) : (
                     stateData.description && (
                         <p className="text-sm text-sand-600 leading-relaxed">{stateData.description}</p>
@@ -227,14 +229,18 @@ export default function Page({ user_id }: Props) {
     const [stateShowForm, setStateShowForm] = useState<boolean>(false);
 
     const openNewForm = (parentUuid?: string) => {
+        console.log(parentUuid)
         setStateNew({ scope: 'card', parent_uuid: parentUuid ?? null });
         setStateShowForm(true);
     };
 
     const handleAdd = async () => {
         if (!stateNew.tag) {
-            addToast({ title: "Tag name is required", color: "warning" });
+            toast.warning("Tag name is required");
             return;
+        }
+        if (!stateNew.parent_uuid) {
+            
         }
         setStateSaving(true);
         const result = await saveTag({
@@ -254,7 +260,7 @@ export default function Page({ user_id }: Props) {
             setStateReload(c => c + 1);
         } else {
             console.log(result.error);
-            addToast({ title: "Failed to save tag", color: "danger" });
+            toast.danger("Failed to save tag");
         }
         setStateSaving(false);
     };
@@ -263,11 +269,11 @@ export default function Page({ user_id }: Props) {
         setStateSaving(true);
         const result = await saveTag({ ...new_item, updated_at: new Date() });
         if (result.status === "success") {
-            addToast({ title: "Tag updated", color: "success" });
+            toast.success("Tag updated");
             setStateReload(c => c + 1);
         } else {
             console.log(result.error);
-            addToast({ title: "Failed to update tag", color: "danger" });
+            toast.danger("Failed to update tag");
         }
         setStateSaving(false);
         return result.status === "success";
@@ -280,7 +286,7 @@ export default function Page({ user_id }: Props) {
             setStateReload(c => c + 1);
         } else {
             console.log(result.error);
-            addToast({ title: typeof result.error === 'string' ? result.error : "Failed to delete tag", color: "danger" });
+            toast.danger(typeof result.error === 'string' ? result.error : "Failed to delete tag");
         }
         setStateSaving(false);
     };
@@ -292,7 +298,7 @@ export default function Page({ user_id }: Props) {
                 setStateData(result.data);
             } else {
                 console.log(result.error);
-                addToast({ title: "Failed to load tags", color: "danger" });
+                toast.danger("Failed to load tags");
             }
         };
         loadData();
@@ -307,8 +313,8 @@ export default function Page({ user_id }: Props) {
     };
 
     // Parent selector for new form: all tags except descendants of pre-filled parent
-    const newFormParentOptions = stateNew.parent_uuid
-        ? stateData.filter(t => t.uuid !== stateNew.parent_uuid && !getDescendantUuids(stateNew.parent_uuid!).includes(t.uuid))
+    const newFormParentOptions = stateNew.uuid
+        ? stateData.filter(t => t.uuid !== stateNew.uuid && !getDescendantUuids(stateNew.uuid!).includes(t.uuid))
         : stateData;
 
     return (
@@ -331,8 +337,8 @@ export default function Page({ user_id }: Props) {
                     <h1 className="page-title-font text-4xl text-sand-900 leading-tight">Tag Management</h1>
                 </div>
                 <Button
-                    variant={stateShowForm ? 'flat' : 'solid'}
-                    color='primary' size="md" className="font-medium"
+                    variant={stateShowForm ? 'ghost' : 'primary'}
+                    className="font-medium"
                     onPress={() => { setStateShowForm(!stateShowForm); setStateNew({ scope: 'card' }); }}
                 >
                     {stateShowForm ? "Cancel" : "+ New Tag"}
@@ -344,13 +350,15 @@ export default function Page({ user_id }: Props) {
                 <div className='form-expand flex flex-col w-full gap-4 p-5 rounded-xl bg-sand-200 border border-sand-300'>
                     <p className="text-xs font-semibold text-sand-500 uppercase tracking-widest">New Tag</p>
                     <div className="flex items-center gap-4">
-                        <Input
-                            label='Tag Name' size='lg' className='flex-1'
-                            classNames={{ inputWrapper: "bg-sand-100" }}
-                            value={stateNew.tag ?? ""}
-                            onChange={(e) => setStateNew({ ...stateNew, tag: e.target.value })}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
-                        />
+                        <TextField className='flex-1'>
+                            <Label>Tag Name</Label>
+                            <Input
+                                className="bg-sand-100"
+                                value={stateNew.tag ?? ""}
+                                onChange={(e) => setStateNew({ ...stateNew, tag: e.target.value })}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+                            />
+                        </TextField>
                         <div className="flex flex-col gap-1">
                             <span className="text-xs text-sand-500 font-medium">Scope</span>
                             <ScopeChips
@@ -360,26 +368,33 @@ export default function Page({ user_id }: Props) {
                         </div>
                     </div>
                     <Select
-                        label="Parent Tag" placeholder="None (root tag)" size="md"
-                        classNames={{ trigger: "bg-sand-100" }}
-                        selectedKeys={stateNew.parent_uuid ? [stateNew.parent_uuid] : []}
-                        onSelectionChange={(keys) => {
-                            const val = Array.from(keys)[0] as string | undefined;
-                            setStateNew({ ...stateNew, parent_uuid: val ?? null });
-                        }}
+                        placeholder="None (root tag)"
+                        value={stateNew.parent_uuid ?? null}
+                        onChange={(v) => setStateNew({ ...stateNew, parent_uuid: v ? v.toString() : null })}
                     >
-                        {newFormParentOptions.map(t => (
-                            <SelectItem key={t.uuid}>{t.tag}</SelectItem>
-                        ))}
+                        <Label>Parent Tag</Label>
+                        <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                            <ListBox>
+                                {newFormParentOptions.map(t => (
+                                    <ListBox.Item id={t.uuid} key={t.uuid} textValue={t.tag}>{t.tag}</ListBox.Item>
+                                ))}
+                            </ListBox>
+                        </Select.Popover>
                     </Select>
-                    <Textarea
-                        label='Description' size='lg' className='w-full'
-                        classNames={{ inputWrapper: "bg-sand-100" }}
-                        value={stateNew.description ?? ""}
-                        onChange={(e) => setStateNew({ ...stateNew, description: e.target.value })}
-                    />
+                    <TextField className='w-full'>
+                        <Label>Description</Label>
+                        <TextArea
+                            className="bg-sand-100"
+                            value={stateNew.description ?? ""}
+                            onChange={(e) => setStateNew({ ...stateNew, description: e.target.value })}
+                        />
+                    </TextField>
                     <div className="flex justify-end">
-                        <Button variant='solid' size="md" color='primary' isDisabled={stateSaving} onPress={handleAdd} className="font-medium">
+                        <Button variant="primary" size="md" isDisabled={stateSaving} onPress={handleAdd} className="font-medium">
                             Create Tag
                         </Button>
                     </div>
@@ -397,7 +412,7 @@ export default function Page({ user_id }: Props) {
                         getDescendantUuids={getDescendantUuids}
                         handleUpdate={handleUpdate}
                         handleDelete={handleDelete}
-                        onAddChild={openNewForm}
+                        onAddChild={() => openNewForm(v.uuid)}
                         index={i}
                         depth={0}
                     />

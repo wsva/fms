@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { addToast } from "@heroui/react";
+import { toast } from "@heroui/react";
 import AppModal from '@/components/AppModal'
 import Plan from './plan';
 import { getPlanAll, savePlan } from '@/app/actions/plan';
@@ -23,7 +23,7 @@ export default function HomePopup({ user_id }: Props) {
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({ title: "save data error", color: "danger" });
+            toast.danger("save data error");
         }
     }
 
@@ -35,7 +35,7 @@ export default function HomePopup({ user_id }: Props) {
                 setIsOpen(true)
             } else {
                 console.log(result.error);
-                addToast({ title: "load data error", color: "danger" });
+                toast.danger("load data error");
             }
         }
         loadData()

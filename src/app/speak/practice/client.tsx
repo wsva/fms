@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { addToast, Button, Spinner, Textarea } from "@heroui/react";
+import { toast, Button, Spinner, TextArea } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
 import Text from './text';
 import { getTextAll, removeText, saveText } from '@/app/actions/practice';
@@ -25,10 +25,7 @@ export default function Page({ user_id }: Props) {
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "remove data error",
-                color: "danger",
-            });
+            toast.danger("remove data error");
         }
     }
 
@@ -48,10 +45,7 @@ export default function Page({ user_id }: Props) {
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
         setStateSaving(false)
     }
@@ -64,10 +58,7 @@ export default function Page({ user_id }: Props) {
                 setStateData(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
             setStateLoading(false)
         }
@@ -77,27 +68,26 @@ export default function Page({ user_id }: Props) {
 
     return (
         <div>
-            <Textarea size='lg' className='w-full my-4'
-                classNames={{
-                    input: "text-xl",
-                }}
-                placeholder='Add a new sentence to practice'
-                onChange={(e) => setStateNew(e.target.value)}
-                endContent={<Button variant='solid' size="sm" color='primary'
+            <div className='flex gap-2 items-start w-full my-4'>
+                <TextArea className='text-xl flex-1'
+                    placeholder='Add a new sentence to practice'
+                    onChange={(e) => setStateNew(e.target.value)}
+                />
+                <Button variant="primary" size="sm"
                     isDisabled={stateSaving} onPress={handleAdd}
                 >
                     Add
-                </Button>}
-            />
+                </Button>
+            </div>
 
             {stateLoading && (
                 <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
-                    <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
+                    <Spinner />
                 </div>
             )}
 
             <div className='flex flex-row items-center justify-end gap-4 my-4 mb-0'>
-                <Button variant='solid' color='primary'
+                <Button variant="primary"
                     isDisabled={!user_id} onPress={() => setStateOnlyMy(!stateOnlyMy)}
                 >
                     {stateOnlyMy ? "All Texts" : "Only My Texts"}

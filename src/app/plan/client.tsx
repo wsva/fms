@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { addToast, Button, Input, Select, SelectItem } from "@heroui/react";
+import { toast, Button, Input, Select, ListBox } from "@heroui/react";
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
 import Plan from './plan';
 import { getUUID } from '@/lib/utils';
@@ -25,10 +25,7 @@ export default function Client({ user_id }: Props) {
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "remove data error",
-                color: "danger",
-            });
+            toast.danger("remove data error");
         }
     }
 
@@ -38,20 +35,14 @@ export default function Client({ user_id }: Props) {
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
     }
 
     const handleAdd = async () => {
         const content = statePlanContent.trim();
         if (!content) {
-            addToast({
-                title: "content is empty",
-                color: "danger",
-            });
+            toast.danger("content is empty");
             return;
         }
         try {
@@ -70,10 +61,7 @@ export default function Client({ user_id }: Props) {
                 setStateReload(current => current + 1)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "save data error",
-                    color: "danger",
-                });
+                toast.danger("save data error");
             }
         } finally {
             setStateSaving(false)
@@ -87,10 +75,7 @@ export default function Client({ user_id }: Props) {
                 setStateData(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
         }
         loadData()
@@ -103,29 +88,35 @@ export default function Client({ user_id }: Props) {
         <div className="flex flex-col gap-4 my-4">
             <div className='flex flex-col gap-1 bg-sand-200 p-2 rounded-md'>
                 <div className='flex flex-row items-center gap-2'>
-                    <Input className='flex-1' size='sm'
-                        classNames={{ inputWrapper: "bg-sand-100" }}
+                    <Input className='flex-1 bg-sand-100 rounded-sm'
                         placeholder="Plan content"
                         value={statePlanContent}
                         onChange={(e) => setStatePlanContent(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
                     />
-                    <Select aria-label='time span' size='sm' className='w-36'
-                        selectedKeys={[String(stateTimeSpan)]}
-                        onChange={(e) => setStateTimeSpan(parseInt(e.target.value))}
+                    <Select aria-label='time span' className='w-36'
+                        value={String(stateTimeSpan)}
+                        onChange={(v) => setStateTimeSpan(parseInt(String(v ?? '15')))}
                     >
-                        <SelectItem key="15">15 min</SelectItem>
-                        <SelectItem key="30">30 min</SelectItem>
-                        <SelectItem key="60">1 hour</SelectItem>
+                        <Select.Trigger className="bg-sand-200 rounded-sm">
+                            <Select.Value />
+                            <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover className="bg-sand-200 rounded-sm">
+                            <ListBox>
+                                <ListBox.Item id="15" key="15" textValue="15 min">15 min</ListBox.Item>
+                                <ListBox.Item id="30" key="30" textValue="30 min">30 min</ListBox.Item>
+                                <ListBox.Item id="60" key="60" textValue="1 hour">1 hour</ListBox.Item>
+                            </ListBox>
+                        </Select.Popover>
                     </Select>
-                    <Button size='sm' variant='solid' color='primary'
+                    <Button size='sm' variant="primary" className="rounded-sm"
                         isDisabled={stateSaving}
                         onPress={handleAdd}
                     >
                         Add
                     </Button>
                 </div>
-                <span className="text-xs text-foreground-400 px-1">Press Enter to add</span>
             </div>
 
             {stateData.length === 0 && (
@@ -134,7 +125,7 @@ export default function Client({ user_id }: Props) {
 
             {favorites.length > 0 && (
                 <div className="flex flex-col gap-8">
-                    <div className="text-sm font-semibold text-foreground-500 px-1">Favorites</div>
+                    <div className="text-2xl font-semibold text-foreground-500 px-1">Favorites</div>
                     {favorites.map((p) => (
                         <Plan key={p.uuid} item={p} user_id={user_id} simple={false}
                             handleDelete={handleDelete} handleUpdate={handleUpdate} />
@@ -144,7 +135,7 @@ export default function Client({ user_id }: Props) {
 
             {others.length > 0 && (
                 <div className="flex flex-col gap-8">
-                    <Button size="sm" variant="light" className="text-sm font-semibold text-foreground-500 px-1 self-start"
+                    <Button variant="ghost" className="text-2xl font-semibold text-foreground-500 px-1 self-start"
                         onPress={() => setStateShowOthers(v => !v)}
                     >
                         {stateShowOthers ? 'Hide Others' : 'Show Others'}

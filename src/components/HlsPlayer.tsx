@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { isAudio } from "@/lib/listen/utils";
 import { Button, Slider } from "@heroui/react";
-import { MdPause, MdPlayArrow, MdReplay10, MdForward10 } from "react-icons/md";
+import { MdReplay10, MdForward10 } from "react-icons/md";
+import { Pause, Play } from "@gravity-ui/icons";
 
 type Props = {
     src: string;
@@ -108,7 +109,7 @@ export default function HlsPlayer({
             const el = videoRef.current;
             if (!el) return;
             if (isPlaying) el.pause();
-            else el.play().catch(() => {});
+            else el.play().catch(() => { });
         };
 
         const skip = (sec: number) => {
@@ -123,27 +124,25 @@ export default function HlsPlayer({
 
                 {/* Transport controls */}
                 <div className="flex items-center justify-center gap-3">
-                    <Button isIconOnly variant="light" size="sm" onPress={() => skip(-10)} aria-label="Rewind 10s">
-                        <MdReplay10 size={22} />
+                    <Button isIconOnly variant="ghost" size="lg" onPress={() => skip(-10)} aria-label="Rewind 10s">
+                        <MdReplay10 size={40} />
                     </Button>
-                    <Button isIconOnly variant="solid" color="primary" radius="full" size="lg"
+                    <Button isIconOnly variant="primary" size="lg" className="rounded-full"
                         onPress={togglePlay} aria-label={isPlaying ? "Pause" : "Play"}
                     >
-                        {isPlaying ? <MdPause size={26} /> : <MdPlayArrow size={26} />}
+                        {isPlaying ? <Pause /> : <Play />}
                     </Button>
-                    <Button isIconOnly variant="light" size="sm" onPress={() => skip(10)} aria-label="Forward 10s">
-                        <MdForward10 size={22} />
+                    <Button isIconOnly variant="ghost" size="lg" onPress={() => skip(10)} aria-label="Forward 10s">
+                        <MdForward10 size={40} />
                     </Button>
                 </div>
 
                 {/* Progress bar + timestamps */}
                 <div className="flex flex-col gap-1">
                     <Slider
-                        size="sm"
-                        color="primary"
-                        minValue={0}
-                        maxValue={duration > 0 ? duration : 1}
                         value={currentTime}
+                        maxValue={duration > 0 ? duration : 1}
+                        minValue={0}
                         onChange={(val) => {
                             isDragging.current = true;
                             const t = Array.isArray(val) ? val[0] : (val as number);
@@ -156,7 +155,12 @@ export default function HlsPlayer({
                         }}
                         aria-label="seek"
                         className="w-full"
-                    />
+                    >
+                        <Slider.Track className="h-1">
+                            <Slider.Fill />
+                            <Slider.Thumb />
+                        </Slider.Track>
+                    </Slider>
                     <div className="flex justify-between text-xs text-foreground-400 font-mono px-1">
                         <span>{fmtTime(currentTime)}</span>
                         <span>{fmtTime(duration)}</span>

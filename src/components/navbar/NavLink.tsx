@@ -1,6 +1,5 @@
 "use client";
 
-import { NavbarItem } from "@heroui/react"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation';
 
@@ -12,6 +11,11 @@ type Props = {
 export default function NavLink({ href, label }: Props) {
     const pathname = usePathname();
     return (
-        <NavbarItem isActive={pathname === href} as={Link} href={href}>{label}</NavbarItem>
+        <Link
+            href={href}
+            className={`text-sm text-gray-500 uppercase hover:text-gray-700 ${pathname === href ? 'font-bold' : ''}`}
+        >
+            {label}
+        </Link>
     )
 }

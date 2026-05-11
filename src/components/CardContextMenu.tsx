@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { addToast } from '@heroui/react'
+import { toast } from '@heroui/react'
 import { saveCard, saveCardTag } from '@/app/actions/card'
 import { getUUID } from '@/lib/utils'
 import { authClient } from '@/lib/auth-client'
@@ -57,7 +57,7 @@ export default function CardContextMenu() {
             updated_at: new Date(),
         })
         if (result.status !== 'success') {
-            addToast({ title: 'Save card failed', color: 'danger' })
+            toast.danger('Save card failed')
             return
         }
 
@@ -67,11 +67,11 @@ export default function CardContextMenu() {
             tag_list_new: default_tags?.split(","),
         })
         if (result_tag.status !== 'success') {
-            addToast({ title: 'Save tags failed', color: 'danger' })
+            toast.danger('Save tags failed')
             return
         }
 
-        addToast({ title: 'Card saved', color: 'success' })
+        toast.success('Card saved')
     }
 
     const menuStyle = menuPos ? {

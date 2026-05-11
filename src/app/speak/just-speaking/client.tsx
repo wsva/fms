@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { addToast, Button, Input, Select, SelectItem, Spinner } from "@heroui/react";
+import { toast, Button, Input, Select, Spinner, ListBox, TextField, Label } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
 import { toggleRecording } from '@/lib/recording';
 import { saveAudio, removeAudio } from '@/app/actions/audio';
@@ -69,7 +69,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
             if (result.status === 'success') {
                 setStateList(result.data);
             } else {
-                addToast({ title: 'Failed to load recordings', color: 'danger' });
+                toast.danger('Failed to load recordings');
             }
             setStateLoading(false);
         };
@@ -121,7 +121,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
             clearInterval(progressTimerRef.current!);
             setStateProgress(0);
             setStateUploading(false);
-            addToast({ title: 'Upload failed', color: 'danger' });
+            toast.danger('Upload failed');
             return;
         }
 
@@ -137,7 +137,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
             clearInterval(progressTimerRef.current!);
             setStateProgress(0);
             setStateUploading(false);
-            addToast({ title: 'Failed to save recording', color: 'danger' });
+            toast.danger('Failed to save recording');
             return;
         }
 
@@ -147,7 +147,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
         URL.revokeObjectURL(statePending.url);
         setStatePending(undefined);
         setStateUploading(false);
-        addToast({ title: 'Uploaded successfully', color: 'success' });
+        toast.success('Uploaded successfully');
         setTimeout(() => setStateProgress(0), 400);
     }
 
@@ -160,7 +160,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
         if (result.status === 'success') {
             setStateList(prev => prev.filter(r => r.uuid !== item.uuid));
         } else {
-            addToast({ title: 'Failed to delete recording', color: 'danger' });
+            toast.danger('Failed to delete recording');
         }
     }
 
@@ -179,12 +179,13 @@ export default function Page({ user_id: _user_id, name }: Props) {
             </div>
             <div className="flex flex-col items-center gap-6 w-full max-w-xl">
 
-                <Input
-                    label="Your name"
-                    value={stateAuthor}
-                    onChange={(e) => setStateAuthor(e.target.value)}
-                    className="w-full"
-                />
+                <TextField className="w-full">
+                    <Label>Your name</Label>
+                    <Input
+                        value={stateAuthor}
+                        onChange={(e) => setStateAuthor(e.target.value)}
+                    />
+                </TextField>
 
                 {/* Round record button with ripple waves */}
                 <div className="relative flex items-center justify-center" style={{ width: '6rem', height: '6rem' }}>
@@ -233,9 +234,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
                     <div className="flex flex-col gap-3 w-full">
                         <audio controls src={statePending.url} className="w-full" />
                         <div className="flex gap-2">
-                            <Button
-                                variant="solid"
-                                color="primary"
+                            <Button variant="primary"
                                 className="flex-1 relative overflow-hidden"
                                 isDisabled={stateUploading}
                                 onPress={handleUpload}
@@ -250,9 +249,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
                                     {stateUploading ? `${stateProgress}%` : 'Upload'}
                                 </span>
                             </Button>
-                            <Button
-                                variant="bordered"
-                                color="danger"
+                            <Button variant="danger"
                                 isDisabled={stateUploading}
                                 onPress={handleDiscard}
                             >
@@ -266,18 +263,26 @@ export default function Page({ user_id: _user_id, name }: Props) {
             <div className="flex flex-col gap-3 w-full max-w-xl">
                 <Select
                     aria-label="Date filter"
-                    selectedKeys={[stateFilter]}
-                    onChange={(e) => setStateFilter(e.target.value as DateFilterKey)}
-                    startContent={<span className="whitespace-nowrap font-bold text-sm">Show</span>}
+                    value={stateFilter}
+                    onChange={(v) => setStateFilter((v ?? DATE_FILTERS[0].key) as DateFilterKey)}
                 >
-                    {DATE_FILTERS.map((f) => (
-                        <SelectItem key={f.key}>{f.label}</SelectItem>
-                    ))}
+                    <Select.Trigger>
+                        <span className="whitespace-nowrap font-bold text-sm">Show</span>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            {DATE_FILTERS.map((f) => (
+                                <ListBox.Item id={f.key} key={f.key} textValue={f.label}>{f.label}</ListBox.Item>
+                            ))}
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
 
                 {stateLoading ? (
                     <div className="flex justify-center py-4">
-                        <Spinner variant="simple" />
+                        <Spinner />
                     </div>
                 ) : stateList.length > 0 ? (
                     stateList.map((item) => (
@@ -290,7 +295,7 @@ export default function Page({ user_id: _user_id, name }: Props) {
                             </div>
                             <audio controls src={item.audio_path ?? undefined} className="w-full" />
                             <div className="flex justify-end">
-                                <Button size="sm" variant="light" color="danger"
+                                <Button size="sm" variant="ghost"
                                     onPress={() => handleDelete(item)}
                                 >
                                     Delete

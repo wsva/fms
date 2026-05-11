@@ -1,6 +1,6 @@
 'use client';
 
-import { addToast, Switch } from "@heroui/react";
+import { toast, Switch, Label } from "@heroui/react";
 import { useState, useEffect } from 'react';
 import { getKey, setKey } from '@/app/actions/settings_general';
 import Section from './section';
@@ -18,15 +18,20 @@ export default function ShowPlanReminderSetting() {
         setEnabled(value);
         const result = await setKey('show_plan_reminder', value ? 'true' : 'false');
         if (result.status !== 'success') {
-            addToast({ title: 'Failed to save', color: 'danger' });
+            toast.danger('Failed to save');
             setEnabled(!value);
         }
     };
 
     return (
         <Section title="Show Reminder of Plans">
-            <Switch isSelected={enabled} onValueChange={toggle}>
-                Show the plan reminder popup on the home page
+            <Switch isSelected={enabled} onChange={toggle}>
+                <Switch.Control>
+                    <Switch.Thumb />
+                </Switch.Control>
+                <Switch.Content>
+                    <Label>Show the plan reminder popup on the home page</Label>
+                </Switch.Content>
             </Switch>
         </Section>
     );

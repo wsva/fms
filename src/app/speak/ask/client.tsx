@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { addToast, Button, Input, Select, SelectItem, Spinner, Textarea } from "@heroui/react";
+import { toast, Button, Input, Select, Spinner, TextArea, TextField, Label, ListBox } from "@heroui/react";
 import { getUUID } from '@/lib/utils';
 import { ask_question } from "@/generated/prisma/client";
 import { getQuestionAll, removeQuestion, saveQuestion } from '@/app/actions/ask';
@@ -37,10 +37,7 @@ export default function Page({ user_id }: Props) {
             const result = await removeAudio("ask", `${item.uuid}.wav`)
             if (result.status === "error") {
                 console.log(result.error);
-                addToast({
-                    title: "remove data error",
-                    color: "danger",
-                });
+                toast.danger("remove data error");
                 return
             }
         }
@@ -48,10 +45,7 @@ export default function Page({ user_id }: Props) {
             const result = await removeAudio("ask", `${item.uuid}.mp4`)
             if (result.status === "error") {
                 console.log(result.error);
-                addToast({
-                    title: "remove data error",
-                    color: "danger",
-                });
+                toast.danger("remove data error");
                 return
             }
         }
@@ -60,10 +54,7 @@ export default function Page({ user_id }: Props) {
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "remove data error",
-                color: "danger",
-            });
+            toast.danger("remove data error");
         }
     }
 
@@ -88,10 +79,7 @@ export default function Page({ user_id }: Props) {
             const result = await saveAudio(stateNewVideo.data, "ask", `${uuid}.mp4`);
             if (result.status === "error") {
                 console.log(result.error);
-                addToast({
-                    title: "save data error",
-                    color: "danger",
-                });
+                toast.danger("save data error");
                 setStateSaving(false)
                 return
             }
@@ -101,10 +89,7 @@ export default function Page({ user_id }: Props) {
             const result = await saveAudio(stateNewAudio.data, "ask", `${uuid}.wav`);
             if (result.status === "error") {
                 console.log(result.error);
-                addToast({
-                    title: "save data error",
-                    color: "danger",
-                });
+                toast.danger("save data error");
                 setStateSaving(false)
                 return
             }
@@ -134,10 +119,7 @@ export default function Page({ user_id }: Props) {
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
         setStateSaving(false)
     }
@@ -166,10 +148,7 @@ export default function Page({ user_id }: Props) {
             });
             setStateNewContent(result.status === 'success' ? result.data : "")
             if (result.status === 'error') {
-                addToast({
-                    title: result.error as string,
-                    color: "danger",
-                });
+                toast.danger(result.error as string);
             }
         }
 
@@ -195,10 +174,7 @@ export default function Page({ user_id }: Props) {
                 setStateData(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
             setStateLoading(false)
         }
@@ -214,14 +190,22 @@ export default function Page({ user_id }: Props) {
         <div>
             <div className='flex flex-col sm:flex-row items-center justify-center gap-4 my-4'>
                 <Select aria-label='stt engine' className='w-full sm:max-w-sm'
-                    selectedKeys={[stateMode]}
-                    onChange={(e) => setStateMode(e.target.value as "video" | "audio")}
-                    startContent={<div className="whitespace-nowrap font-bold">Mode</div>}
+                    value={stateMode}
+                    onChange={(v) => setStateMode((v ?? 'video') as "video" | "audio")}
                 >
-                    <SelectItem key="video" textValue="video">video</SelectItem>
-                    <SelectItem key="audio" textValue="audio">audio</SelectItem>
+                    <Select.Trigger>
+                        <div className="whitespace-nowrap font-bold">Mode</div>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            <ListBox.Item id="video" key="video" textValue="video">video</ListBox.Item>
+                            <ListBox.Item id="audio" key="audio" textValue="audio">audio</ListBox.Item>
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
-                <Button variant='solid' color='primary' id='button-toggel-recording'
+                <Button variant="primary" id='button-toggel-recording'
                     isDisabled={!stateRecording && stateProcessing}
                     onPress={async () => {
                         await toggleRecordingLocal()
@@ -237,21 +221,20 @@ export default function Page({ user_id }: Props) {
                 <video ref={previewRef} autoPlay muted playsInline className="w-full" />
             ) : (
                 <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
-                    <Input label="title" size="lg" className='w-full'
-                        value={stateNewTitle}
-                        onChange={(e) => setStateNewTitle(e.target.value)}
-                    />
+                    <TextField className='w-full'>
+                        <Label>title</Label>
+                        <Input value={stateNewTitle} onChange={(e) => setStateNewTitle(e.target.value)} />
+                    </TextField>
                     {!!stateNewAudio && (<audio controls src={stateNewAudio.url} className="w-full" />)}
                     {!!stateNewVideo && (<video controls src={stateNewVideo.url} className="w-full max-h-[40vh]" />)}
-                    <Textarea size='lg' className='w-full' label="content"
-                        classNames={{
-                            inputWrapper: "bg-sand-200",
-                            input: "text-xl",
-                        }}
-                        value={stateNewContent}
-                        onChange={(e) => setStateNewContent(e.target.value)}
-                    />
-                    <Button variant='solid' color='primary' id="button-add-save"
+                    <TextField className='w-full'>
+                        <Label>content</Label>
+                        <TextArea className="bg-sand-200 text-xl"
+                            value={stateNewContent}
+                            onChange={(e) => setStateNewContent(e.target.value)}
+                        />
+                    </TextField>
+                    <Button variant="primary" id="button-add-save"
                         isDisabled={stateSaving} onPress={handleAdd}
                     >
                         Add & Save (Ctrl+S)
@@ -261,12 +244,12 @@ export default function Page({ user_id }: Props) {
 
             {stateLoading && (
                 <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
-                    <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
+                    <Spinner />
                 </div>
             )}
 
             <div className='flex flex-row items-center justify-end gap-4 my-4 mb-0'>
-                <Button variant='solid' color='primary'
+                <Button variant="primary"
                     isDisabled={!user_id} onPress={() => setStateOnlyMy(!stateOnlyMy)}
                 >
                     {stateOnlyMy ? "All Texts" : "Only My Texts"}

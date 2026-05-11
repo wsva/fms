@@ -1,8 +1,8 @@
 'use client'
 
 import { useRef } from 'react'
-import { Button } from "@heroui/react"
-import { MdAdd, MdAudiotrack, MdContentCopy, MdDelete, MdPlayCircle } from 'react-icons/md'
+import { Button, Tooltip } from "@heroui/react"
+import { CirclePlay, Copy, FileArrowUp, TrashBin, Plus } from "@gravity-ui/icons"
 import { Paragraph, SentenceClient } from './types'
 import { BG_COLORS } from './SentenceDrawer'
 
@@ -55,37 +55,48 @@ export default function ParagraphList({
                                     e.target.value = ''
                                 }}
                             />
-                            {para.breakSentence?.audio_path && (
-                                <Button isIconOnly size="sm" variant="light" color="primary"
-                                    title="play paragraph audio"
-                                    onPress={() => new Audio(para.breakSentence!.audio_path!).play()}
-                                >
-                                    <MdPlayCircle size={15} />
-                                </Button>
-                            )}
-                            <Button isIconOnly size="sm" variant="light"
-                                isDisabled={saving}
-                                color={para.breakSentence?.audio_path ? 'primary' : 'default'}
-                                title="upload audio"
-                                onPress={() => fileInputRefs.current[pi]?.click()}
-                            >
-                                <MdAudiotrack size={15} />
-                            </Button>
                             {para.sentences.length > 0 && (
-                                <Button isIconOnly size="sm" variant="light"
+                                <Button isIconOnly size="sm" variant="tertiary"
                                     onPress={() => navigator.clipboard.writeText(
                                         para.sentences.map(s => s.content.trim()).join(' ')
                                     )}
                                 >
-                                    <MdContentCopy size={15} />
+                                    <Copy />
                                 </Button>
                             )}
+                            {para.breakSentence?.audio_path && (
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button isIconOnly size="sm" variant="tertiary"
+                                            onPress={() => new Audio(para.breakSentence!.audio_path!).play()}
+                                        >
+                                            <CirclePlay />
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        play paragraph audio
+                                    </Tooltip.Content>
+                                </Tooltip>
+                            )}
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button isIconOnly size="sm" variant='tertiary'
+                                        isDisabled={saving}
+                                        onPress={() => fileInputRefs.current[pi]?.click()}
+                                    >
+                                        <FileArrowUp color={para.breakSentence?.audio_path ? 'red' : ''} />
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    {para.breakSentence?.audio_path ? 'replace audio' : 'upload audio'}
+                                </Tooltip.Content>
+                            </Tooltip>
                             {(para.sentences.length > 0 || para.breakSentence) && (
-                                <Button isIconOnly size="sm" variant="light" color="danger"
+                                <Button isIconOnly size="sm" variant='tertiary'
                                     isDisabled={saving}
                                     onPress={() => onDeleteParagraph(para)}
                                 >
-                                    <MdDelete size={15} />
+                                    <TrashBin color='red' />
                                 </Button>
                             )}
                         </div>
@@ -130,9 +141,10 @@ export default function ParagraphList({
 
                     {/* Add Sentence button */}
                     <div className="flex justify-end">
-                        <Button size="sm" variant="flat" startContent={<MdAdd size={16} />}
+                        <Button size="sm" variant="ghost"
                             onPress={() => onAddSentence(para)}
                         >
+                            <Plus />
                             Add Sentence
                         </Button>
                     </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addToast, CircularProgress, Select, SelectItem } from "@heroui/react"
+import { toast, ProgressCircle, Select, ListBox, Label } from "@heroui/react"
 import { getUserIDAll } from '@/app/actions/manage';
 import { useRouter } from "next/navigation";
 
@@ -23,10 +23,7 @@ export default function Page({ user_id_my }: Props) {
                 setStateData(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
             setStateLoading(false)
         }
@@ -38,19 +35,25 @@ export default function Page({ user_id_my }: Props) {
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
             {stateLoading ? (
                 <div className='flex flex-row w-full items-center justify-center gap-4'>
-                    <CircularProgress label="Loading..." />
+                    <ProgressCircle aria-label="Loading" />
                 </div >
             ) : (
-                <Select label="Select User ID" labelPlacement='outside-left'
-                    onChange={(e) => router.push(`/card/manage?user_id=${encodeURIComponent(e.target.value)}`)}
-                    endContent={stateLoading && (<CircularProgress aria-label="Loading..." color="default" />)}
-                >
-                    {[
-                        <SelectItem key={user_id_my} textValue={user_id_my}>My Own ID: {user_id_my}</SelectItem>,
-                        ...stateData.filter(v => v !== user_id_my).map((v) => (
-                            <SelectItem key={v} textValue={v}>{v}</SelectItem>
-                        )),
-                    ]}
+                <Select onChange={(v) => router.push(`/card/manage?user_id=${encodeURIComponent(String(v ?? ''))}`)}>
+                    <Label>Select User ID</Label>
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            {[
+                                <ListBox.Item id={user_id_my} key={user_id_my} textValue={user_id_my}>My Own ID: {user_id_my}</ListBox.Item>,
+                                ...stateData.filter(v => v !== user_id_my).map((v) => (
+                                    <ListBox.Item id={v} key={v} textValue={v}>{v}</ListBox.Item>
+                                )),
+                            ]}
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
             )}
         </div>

@@ -50,19 +50,29 @@ export default function Page({ item, handleUpdate }: Props) {
                 </div>
                 {item.status === "pending" && (
                     <>
-                        <Tooltip placement='bottom' content="done">
-                            <Button isIconOnly size="sm" variant='light' color='success'
-                                onPress={async () => { await handleUpdate({ ...item, status: 'completed' }) }}
-                            >
-                                <MdDone size={24} />
-                            </Button>
+                        <Tooltip>
+                            <Tooltip.Trigger>
+                                <Button isIconOnly size="sm" variant="ghost"
+                                    onPress={async () => { await handleUpdate({ ...item, status: 'completed' }) }}
+                                >
+                                    <MdDone size={24} />
+                                </Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content placement='bottom'>
+                                done
+                            </Tooltip.Content>
                         </Tooltip>
-                        <Tooltip placement='bottom' content="failed">
-                            <Button isIconOnly size="sm" variant='light' color="danger"
-                                onPress={async () => { await handleUpdate({ ...item, status: 'failed' }) }}
-                            >
-                                <MdClose size={24} />
-                            </Button>
+                        <Tooltip>
+                            <Tooltip.Trigger>
+                                <Button isIconOnly size="sm" variant="ghost"
+                                    onPress={async () => { await handleUpdate({ ...item, status: 'failed' }) }}
+                                >
+                                    <MdClose size={24} />
+                                </Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content placement='bottom'>
+                                failed
+                            </Tooltip.Content>
                         </Tooltip>
                     </>
                 )}

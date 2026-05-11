@@ -4,7 +4,7 @@ import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import { useEffect, useState } from 'react';
 import { getTagAllOwned } from '@/app/actions/dataset';
 import Card from './Card';
-import { addToast } from '@heroui/react';
+import { toast } from '@heroui/react';
 
 type Props = {
     user_id: string
@@ -21,10 +21,7 @@ export default function CardList({ user_id, card_list }: Props) {
                 setStateTagList(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data success",
-                    color: "danger",
-                });
+                toast.danger("load data success");
             }
         };
         loadData();

@@ -10,7 +10,7 @@ export default function LoginButton() {
 
     return (
         <Button
-            variant="bordered"
+            variant="outline"
             onPress={() => authClient.signIn.social({
                 provider: 'wsva_oauth2',
                 callbackURL: redirectUrl,

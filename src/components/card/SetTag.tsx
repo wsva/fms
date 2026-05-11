@@ -2,7 +2,7 @@
 
 import { getCardTag, saveCardTag } from '@/app/actions/card';
 import { card_ext } from '@/lib/types';
-import { addToast, Checkbox, CheckboxGroup, CircularProgress, Link } from "@heroui/react"
+import { toast, Checkbox, CheckboxGroup, ProgressCircle, Label } from "@heroui/react"
 import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -50,42 +50,44 @@ export default function SetTag({ user_id, card, tag_list, onSuccess }: Props) {
         }
         const result = await saveCardTag(item)
         if (result.status === 'success') {
-            addToast({
-                title: "save data success",
-                color: "success",
-            });
+            toast.success("save data success");
             onSuccess();
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
     }
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
-            <div className='flex flex-col gap-4'>
-                {stateLoading ? (
-                    <CircularProgress />
-                ) : (
-                    <CheckboxGroup
-                        color="success"
-                        value={stateSelected}
-                        onValueChange={(v) => setStateSelected(v.sort())}
-                        orientation="vertical"
-                    >
-                        {tag_list.map((v) => <Checkbox key={v.uuid} value={v.uuid}>{v.tag}</Checkbox>)}
-                    </CheckboxGroup>
-                )}
+        <form className='w-full' onSubmit={handleSubmit(onSubmit)}>
+            <div className='flex flex-col gap-2'>
                 <div className='flex flex-row items-center justify-end gap-1'>
-                    <Link as='button' type='submit' className='bg-blue-500 rounded-md text-slate-50 px-2'
-                        isDisabled={compareArray(stateAdded, stateSelected)}
+                    <button type='submit' className='bg-blue-500 rounded-md text-slate-50 px-2'
+                        disabled={compareArray(stateAdded, stateSelected)}
                     >
                         save
-                    </Link>
+                    </button>
                 </div>
+                {stateLoading ? (
+                    <ProgressCircle />
+                ) : (
+                    <CheckboxGroup
+                        className='flex flex-row flex-wrap gap-2'
+                        value={stateSelected}
+                        onChange={(v) => setStateSelected(v.sort())}
+                    >
+                        {tag_list.map((v) => (
+                            <Checkbox key={v.uuid} value={v.uuid}>
+                                <Checkbox.Control>
+                                    <Checkbox.Indicator />
+                                </Checkbox.Control>
+                                <Checkbox.Content>
+                                    <Label>{v.tag}</Label>
+                                </Checkbox.Content>
+                            </Checkbox>
+                        ))}
+                    </CheckboxGroup>
+                )}
             </div>
         </form>
     )

@@ -2,7 +2,7 @@
 
 import { removeTranscript, saveTranscript } from "@/app/actions/listen";
 import { languageOptions } from "@/lib/language";
-import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
+import { toast, Button, Select, TextArea, ListBox } from "@heroui/react";
 import { listen_transcript } from "@/generated/prisma/client";
 import React, { useState } from "react";
 
@@ -20,40 +20,42 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
     return (
         <div className='flex flex-col items-center justify-start w-full my-2'>
             <div className='flex flex-row items-center justify-end w-full gap-2'>
-                <Select aria-label="Select language" size="sm" className="max-w-xs"
+                <Select aria-label="Select language" className="max-w-xs"
                     isDisabled={item.user_id !== user_id || !stateEdit}
-                    selectedKeys={[stateData.language]}
-                    onChange={(e) => setStateData({ ...stateData, language: e.target.value })}
+                    value={stateData.language}
+                    onChange={(v) => setStateData({ ...stateData, language: String(v ?? '') })}
                 >
-                    {languageOptions.map((v) => (
-                        <SelectItem key={v.key} textValue={`${v.key} (${v.value})`}>{`${v.key} (${v.value})`}</SelectItem>
-                    ))}
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            {languageOptions.map((v) => (
+                                <ListBox.Item id={v.key} key={v.key} textValue={`${v.key} (${v.value})`}>{`${v.key} (${v.value})`}</ListBox.Item>
+                            ))}
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
                 {item.user_id === user_id && (
-                    <Button variant='solid' size="sm" color="secondary"
+                    <Button variant="secondary" size="sm"
                         onPress={() => setStateEdit(!stateEdit)}
                     >
                         {stateEdit ? "View" : "Edit"}
                     </Button>
                 )}
                 {stateEdit && (
-                    <Button variant='solid' size="sm" color="secondary"
+                    <Button variant="secondary" size="sm"
                         isDisabled={stateSaving}
                         onPress={async () => {
                             setStateSaving(true);
                             const result = await saveTranscript({ ...stateData, updated_at: new Date() });
                             if (result.status === "success") {
-                                addToast({
-                                    title: "save data success",
-                                    color: "success",
-                                });
+                                toast.success("save data success");
                                 setStateReloadTranscript(current => current + 1);
                             } else {
                                 console.log(result.error);
-                                addToast({
-                                    title: "save data error",
-                                    color: "danger",
-                                });
+                                toast.danger("save data error");
                             }
                             setStateSaving(false);
                         }}
@@ -63,23 +65,17 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                 )}
                 {item.user_id === user_id && (
                     <div className="flex flex-row items-center justify-center gap-2">
-                        <Button variant='solid' size="sm" color="danger"
+                        <Button variant="danger" size="sm"
                             isDisabled={stateSaving}
                             onPress={async () => {
                                 setStateSaving(true);
                                 const result = await removeTranscript(item.uuid);
                                 if (result.status === "success") {
-                                    addToast({
-                                        title: "remove data success",
-                                        color: "success",
-                                    });
+                                    toast.success("remove data success");
                                     setStateReloadTranscript(current => current + 1);
                                 } else {
                                     console.log(result.error);
-                                    addToast({
-                                        title: "remove data error",
-                                        color: "danger",
-                                    });
+                                    toast.danger("remove data error");
                                 }
                                 setStateSaving(false);
                             }}
@@ -90,16 +86,13 @@ export default function Page({ item, user_id, setStateReloadTranscript }: Props)
                 )}
             </div>
             {stateEdit ? (
-                <Textarea
-                    classNames={{
-                        "input": 'text-xl leading-tight font-roboto',
-                    }}
+                <TextArea
+                    className='text-xl leading-tight font-roboto w-full'
                     value={stateData.transcript}
-                    minRows={10}
-                    maxRows={30}
                     autoComplete='off'
                     autoCorrect='off'
                     spellCheck='false'
+                    rows={10}
                     onChange={(e) => {
                         setStateData({ ...stateData, transcript: e.target.value })
                     }}

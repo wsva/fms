@@ -1,7 +1,7 @@
 "use client"
 
 import { buildVTT, Cue, parseSRT, parseVTT } from "@/lib/listen/subtitle";
-import { addToast, Button, Select, SelectItem, Textarea } from "@heroui/react";
+import { toast, Button, Select, TextArea, ListBox } from "@heroui/react";
 import React, { useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import { listen_subtitle } from "@/generated/prisma/client";
@@ -36,10 +36,7 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
                     cue_list = parseSRT(item.subtitle, false);
                     break;
                 default:
-                    addToast({
-                        title: "invalid subtitle format",
-                        color: "danger",
-                    });
+                    toast.danger("invalid subtitle format");
             }
             updateStateCues((draft) => {
                 draft.length = 0;
@@ -56,25 +53,41 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
     return (
         <div className='flex flex-col items-center justify-start w-full my-2 gap-1'>
             <div className='flex flex-row items-center justify-end w-full gap-2'>
-                <Select aria-label="Select language" size="sm" className="max-w-xs"
-                    selectedKeys={[stateData.language]}
-                    onChange={(e) => setStateData({ ...stateData, language: e.target.value })}
+                <Select aria-label="Select language" className="max-w-xs"
+                    value={stateData.language}
+                    onChange={(v) => setStateData({ ...stateData, language: String(v ?? '') })}
                 >
-                    {languageOptions.map((v) => (
-                        <SelectItem key={v.key} textValue={`${v.key} (${v.value})`}>{`${v.key} (${v.value})`}</SelectItem>
-                    ))}
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            {languageOptions.map((v) => (
+                                <ListBox.Item id={v.key} key={v.key} textValue={`${v.key} (${v.value})`}>{`${v.key} (${v.value})`}</ListBox.Item>
+                            ))}
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
-                <Select aria-label="Select format" size="sm" className="max-w-xs"
-                    selectedKeys={[stateData.format]}
-                    onChange={(e) => setStateData({ ...stateData, format: e.target.value })}
+                <Select aria-label="Select format" className="max-w-xs"
+                    value={stateData.format}
+                    onChange={(v) => setStateData({ ...stateData, format: String(v ?? '') })}
                 >
-                    <SelectItem key="vtt" textValue="vtt">vtt</SelectItem>
-                    <SelectItem key="srt" textValue="srt">srt</SelectItem>
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            <ListBox.Item id="vtt" key="vtt" textValue="vtt">vtt</ListBox.Item>
+                            <ListBox.Item id="srt" key="srt" textValue="srt">srt</ListBox.Item>
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
 
 
                 {item.user_id === user_id && (
-                    <Button variant='solid' size='sm' color="secondary"
+                    <Button variant="secondary" size='sm'
                         onPress={() => {
                             // 当前处于编辑状态，而且不是文本编辑模式，才需要重新生成字幕
                             if (stateEdit && !stateEditAsText) {
@@ -95,7 +108,7 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
                 {stateEdit && (
                     <div className="flex flex-row items-center justify-center gap-2">
                         {/** edit subtitle in text format */}
-                        <Button variant='solid' size='sm' color="secondary"
+                        <Button variant="secondary" size='sm'
                             isDisabled={stateEditAsText}
                             onPress={() => setStateEditAsText(true)}
                         >
@@ -103,7 +116,7 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
                         </Button>
 
                         {stateEdit && (
-                            <Button variant='solid' size="sm" color="secondary"
+                            <Button variant="secondary" size="sm"
                                 isDisabled={stateSaving}
                                 onPress={async () => {
                                     setStateSaving(true);
@@ -130,17 +143,11 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
                                                 )
                                             )
 
-                                            addToast({
-                                                title: 'save data success',
-                                                color: 'success',
-                                            })
+                                            toast.success('save data success')
                                         } else {
                                             console.log(result.error)
 
-                                            addToast({
-                                                title: 'save data error',
-                                                color: 'danger',
-                                            })
+                                            toast.danger('save data error')
                                         }
                                     } finally {
                                         setStateSaving(false)
@@ -154,7 +161,7 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
                 )}
                 {item.user_id === user_id && (
                     <div className="flex flex-row items-center justify-center gap-2">
-                        <Button variant='solid' size="sm" color="danger"
+                        <Button variant="danger" size="sm"
                             isDisabled={stateSaving}
                             onPress={async () => {
                                 setStateSaving(true);
@@ -175,17 +182,11 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
                                                 : current
                                         )
 
-                                        addToast({
-                                            title: 'remove data success',
-                                            color: 'success',
-                                        })
+                                        toast.success('remove data success')
                                     } else {
                                         console.log(result.error)
 
-                                        addToast({
-                                            title: 'remove data error',
-                                            color: 'danger',
-                                        })
+                                        toast.danger('remove data error')
                                     }
                                 } finally {
                                     setStateSaving(false)
@@ -201,16 +202,13 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
             {stateEdit ? (
                 <div className="flex flex-col items-center justify-center w-full">
                     {stateEditAsText ? (
-                        <Textarea
-                            classNames={{
-                                "input": 'text-xl leading-tight font-roboto',
-                            }}
+                        <TextArea
+                            className='text-xl leading-tight font-roboto w-full'
                             value={stateData.subtitle}
-                            minRows={10}
-                            maxRows={30}
                             autoComplete='off'
                             autoCorrect='off'
                             spellCheck='false'
+                            rows={20}
                             onChange={(e) => {
                                 const new_subtitle = {
                                     ...stateData,

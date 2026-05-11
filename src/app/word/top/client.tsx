@@ -1,7 +1,8 @@
 'use client'
 
 import { getTopword, searchTopword } from '@/app/actions/word'
-import { CircularProgress, Input, Link, Pagination } from "@heroui/react"
+import { ProgressCircle, InputGroup, Link } from "@heroui/react"
+import SimplePagination from '@/components/SimplePagination'
 import { useEffect, useState } from 'react'
 import { topword } from '@/lib/types'
 import Table from './table'
@@ -76,63 +77,38 @@ export default function WordStore({ email, language, keyword, all }: Props) {
             </div>
 
             {/* Search */}
-            <Input
-                isClearable
-                radius="lg"
-                classNames={{
-                    label: "text-black/50 dark:text-white/90",
-                    input: [
-                        "bg-transparent",
-                        "text-black/90 dark:text-white/90",
-                        "placeholder:text-default-700/50 dark:placeholder:text-white/60",
-                    ],
-                    innerWrapper: "bg-transparent",
-                    inputWrapper: [
-                        "shadow-sm",
-                        "bg-default-100",
-                        "hover:bg-amber-50/60",
-                        "group-data-[focus=true]:bg-amber-50/40",
-                        "!cursor-text",
-                    ],
-                }}
-                placeholder="Search word store..."
-                startContent={
+            <InputGroup>
+                <InputGroup.Prefix>
                     <BiSearch className="mb-0.5 text-stone-400 pointer-events-none flex-shrink-0" />
-                }
-                value={stateKeyword}
-                onClear={() => setStateKeyword("")}
-                onChange={(e) => setStateKeyword(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key == 'Enter') {
-                        setStateWords([])
-                        setStateCurrentPage(1)
-                        loadData(stateKeyword, 1)
-                    }
-                }}
-            />
+                </InputGroup.Prefix>
+                <InputGroup.Input
+                    placeholder="Search word store..."
+                    value={stateKeyword}
+                    onChange={(e) => setStateKeyword(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key == 'Enter') {
+                            setStateWords([])
+                            setStateCurrentPage(1)
+                            loadData(stateKeyword, 1)
+                        }
+                    }}
+                />
+            </InputGroup>
 
             {/* Top pagination */}
             {stateTotalPages > 1 && (
                 <div className='flex w-full items-center justify-center'>
-                    <Pagination
-                        showControls
-                        loop
-                        variant='bordered'
-                        total={stateTotalPages}
-                        page={stateCurrentPage}
-                        isDisabled={stateLoading}
-                        onChange={(page) => {
+                    <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={(page) => {
                             setStateCurrentPage(page)
                             loadData(stateKeyword, page)
-                        }}
-                    />
+                        }} />
                 </div>
             )}
 
             {/* Word list */}
             {stateLoading ? (
                 <div className='flex w-full items-center justify-center py-16'>
-                    <CircularProgress size='md' label="Loading..." />
+                    <ProgressCircle size='md' aria-label="Loading" />
                 </div>
             ) : (
                 <Table words={stateWords} language={language} email={email} />
@@ -141,18 +117,10 @@ export default function WordStore({ email, language, keyword, all }: Props) {
             {/* Bottom pagination */}
             {stateTotalPages > 1 && !stateLoading && (
                 <div className='flex w-full items-center justify-center py-2'>
-                    <Pagination
-                        showControls
-                        loop
-                        variant='bordered'
-                        total={stateTotalPages}
-                        page={stateCurrentPage}
-                        isDisabled={stateLoading}
-                        onChange={(page) => {
+                    <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={(page) => {
                             setStateCurrentPage(page)
                             loadData(stateKeyword, page)
-                        }}
-                    />
+                        }} />
                 </div>
             )}
         </div>

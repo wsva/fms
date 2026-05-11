@@ -1,9 +1,9 @@
 'use client';
 
-import { Button, ButtonGroup, Divider, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Link, Navbar, NavbarBrand, NavbarContent, NavbarItem, NavbarMenu, NavbarMenuItem, NavbarMenuToggle, Tooltip } from "@heroui/react"
+import { Button, ButtonGroup, Separator, Dropdown, Label, Description, Link, Tooltip } from "@heroui/react"
 import { useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
-import { MdArrowBack, MdArrowForward } from "react-icons/md";
+import { MdMenu, MdClose } from "react-icons/md";
 import { menuList } from "./menu";
 import { authClient } from "@/lib/auth-client";
 import { deleteAuthTokens } from "@/app/actions/auth";
@@ -11,6 +11,7 @@ import { User } from "better-auth";
 import ThemeSelector from '@/components/ThemeSelector'
 import NavIcon from '@/components/design/NavIcon'
 import { useSearchParams } from 'next/navigation'
+import { ArrowUturnCcwLeft, ArrowUturnCwRight } from "@gravity-ui/icons";
 
 const ChevronDown = () => {
     return (
@@ -77,136 +78,134 @@ export default function TopNav() {
 
     return (
         <>
-            <Navbar
-                shouldHideOnScroll
-                maxWidth='full'
-                className='bg-linear-to-b from-sand-300 to-sand-200'
-                classNames={{
-                    item: [
-                        'text-sm',
-                        'sm:text-xl',
-                        'text-gray-500',
-                        'uppercase',
-                        'data-[active=true]:font-bold'
-                    ]
-                }}
-                isMenuOpen={isMenuOpen}
-                onMenuOpenChange={setIsMenuOpen}
-            >
-                <NavbarContent className='grow-0 mr-1 sm:mr-4 data-[justify=start]:grow-0' justify="start">
-                    <NavbarMenuToggle
-                        aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-                        className="lg:hidden"
-                    />
-                    <NavbarBrand className="hidden lg:flex">
-                        <Tooltip content={<NavIcon size={280} />} classNames={{ content: 'bg-transparent p-0 shadow-none border-none' }}>
-                            <Link href='/'>
-                                <NavIcon size={40} />
-                            </Link>
-                        </Tooltip>
-                    </NavbarBrand>
-                    <ButtonGroup>
-                        <Button isIconOnly variant="light"
-                            onPress={() => {
-                                router.back()
-                                setIsMenuOpen(!isMenuOpen)
-                            }}
+            <nav className="sticky top-0 z-40 w-full bg-linear-to-b from-sand-300 to-sand-200 border-b border-sand-300">
+                <header className="flex items-center h-16 px-2 sm:px-4 w-full">
+                    {/* Left: hamburger + brand */}
+                    <div className="flex items-center shrink-0 mr-1 sm:mr-4 gap-1">
+                        <button
+                            className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-sand-300"
+                            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
                         >
-                            <MdArrowBack size={24} />
-                        </Button>
-                        <Button isIconOnly variant="light"
-                            onPress={() => {
-                                router.forward()
-                                setIsMenuOpen(!isMenuOpen)
-                            }}
-                        >
-                            <MdArrowForward size={24} />
-                        </Button>
-                    </ButtonGroup>
-                </NavbarContent>
+                            {isMenuOpen ? <MdClose size={22} /> : <MdMenu size={22} />}
+                        </button>
+                        <div className="hidden lg:flex">
+                            <Tooltip delay={0} closeDelay={0}>
+                                <Tooltip.Trigger>
+                                    <Link href='/'>
+                                        <NavIcon size={40} />
+                                    </Link>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content className="bg-transparent p-0 shadow-none border-none">
+                                    <NavIcon size={280} />
+                                </Tooltip.Content>
+                            </Tooltip>
+                        </div>
+                        <ButtonGroup>
+                            <Button isIconOnly variant="ghost"
+                                onPress={() => {
+                                    router.back()
+                                    setIsMenuOpen(false)
+                                }}
+                            >
+                                <ArrowUturnCcwLeft />
+                            </Button>
+                            <Button isIconOnly variant="ghost"
+                                onPress={() => {
+                                    router.forward()
+                                    setIsMenuOpen(false)
+                                }}
+                            >
+                                <ArrowUturnCwRight />
+                            </Button>
+                        </ButtonGroup>
+                    </div>
 
-                <NavbarContent className="hidden lg:flex gap-3" justify="start">
-                    {menuList.map((group, index) => (
-                        <Dropdown key={`group-${index}`} className="bg-sand-200">
-                            <NavbarItem>
-                                <DropdownTrigger>
+                    {/* Desktop nav menu */}
+                    <ul className="hidden lg:flex items-center gap-3 flex-1">
+                        {menuList.map((group, index) => (
+                            <li key={`group-${index}`}>
+                                <Dropdown>
                                     <Button
-                                        disableRipple
-                                        className="p-0 bg-transparent data-[hover=true]:bg-transparent gap-0 min-w-0"
-                                        endContent={<ChevronDown />}
-                                        radius="sm"
-                                        variant="light"
+                                        className="p-0 bg-transparent data-[hover=true]:bg-transparent gap-0 min-w-0 text-sm text-gray-500 rounded-sm"
+                                        variant="ghost"
                                     >
                                         {group.name}
+                                        <ChevronDown />
                                     </Button>
-                                </DropdownTrigger>
-                            </NavbarItem>
-                            <DropdownMenu
-                                disabledKeys={group.items.filter(item => /^seperator_/.test(item.key)).map(item => item.key)}
-                            >
-                                {group.items.map((item) => {
-                                    return /^seperator_/.test(item.key) ? (
-                                        <DropdownItem key={item.key} >
-                                            <span className="font-bold select-none text-gray-500">{item.name}</span>
-                                            <Divider />
-                                        </DropdownItem>
-                                    ) : (
-                                        <DropdownItem
-                                            className="bg-sand-300"
-                                            href={item.href}
-                                            key={item.key}
-                                            description={item.description}
-                                            onPress={() => router.push(item.href)}
+                                    <Dropdown.Popover className="bg-sand-200 rounded-sm">
+                                        <Dropdown.Menu
+                                            disabledKeys={group.items.filter(item => /^seperator_/.test(item.key)).map(item => item.key)}
                                         >
-                                            {item.name}
-                                        </DropdownItem>
-                                    )
-                                })}
-                            </DropdownMenu>
-                        </Dropdown>
-                    ))}
-                </NavbarContent>
+                                            {group.items.map((item) => {
+                                                return /^seperator_/.test(item.key) ? (
+                                                    <Dropdown.Item id={item.key} textValue={item.name} key={item.key}
+                                                        className="flex flex-col items-start justify-center gap-0"
+                                                    >
+                                                        <Label className="font-bold select-none text-red">{item.name}</Label>
+                                                        <Separator />
+                                                    </Dropdown.Item>
+                                                ) : (
+                                                    <Dropdown.Item
+                                                        id={item.key}
+                                                        textValue={item.name}
+                                                        key={item.key}
+                                                        className="flex flex-col items-start justify-center gap-1 bg-sand-300 rounded-sm"
+                                                        onPress={() => router.push(item.href)}
+                                                    >
+                                                        <Label className="font-bold">{item.name}</Label>
+                                                        <Description>{item.description}</Description>
+                                                    </Dropdown.Item>
+                                                )
+                                            })}
+                                        </Dropdown.Menu>
+                                    </Dropdown.Popover>
+                                </Dropdown>
+                            </li>
+                        ))}
+                    </ul>
 
-                <NavbarContent justify='end' className="hidden lg:flex gap-3">
-                    <ThemeSelector />
-                    {!!stateUser ? (
-                        <Dropdown placement="bottom-start">
-                            <DropdownTrigger>
+                    {/* Right: theme + user */}
+                    <div className="hidden lg:flex items-center gap-3 ml-auto">
+                        <ThemeSelector />
+                        {!!stateUser ? (
+                            <Dropdown>
                                 <Button size="sm" className="text-lg bg-sand-400">
                                     {stateUser.name}
                                 </Button>
-                            </DropdownTrigger>
-                            <DropdownMenu aria-label="User Actions" variant="flat">
-                                <DropdownItem key="profile" className="h-14 gap-2">
-                                    <p className="font-bold">{stateUser.name}</p>
-                                    <p className="font-bold">{stateUser.email}</p>
-                                </DropdownItem>
-                                <DropdownItem key="logout"
-                                    className="text-danger"
-                                    color="danger"
-                                    onPress={handleSignOut}
-                                >
-                                    Sign Out
-                                </DropdownItem>
-                            </DropdownMenu>
-                        </Dropdown>
-                    ) : (
-                        <Button variant='bordered' className='text-gray-500'
-                            onPress={async () => {
-                                await authClient.signIn.social({
-                                    provider: "wsva_oauth2",
-                                    callbackURL: redirectUrl,
-                                });
-                            }}
-                        >
-                            Login
-                        </Button>
-                    )}
-                </NavbarContent>
+                                <Dropdown.Popover placement="bottom start">
+                                    <Dropdown.Menu aria-label="User Actions">
+                                        <Dropdown.Item id="profile" textValue="Profile" className="h-14 gap-2">
+                                            <p className="font-bold">{stateUser.name}</p>
+                                            <p className="font-bold">{stateUser.email}</p>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="logout" textValue="Sign Out" variant="danger" onPress={handleSignOut}>
+                                            <Label>Sign Out</Label>
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown.Popover>
+                            </Dropdown>
+                        ) : (
+                            <Button variant="outline" className='text-gray-500'
+                                onPress={async () => {
+                                    await authClient.signIn.social({
+                                        provider: "wsva_oauth2",
+                                        callbackURL: redirectUrl,
+                                    });
+                                }}
+                            >
+                                Login
+                            </Button>
+                        )}
+                    </div>
+                </header>
+            </nav>
 
-                <NavbarMenu className="pt-4 pb-20 bg-sand-200">
+            {/* Mobile menu overlay */}
+            {isMenuOpen && (
+                <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-30 bg-sand-200 overflow-y-auto pt-4 pb-20">
                     <div className="flex justify-center">
-                        <Link href='/' onPress={() => setIsMenuOpen(!isMenuOpen)}>
+                        <Link href='/' onPress={() => setIsMenuOpen(false)}>
                             <NavIcon size={280} />
                         </Link>
                     </div>
@@ -223,7 +222,7 @@ export default function TopNav() {
                                             {stateUser.name}
                                         </Button>
                                     </div>
-                                    <Button color="danger" size="sm"
+                                    <Button variant="danger" size="sm"
                                         onPress={handleSignOut}
                                     >
                                         Sign Out
@@ -233,7 +232,7 @@ export default function TopNav() {
                             </div>
                         ) : (
                             <div className="flex flex-row items-center justify-center gap-2 w-full">
-                                <Button color="primary" size="sm"
+                                <Button variant="primary" size="sm"
                                     onPress={async () => {
                                         await authClient.signIn.social({
                                             provider: "wsva_oauth2",
@@ -246,37 +245,37 @@ export default function TopNav() {
                             </div>
                         )}
                     </div>
-                    <NavbarMenuItem className="my-1">
+                    <div className="my-1">
                         <Link className="w-full text-blue-600 underline font-bold text-xl" href={"/"}
-                            onPress={() => setIsMenuOpen(!isMenuOpen)}
+                            onPress={() => setIsMenuOpen(false)}
                         >
                             Home
                         </Link>
-                    </NavbarMenuItem>
+                    </div>
                     {menuList.map((group) => (
                         <div key={group.name}>
                             <div className="select-none font-bold text-xl">{group.name}</div>
-                            <Divider />
+                            <Separator />
                             {group.items.map((item) => {
                                 return /^seperator_/.test(item.key) ? (
-                                    <NavbarMenuItem key={item.key} className="my-1 pl-4">
+                                    <div key={item.key} className="my-1 pl-4">
                                         <span className="font-bold select-none text-gray-500 text-lg">{item.name}</span>
-                                        <Divider />
-                                    </NavbarMenuItem>
+                                        <Separator />
+                                    </div>
                                 ) : (
-                                    <NavbarMenuItem key={item.key} className="my-1 pl-4">
+                                    <div key={item.key} className="my-1 pl-4">
                                         <Link className="w-full text-blue-600 underline text-lg" href={item.href}
-                                            onPress={() => setIsMenuOpen(!isMenuOpen)}
+                                            onPress={() => setIsMenuOpen(false)}
                                         >
                                             {item.name}
                                         </Link>
-                                    </NavbarMenuItem>
+                                    </div>
                                 )
                             })}
                         </div>
                     ))}
-                </NavbarMenu>
-            </Navbar >
+                </div>
+            )}
         </>
     )
 }

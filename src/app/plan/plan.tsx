@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addToast, Button, Divider, Tooltip } from '@heroui/react'
+import { toast, Button, Separator, Tooltip } from '@heroui/react'
 import Record from './record';
 import { plan_plan, plan_record } from "@/generated/prisma/client";
 import { getRecordAll, saveRecord } from '../actions/plan';
 import { getUUID } from '@/lib/utils';
-import { MdDelete, MdExpandCircleDown, MdOutlineStar, MdOutlineStarBorder } from 'react-icons/md';
+import { CircleChevronDownFill, CircleChevronUpFill, PlayFill, Star, StarFill, TrashBin } from '@gravity-ui/icons';
 
 export type Props = {
     item: plan_plan;
@@ -35,10 +35,7 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
     }
 
@@ -51,10 +48,7 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
             setStateReload(current => current + 1)
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
     }
 
@@ -65,10 +59,7 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
                 setStateData(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
         }
 
@@ -92,39 +83,34 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
                 {/* End actions */}
                 <div className="flex items-center gap-1">
                     {!simple && (
-                    <Tooltip placement='bottom' content="log a session">
-                        <Button
-                            size="sm"
-                            className="shrink-0 bg-green-600 text-white hover:bg-green-700 rounded-full px-2 py-0.5 min-w-0 h-auto text-xs font-semibold"
-                            onPress={handleAddRecord}
-                        >
-                            start
-                        </Button>
-                    </Tooltip>
+                        <Tooltip>
+                            <Tooltip.Trigger>
+                                <Button isIconOnly variant='ghost' onPress={handleAddRecord} >
+                                    <PlayFill />
+                                </Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content placement='bottom'>
+                                log a session
+                            </Tooltip.Content>
+                        </Tooltip>
                     )}
                     {!simple && (
                         <>
-                            <Tooltip placement='bottom' content={item.favorite === "Y" ? "unpin" : "pin"}>
-                                <Button isIconOnly size="sm" variant='light'
-                                    onPress={() => handleUpdate({ ...item, favorite: item.favorite === "Y" ? "N" : "Y" })}
-                                >
-                                    {item.favorite === "Y"
-                                        ? <MdOutlineStar className='text-sand-600' size={18} />
-                                        : <MdOutlineStarBorder className='text-sand-600' size={18} />}
-                                </Button>
-                            </Tooltip>
+                            <Button isIconOnly variant='ghost'
+                                onPress={() => handleUpdate({ ...item, favorite: item.favorite === "Y" ? "N" : "Y" })}
+                            >
+                                {item.favorite === "Y" ? <StarFill color='text-sand-600' /> : <Star />}
+                            </Button>
                             {item.favorite !== "Y" && (
-                                <Tooltip placement='bottom' content="delete">
-                                    <Button isIconOnly size="sm" variant='light'
-                                        onPress={() => {
-                                            if (window.confirm(`Delete "${item.content}"?`)) {
-                                                handleDelete(item)
-                                            }
-                                        }}
-                                    >
-                                        <MdDelete className='text-red-300 hover:text-red-500' size={18} />
-                                    </Button>
-                                </Tooltip>
+                                <Button isIconOnly variant='ghost'
+                                    onPress={() => {
+                                        if (window.confirm(`Delete "${item.content}"?`)) {
+                                            handleDelete(item)
+                                        }
+                                    }}
+                                >
+                                    <TrashBin color='red' />
+                                </Button>
                             )}
                         </>
                     )}
@@ -134,22 +120,24 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
 
             {!simple && stateData.length > 0 && (
                 <div className="flex flex-col w-full">
-                    <Divider />
+                    <Separator />
                     <div className="flex flex-row items-start w-full px-2 gap-2 pt-1">
                         <div className="flex flex-col flex-1">
                             {(stateShowAll ? stateData : stateData.slice(0, 1)).map((v, i) => (
                                 <Record key={i} item={v} handleUpdate={handleUpdateRecord} />
                             ))}
                         </div>
-                        <Tooltip placement='bottom' content="records">
-                            <Button isIconOnly size="sm" variant='light'
-                                onPress={() => setStateShowAll(!stateShowAll)}
-                            >
-                                <MdExpandCircleDown
-                                    className={`text-sand-600 transition-transform duration-200 ${stateShowAll ? 'rotate-180' : ''}`}
-                                    size={18}
-                                />
-                            </Button>
+                        <Tooltip>
+                            <Tooltip.Trigger>
+                                <Button isIconOnly variant='ghost'
+                                    onPress={() => setStateShowAll(!stateShowAll)}
+                                >
+                                    {stateShowAll ? <CircleChevronDownFill /> : <CircleChevronUpFill />}
+                                </Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content placement='bottom'>
+                                records
+                            </Tooltip.Content>
                         </Tooltip>
                     </div>
                 </div>

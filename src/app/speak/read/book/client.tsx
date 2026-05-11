@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { addToast, Button, Input, Spinner } from "@heroui/react"
-import { MdAdd, MdChevronRight, MdDelete, MdEdit, MdExpandMore } from 'react-icons/md'
+import { toast, Button, Input, Spinner, TextField, Label, Tooltip } from "@heroui/react"
 import { book_chapter, book_meta } from "@/generated/prisma/client"
 import { getBookMetaAll, saveBookMeta, removeBookMeta, getBookChapterAll, saveBookChapter, removeBookChapter } from "@/app/actions/book"
 import { saveTag } from "@/app/actions/dataset"
 import { getUUID } from "@/lib/utils"
+import { ChevronDownWide, ChevronRight, Copy, PencilToSquare, Plus, TrashBin } from '@gravity-ui/icons'
 
 // ─── Book section ─────────────────────────────────────────────────────────────
 
@@ -37,14 +37,17 @@ function InlineForm({ form, onChange, saving, label, onSave, onCancel }: {
 }) {
     return (
         <div className="flex flex-col gap-2 p-3 rounded-lg bg-sand-200 mt-1">
-            <Input size="sm" label="Title" autoFocus
-                value={form.title}
-                onChange={e => onChange({ ...form, title: e.target.value })}
-                onKeyDown={e => { if (e.key === 'Enter') onSave() }}
-            />
+            <TextField>
+                <Label>Title</Label>
+                <Input autoFocus
+                    value={form.title}
+                    onChange={e => onChange({ ...form, title: e.target.value })}
+                    onKeyDown={e => { if (e.key === 'Enter') onSave() }}
+                />
+            </TextField>
             <div className="flex flex-row gap-2">
-                <Button size="sm" color="primary" isDisabled={saving} onPress={onSave}>{label}</Button>
-                <Button size="sm" variant="flat" onPress={onCancel}>Cancel</Button>
+                <Button variant="primary" size="sm" isDisabled={saving} onPress={onSave}>{label}</Button>
+                <Button size="sm" variant="ghost" onPress={onCancel}>Cancel</Button>
             </div>
         </div>
     )
@@ -77,19 +80,9 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
     return (
         <div>
             <div
-                className="flex flex-row items-center gap-1 rounded-lg p-2 bg-sand-200 mb-1 group"
+                className="flex flex-row items-start justify-start gap-1 rounded-lg px-2 bg-sand-200 group hover:bg-sand-300"
                 style={{ marginLeft: indent }}
             >
-                <button
-                    className="text-foreground-400 w-5 flex-shrink-0"
-                    onClick={() => setExpanded(v => !v)}
-                >
-                    {node.children.length > 0
-                        ? (expanded ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />)
-                        : <span className="w-[18px] inline-block" />
-                    }
-                </button>
-
                 <div className="flex-1 min-w-0">
                     {isEditing ? (
                         <InlineForm
@@ -102,33 +95,72 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
                         />
                     ) : (
                         <div className="flex flex-row items-center gap-2 flex-wrap">
-                            <div>
+                            <div className='flex flex-row items-center justify-start gap-2'>
+                                <Button isIconOnly variant='ghost'
+                                    className="text-foreground-400 w-5 lex-shrink-0"
+                                    onClick={() => setExpanded(v => !v)}
+                                >
+                                    {node.children.length > 0
+                                        ? (expanded ? <ChevronDownWide /> : <ChevronRight />)
+                                        : <span className="w-[18px] inline-block" />
+                                    }
+                                </Button>
                                 <div className="font-medium">{node.title}</div>
-                                <div className="text-xs text-foreground-400 font-mono select-all">{node.uuid}</div>
                             </div>
                             <div className="flex flex-row gap-1 flex-shrink-0">
-                                <Button isIconOnly size="sm" variant="light"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onPress={() => h.onAddChild(node.uuid)}
-                                    title="Add child chapter"
-                                >
-                                    <MdAdd size={16} />
-                                </Button>
-                                <Button isIconOnly size="sm" variant="light"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onPress={() => h.onEdit(node)}
-                                    title="Edit"
-                                >
-                                    <MdEdit size={16} />
-                                </Button>
-                                <Button isIconOnly size="sm" variant="light" color="danger"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                    isDisabled={h.saving}
-                                    onPress={() => h.onDelete(node)}
-                                    title="Delete"
-                                >
-                                    <MdDelete size={16} />
-                                </Button>
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button isIconOnly size="sm" variant="ghost"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onPress={() => navigator.clipboard.writeText(node.uuid)}
+                                        >
+                                            <Copy />
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        Copy UUID
+                                    </Tooltip.Content>
+                                </Tooltip>
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button isIconOnly size="sm" variant="ghost"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onPress={() => h.onAddChild(node.uuid)}
+                                        >
+                                            <Plus />
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        Add child chapter
+                                    </Tooltip.Content>
+                                </Tooltip>
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button isIconOnly size="sm" variant="ghost"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onPress={() => h.onEdit(node)}
+                                        >
+                                            <PencilToSquare />
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        Edit
+                                    </Tooltip.Content>
+                                </Tooltip>
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button isIconOnly size="sm" variant="ghost"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                            isDisabled={h.saving}
+                                            onPress={() => h.onDelete(node)}
+                                        >
+                                            <TrashBin color="red" />
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        Delete
+                                    </Tooltip.Content>
+                                </Tooltip>
                             </div>
                         </div>
                     )}
@@ -187,7 +219,7 @@ export default function Client({ email }: Props) {
             setStateBooksLoading(true)
             const result = await getBookMetaAll(email)
             if (result.status === 'success') setStateBooks(result.data)
-            else addToast({ title: 'load error', color: 'danger' })
+            else toast.danger('load error')
             setStateBooksLoading(false)
         }
         load()
@@ -200,7 +232,7 @@ export default function Client({ email }: Props) {
             setStateChaptersLoading(true)
             const result = await getBookChapterAll(stateBookUUID)
             if (result.status === 'success') setStateFlat(result.data)
-            else addToast({ title: 'load error', color: 'danger' })
+            else toast.danger('load error')
             setStateChaptersLoading(false)
         }
         load()
@@ -210,7 +242,7 @@ export default function Client({ email }: Props) {
 
     const handleAddBook = async () => {
         if (!stateAddForm.title) {
-            addToast({ title: 'title is required', color: 'danger' })
+            toast.danger('title is required')
             return
         }
         setStateSavingBook(true)
@@ -234,7 +266,7 @@ export default function Client({ email }: Props) {
             setStateShowAdd(false)
             setStateBooks(prev => [...prev, newBook])
         } else {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
         }
         setStateSavingBook(false)
     }
@@ -250,7 +282,7 @@ export default function Client({ email }: Props) {
             setStateEditBookUUID(null)
             setStateBooksReload(n => n + 1)
         } else {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
         }
         setStateSavingBook(false)
     }
@@ -266,7 +298,7 @@ export default function Client({ email }: Props) {
             }
             setStateBooksReload(n => n + 1)
         } else {
-            addToast({ title: 'delete error', color: 'danger' })
+            toast.danger('delete error')
         }
         setStateSavingBook(false)
     }
@@ -275,7 +307,7 @@ export default function Client({ email }: Props) {
 
     const handleAddChapter = async (parentUuid: string | null) => {
         if (!stateChapterAddForm.title) {
-            addToast({ title: 'title is required', color: 'danger' })
+            toast.danger('title is required')
             return
         }
         const siblings = stateFlat.filter(c => c.parent_uuid === parentUuid)
@@ -295,7 +327,7 @@ export default function Client({ email }: Props) {
             setStateAddingUnder(undefined)
             setStateFlat(prev => [...prev, newChapter])
         } else {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
         }
         setStateSavingChapter(false)
     }
@@ -312,7 +344,7 @@ export default function Client({ email }: Props) {
             setStateEditChapterUUID(null)
             setStateChaptersReload(n => n + 1)
         } else {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
         }
         setStateSavingChapter(false)
     }
@@ -320,7 +352,7 @@ export default function Client({ email }: Props) {
     const handleDeleteChapter = async (item: book_chapter) => {
         const hasChildren = stateFlat.some(c => c.parent_uuid === item.uuid)
         if (hasChildren) {
-            addToast({ title: 'remove child chapters first', color: 'warning' })
+            toast.warning('remove child chapters first')
             return
         }
         if (!window.confirm(`Delete "${item.title}"?`)) return
@@ -329,7 +361,7 @@ export default function Client({ email }: Props) {
         if (result.status === 'success') {
             setStateChaptersReload(n => n + 1)
         } else {
-            addToast({ title: 'delete error', color: 'danger' })
+            toast.danger('delete error')
         }
         setStateSavingChapter(false)
     }
@@ -368,34 +400,33 @@ export default function Client({ email }: Props) {
             {/* Books */}
             <div className="flex flex-row items-center justify-between">
                 <h2 className="text-xl font-bold">Books</h2>
-                <Button size="sm" color="primary" onPress={() => setStateShowAdd(!stateShowAdd)}>
+                <Button variant="primary" size="sm" onPress={() => setStateShowAdd(!stateShowAdd)}>
                     {stateShowAdd ? 'Cancel' : '+ New Book'}
                 </Button>
             </div>
 
             {stateShowAdd && (
                 <div className="flex flex-col gap-3 p-4 rounded-lg bg-sand-300">
-                    <Input label="Title" size="sm"
-                        value={stateAddForm.title}
-                        onChange={e => setStateAddForm({ title: e.target.value })}
-                    />
-                    <Button color="primary" isDisabled={stateSavingBook} onPress={handleAddBook}>
+                    <TextField>
+                        <Label>Title</Label>
+                        <Input value={stateAddForm.title} onChange={e => setStateAddForm({ title: e.target.value })} />
+                    </TextField>
+                    <Button variant="primary" isDisabled={stateSavingBook} onPress={handleAddBook}>
                         Add Book
                     </Button>
                 </div>
             )}
 
             {stateBooksLoading && (
-                <div className="flex justify-center my-4"><Spinner variant="simple" /></div>
+                <div className="flex justify-center my-4"><Spinner /></div>
             )}
 
             <div className="flex flex-col gap-3">
                 {stateBooks.map(item => (
                     <div
                         key={item.uuid}
-                        className={`flex flex-col gap-2 p-4 rounded-lg cursor-pointer transition-colors ${
-                            stateBookUUID === item.uuid ? 'bg-sand-300' : 'bg-sand-200 hover:bg-sand-250'
-                        }`}
+                        className={`flex flex-col gap-2 p-4 rounded-lg cursor-pointer transition-colors ${stateBookUUID === item.uuid ? 'bg-sand-300' : 'bg-sand-200 hover:bg-sand-250'
+                            }`}
                         onClick={() => {
                             if (stateBookUUID === item.uuid) {
                                 setStateBookUUID('')
@@ -409,17 +440,17 @@ export default function Client({ email }: Props) {
                     >
                         {stateEditBookUUID === item.uuid ? (
                             <div onClick={e => e.stopPropagation()}>
-                                <Input label="Title" size="sm"
-                                    value={stateEditBookForm.title}
-                                    onChange={e => setStateEditBookForm({ title: e.target.value })}
-                                />
+                                <TextField>
+                                    <Label>Title</Label>
+                                    <Input value={stateEditBookForm.title} onChange={e => setStateEditBookForm({ title: e.target.value })} />
+                                </TextField>
                                 <div className="flex flex-row gap-2 mt-2">
-                                    <Button size="sm" color="primary" isDisabled={stateSavingBook}
+                                    <Button variant="primary" size="sm" isDisabled={stateSavingBook}
                                         onPress={() => handleSaveEditBook(item)}
                                     >
                                         Save
                                     </Button>
-                                    <Button size="sm" variant="flat"
+                                    <Button size="sm" variant="ghost"
                                         onPress={() => setStateEditBookUUID(null)}
                                     >
                                         Cancel
@@ -434,7 +465,7 @@ export default function Client({ email }: Props) {
                                 </div>
                                 {item.user_id === email && (
                                     <div className="flex flex-row gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                                        <Button size="sm" variant="flat"
+                                        <Button size="sm" variant="ghost"
                                             onPress={() => {
                                                 setStateEditBookUUID(item.uuid)
                                                 setStateEditBookForm({ title: item.title || '' })
@@ -442,7 +473,7 @@ export default function Client({ email }: Props) {
                                         >
                                             Edit
                                         </Button>
-                                        <Button size="sm" variant="flat" color="danger"
+                                        <Button size="sm" variant="danger-soft"
                                             isDisabled={stateSavingBook}
                                             onPress={() => handleDeleteBook(item.uuid)}
                                         >
@@ -468,7 +499,7 @@ export default function Client({ email }: Props) {
                             <h3 className="text-lg font-semibold">
                                 Chapters — <span className="font-normal text-foreground-600">{selectedBook.title}</span>
                             </h3>
-                            <Button size="sm" color="primary"
+                            <Button variant="primary" size="sm"
                                 onPress={() => {
                                     setStateEditChapterUUID(null)
                                     setStateAddingUnder(prev => prev === null ? undefined : null)
@@ -480,7 +511,7 @@ export default function Client({ email }: Props) {
                         </div>
 
                         {stateChaptersLoading && (
-                            <div className="flex justify-center my-4"><Spinner variant="simple" /></div>
+                            <div className="flex justify-center my-4"><Spinner /></div>
                         )}
 
                         {!stateChaptersLoading && (

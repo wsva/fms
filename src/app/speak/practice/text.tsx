@@ -1,6 +1,6 @@
 'use client'
 
-import { Link } from "@heroui/react";
+import { Link, Button } from "@heroui/react";
 import { practice_text } from "@/generated/prisma/client";
 
 type Props = {
@@ -30,7 +30,7 @@ export default function Page({ user_id, item, handleDelete }: Props) {
                     {`by ${item.user_id}`}
                 </Link>
                 {item.user_id === user_id && (
-                    <Link as='button' isBlock color='danger' className='text-xl'
+                    <Button variant="ghost" className='text-xl'
                         onPress={async () => {
                             if (window.confirm("Are you sure to delete?")) {
                                 await handleDelete(item);
@@ -38,7 +38,7 @@ export default function Page({ user_id, item, handleDelete }: Props) {
                         }}
                     >
                         delete
-                    </Link>
+                    </Button>
                 )}
             </div>
         </div>

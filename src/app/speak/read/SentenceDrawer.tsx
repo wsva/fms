@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Textarea } from "@heroui/react"
+import { Button, Dropdown, Label, TextArea, Tooltip } from "@heroui/react"
 import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle, MdUnfoldMore, MdUnfoldLess } from 'react-icons/md'
 import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
@@ -149,41 +149,47 @@ export default function SentenceDrawer({
                         {drawer.mode === 'edit' ? 'Edit Sentence' : 'New Sentence'}
                     </span>
                     <div className="flex flex-row items-center gap-4">
-                        <Button size="sm" color="primary" isDisabled={saving}
+                        <Button variant="primary" size="sm" isDisabled={saving}
                             onPress={drawer.mode === 'add' ? onSaveAdd : onSaveEdit}
                         >
                             {drawer.mode === 'add' ? 'Add' : 'Save'}
                         </Button>
                         {drawer.mode === 'edit' && (
                             <Dropdown>
-                                <DropdownTrigger>
-                                    <Button isIconOnly size="sm" variant="light" isDisabled={saving}>
-                                        <MdMoreVert size={20} />
-                                    </Button>
-                                </DropdownTrigger>
-                                <DropdownMenu aria-label="Sentence actions">
-                                    <DropdownItem key="copy" onPress={() => navigator.clipboard.writeText(content)}>
-                                        Copy
-                                    </DropdownItem>
-                                    <DropdownItem key="link_card" onPress={() => {
-                                        const s = (drawer as { mode: 'edit'; sentence: { uuid: string } }).sentence
-                                        const tags = bookUUID ? `&tags=${bookUUID}` : ''
-                                        const note = chapterPath ? `&note=${encodeURIComponent(chapterPath)}` : ''
-                                        window.open(`/card/${s.uuid}?question=${encodeURIComponent(content)}&edit=y${tags}${note}`, '_blank')
-                                    }}>
-                                        Link Card
-                                    </DropdownItem>
-                                    <DropdownItem key="insert_before" onPress={onInsertBefore}>Insert Sentence Before</DropdownItem>
-                                    <DropdownItem key="insert_after" onPress={onInsertAfter}>Insert Sentence After</DropdownItem>
-                                    <DropdownItem key="para_before" onPress={onParagraphBefore}>Insert Paragraph Before</DropdownItem>
-                                    <DropdownItem key="para_after" onPress={onParagraphAfter}>Insert Paragraph After</DropdownItem>
-                                    <DropdownItem key="delete" color="danger" className="text-danger"
-                                        startContent={<MdDelete size={16} />}
-                                        onPress={onDelete}
-                                    >
-                                        Delete
-                                    </DropdownItem>
-                                </DropdownMenu>
+                                <Button isIconOnly size="sm" variant="ghost" isDisabled={saving}>
+                                    <MdMoreVert size={20} />
+                                </Button>
+                                <Dropdown.Popover>
+                                    <Dropdown.Menu aria-label="Sentence actions">
+                                        <Dropdown.Item id="copy" textValue="Copy" onPress={() => navigator.clipboard.writeText(content)}>
+                                            <Label>Copy</Label>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="link_card" textValue="Link Card" onPress={() => {
+                                            const s = (drawer as { mode: 'edit'; sentence: { uuid: string } }).sentence
+                                            const tags = bookUUID ? `&tags=${bookUUID}` : ''
+                                            const note = chapterPath ? `&note=${encodeURIComponent(chapterPath)}` : ''
+                                            window.open(`/card/${s.uuid}?question=${encodeURIComponent(content)}&edit=y${tags}${note}`, '_blank')
+                                        }}>
+                                            <Label>Link Card</Label>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="insert_before" textValue="Insert Sentence Before" onPress={onInsertBefore}>
+                                            <Label>Insert Sentence Before</Label>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="insert_after" textValue="Insert Sentence After" onPress={onInsertAfter}>
+                                            <Label>Insert Sentence After</Label>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="para_before" textValue="Insert Paragraph Before" onPress={onParagraphBefore}>
+                                            <Label>Insert Paragraph Before</Label>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="para_after" textValue="Insert Paragraph After" onPress={onParagraphAfter}>
+                                            <Label>Insert Paragraph After</Label>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="delete" textValue="Delete" variant="danger" onPress={onDelete}>
+                                            <MdDelete size={16} />
+                                            <Label>Delete</Label>
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown.Popover>
                             </Dropdown>
                         )}
                         <button onClick={() => setExpanded(e => !e)} className="text-foreground-400 hover:text-foreground-600 p-1" title={expanded ? 'Restore size' : 'Expand'}>
@@ -201,16 +207,16 @@ export default function SentenceDrawer({
                     {/* Audio + Recording */}
                     <div className="flex flex-row flex-wrap items-center justify-start gap-2">
                         {hasLocalService && (
-                            <Button size={expanded ? 'md' : 'sm'} color="primary" variant="flat"
+                            <Button size={expanded ? 'md' : 'sm'} variant="tertiary"
                                 isDisabled={!recording && processing}
                                 onPress={onToggleRecording}
-                                startContent={recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
                             >
+                                {recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
                                 {recording ? 'Stop' : processing ? 'Processing…' : 'Record'}
                             </Button>
                         )}
                         {hasAudio && (
-                            <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="flat" onPress={onPlay}>
+                            <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="ghost" onPress={onPlay}>
                                 <MdPlayCircle size={expanded ? 24 : 20} />
                             </Button>
                         )}
@@ -247,25 +253,46 @@ export default function SentenceDrawer({
                             </button>
                         ))}
                         <div className="ml-auto flex flex-row gap-1">
-                            <Button size="sm" variant="flat" onPress={applySmartQuotes} title='Replace "..." with „..."'>
-                                „"
-                            </Button>
-                            <Button size="sm" variant="flat" onPress={applyRules} title="Apply auto-replace rules to content">
-                                Apply
-                            </Button>
-                            <Button size="sm" variant="flat" onPress={openRulesEditor} title="Edit auto-replace rules">
-                                Rules
-                            </Button>
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button size="sm" variant="ghost" onPress={applySmartQuotes}>
+                                        „“
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    Replace "..." with „...“
+                                </Tooltip.Content>
+                            </Tooltip>
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button size="sm" variant="ghost" onPress={applyRules}>
+                                        Apply
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    Apply auto-replace rules to content
+                                </Tooltip.Content>
+                            </Tooltip>
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button size="sm" variant="ghost" onPress={openRulesEditor}>
+                                        Rules
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    Edit auto-replace rules
+                                </Tooltip.Content>
+                            </Tooltip>
                         </div>
                     </div>
 
                     {/* Content editor */}
-                    <Textarea data-no-voice
+                    <TextArea data-no-voice
                         ref={textareaRef}
-                        label="Content" size={expanded ? 'md' : 'sm'} minRows={expanded ? 6 : 2}
+                        className={expanded ? 'text-2xl font-bold' : 'text-base'}
+                        rows={3}
                         value={content}
                         onChange={e => onContentChange(e.target.value)}
-                        classNames={{ input: expanded ? 'text-2xl font-bold' : 'text-base' }}
                     />
 
                     {/* Background color picker */}
@@ -312,8 +339,8 @@ export default function SentenceDrawer({
                             spellCheck={false}
                         />
                         <div className="flex flex-row gap-2 justify-end">
-                            <Button size="sm" variant="flat" onPress={() => setShowRulesEditor(false)}>Cancel</Button>
-                            <Button size="sm" color="primary" onPress={saveRules}>Save</Button>
+                            <Button size="sm" variant="ghost" onPress={() => setShowRulesEditor(false)}>Cancel</Button>
+                            <Button variant="primary" size="sm" onPress={saveRules}>Save</Button>
                         </div>
                     </div>
                 </div>

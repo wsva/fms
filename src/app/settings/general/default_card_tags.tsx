@@ -1,8 +1,7 @@
 'use client';
 
-import { addToast, Button, Checkbox, CheckboxGroup } from "@heroui/react";
+import { toast, Button, Checkbox, CheckboxGroup, Label } from "@heroui/react";
 import { useState, useEffect } from 'react';
-import { MdOutlineSave } from 'react-icons/md';
 import { getKey, setKey } from '@/app/actions/settings_general';
 import { getTagAllOwned } from '@/app/actions/dataset';
 import { dataset_tag } from "@/generated/prisma/client";
@@ -27,9 +26,9 @@ export default function DefaultCardTagsSetting({ user_id }: { user_id: string })
         setSaving(true);
         const result = await setKey('default_card_tags', selected.join(','));
         if (result.status === 'success') {
-            addToast({ title: 'Saved', color: 'success' });
+            toast.success('Saved');
         } else {
-            addToast({ title: 'Failed to save', color: 'danger' });
+            toast.danger('Failed to save');
         }
         setSaving(false);
     };
@@ -38,23 +37,26 @@ export default function DefaultCardTagsSetting({ user_id }: { user_id: string })
         <Section title="Default Tags of New Cards">
             <p className="text-xs text-foreground-400">Tags applied automatically when creating a new card without a tag pre-selected via URL.</p>
             <CheckboxGroup
-                color="success"
                 value={selected}
-                onValueChange={setSelected}
-                orientation="horizontal"
+                onChange={(v) => setSelected(v)}
+                className="flex flex-row flex-wrap gap-2"
             >
                 {tagList.map(t => (
-                    <Checkbox key={t.uuid} value={t.uuid}>{t.tag}</Checkbox>
+                    <Checkbox key={t.uuid} value={t.uuid}>
+                        <Checkbox.Control>
+                            <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Content>
+                            <Label>{t.tag}</Label>
+                        </Checkbox.Content>
+                    </Checkbox>
                 ))}
             </CheckboxGroup>
             {tagList.length === 0 && (
                 <p className="text-sm text-foreground-400">No tags found.</p>
             )}
             <div className="flex justify-end">
-                <Button variant="bordered" size="sm" isLoading={saving}
-                    startContent={!saving && <MdOutlineSave size={16} />}
-                    onPress={save}
-                >
+                <Button variant="primary" size="sm" isDisabled={saving} onPress={save}>
                     Save
                 </Button>
             </div>

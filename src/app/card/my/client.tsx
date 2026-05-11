@@ -1,7 +1,8 @@
 'use client'
+import SimplePagination from '@/components/SimplePagination';
 
 import { useEffect, useState } from 'react'
-import { Chip, CircularProgress, Divider, Input, Pagination, Tooltip } from "@heroui/react"
+import { Chip, ProgressCircle, Separator, InputGroup, Tooltip } from "@heroui/react"
 import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';
 import { getCardAll } from '@/app/actions/card';
@@ -40,18 +41,21 @@ export default function CardFilter({ user_id, tag_list }: Props) {
 
     const getChipType = (value: FilterType, description: string) => {
         return (
-            <Tooltip key={value} placement='bottom' className='bg-slate-300'
-                content={<div className='p-1'>{description}</div>}
-            >
-                <Chip color={stateFilterType === value ? "success" : "default"}
-                    isDisabled={stateLoading}
-                    onClick={async () => {
-                        setStateFilterType(value)
-                        setStateCurrentPage(1)
-                    }}
-                >
-                    {value}
-                </Chip>
+            <Tooltip key={value}>
+                <Tooltip.Trigger>
+                    <Chip color={stateFilterType === value ? "success" : "default"}
+                        className={stateLoading ? "opacity-50 pointer-events-none" : ""}
+                        onClick={async () => {
+                            setStateFilterType(value)
+                            setStateCurrentPage(1)
+                        }}
+                    >
+                        {value}
+                    </Chip>
+                </Tooltip.Trigger>
+                <Tooltip.Content placement='bottom' className='bg-slate-300'>
+                    <div className='p-1'>{description}</div>
+                </Tooltip.Content>
             </Tooltip>
         )
     }
@@ -59,7 +63,7 @@ export default function CardFilter({ user_id, tag_list }: Props) {
     const getChipTag = (key: string, value: string) => {
         return (
             <Chip key={key} color={stateTagUUID === key ? "success" : "default"}
-                isDisabled={stateLoading}
+                className={stateLoading ? "opacity-50 pointer-events-none" : ""}
                 onClick={async () => {
                     setStateTagUUID(key)
                     setStateCurrentPage(1)
@@ -76,53 +80,51 @@ export default function CardFilter({ user_id, tag_list }: Props) {
                 <div className='w-16'>Type</div>
                 {FilterTypeList.map((v) => getChipType(v.value, v.description))}
             </div>
-            <Divider />
+            <Separator />
 
             <div className="flex flex-row flex-wrap w-full items-center justify-start gap-1">
                 <div className='w-16'>Tag</div>
                 {getChipTag(TagUnspecified, TagUnspecified)}
-                <Divider orientation="vertical" className='mx-2 h-5' />
+                <Separator orientation="vertical" className='mx-2 h-5' />
                 {getChipTag(TagAll, TagAll)}
                 {getChipTag(TagNo, TagNo)}
-                <Divider orientation="vertical" className='mx-2 h-5' />
+                <Separator orientation="vertical" className='mx-2 h-5' />
                 {tag_list.map((v) => getChipTag(v.uuid, v.tag))}
             </div>
-            <Divider />
+            <Separator />
 
             <div className="flex flex-row w-full items-center justify-start gap-1">
-                <Input isClearable radius="md" size='sm' placeholder="search question"
-                    startContent={
+                <InputGroup>
+                    <InputGroup.Prefix>
                         <BiSearch className="mb-0.5 dark:text-white/90 text-slate-400 pointer-events-none flex-shrink-0" />
-                    }
-                    value={stateKeyword}
-                    onClear={() => setStateKeyword("")}
-                    onChange={(e) => setStateKeyword(e.target.value.trim())}
-                    onKeyDown={(e) => {
-                        if (e.key == 'Enter' && !!stateKeyword) {
-                            setStateCurrentPage(1)
-                        }
-                    }}
-                />
+                    </InputGroup.Prefix>
+                    <InputGroup.Input
+                        placeholder="search question"
+                        value={stateKeyword}
+                        onChange={(e) => setStateKeyword(e.target.value.trim())}
+                        onKeyDown={(e) => {
+                            if (e.key == 'Enter' && !!stateKeyword) {
+                                setStateCurrentPage(1)
+                            }
+                        }}
+                    />
+                </InputGroup>
             </div>
 
             {stateLoading ? (
                 <div className='flex flex-row w-full items-center justify-center gap-4'>
-                    <CircularProgress label="Loading..." />
+                    <ProgressCircle aria-label="Loading" />
                 </div >
             ) : (
                 <>
                     <div className='flex flex-row items-center justify-center gap-4'>
                         <div>Page</div>
-                        <Pagination showControls loop variant='bordered'
-                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                        />
+                        <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage} />
                     </div>
                     <CardList user_id={user_id} card_list={stateCards} />
                     <div className='flex flex-row items-center justify-center gap-4'>
                         <div>Page</div>
-                        <Pagination showControls loop variant='bordered'
-                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                        />
+                        <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage} />
                     </div>
                 </>
             )}

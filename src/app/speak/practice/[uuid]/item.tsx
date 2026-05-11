@@ -1,7 +1,7 @@
 'use client'
 
 import { getUUID } from '@/lib/utils';
-import { addToast, Button, Spinner, Textarea } from "@heroui/react";
+import { toast, Button, Spinner, TextArea } from "@heroui/react";
 import { useEffect, useState } from 'react'
 import { practice_audio, practice_text } from "@/generated/prisma/client";
 import { getAudioDBAll, getText, removeAudioDB, saveAudioDB, saveText } from '@/app/actions/practice';
@@ -36,10 +36,7 @@ export default function Item({ uuid, user_id }: Props) {
         const resultDb = await saveText({ ...stateText, updated_at: new Date() });
         if (resultDb.status !== "success") {
             console.log(resultDb.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
         setStateSaving(false)
     }
@@ -54,20 +51,14 @@ export default function Item({ uuid, user_id }: Props) {
             audioBlob = await getBlobFromIndexedDB(stateCurrent.uuid);
         }
         if (!audioBlob) {
-            addToast({
-                title: "Blob of audio not found",
-                color: "danger",
-            });
+            toast.danger("Blob of audio not found");
             setStateSaving(false)
             return
         }
         const resultFs = await saveAudio(audioBlob, "practice", `${stateCurrent.uuid}.wav`);
         if (resultFs.status === "error") {
             console.log(resultFs.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
             setStateSaving(false)
             return
         }
@@ -83,10 +74,7 @@ export default function Item({ uuid, user_id }: Props) {
         });
         if (resultDb.status === "error") {
             console.log(resultDb.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
             setStateSaving(false)
             return
         }
@@ -94,10 +82,7 @@ export default function Item({ uuid, user_id }: Props) {
         await deleteBlobFromIndexedDB(stateCurrent.uuid);
         dropWeakCache(stateCurrent.uuid);
         setStateCurrent(undefined);
-        addToast({
-            title: "save data success",
-            color: "success",
-        });
+        toast.success("save data success");
         setStateSaving(false)
         setStateReload(current => current + 1)
     }
@@ -109,27 +94,18 @@ export default function Item({ uuid, user_id }: Props) {
         const resultFs = await removeAudio("practice", `${item.uuid}.wav`);
         if (resultFs.status === "error") {
             console.log(resultFs.error);
-            addToast({
-                title: "remove data error",
-                color: "danger",
-            });
+            toast.danger("remove data error");
             return
         }
 
         const resultDb = await removeAudioDB(item.uuid);
         if (resultDb.status === "error") {
             console.log(resultDb.error);
-            addToast({
-                title: "remove data error",
-                color: "danger",
-            });
+            toast.danger("remove data error");
             return
         }
 
-        addToast({
-            title: "remove data success",
-            color: "success",
-        });
+        toast.success("remove data success");
         setStateReload(current => current + 1)
     }
 
@@ -148,10 +124,7 @@ export default function Item({ uuid, user_id }: Props) {
                 updated_at: new Date(),
             })
             if (result.status === 'error') {
-                addToast({
-                    title: result.error as string,
-                    color: "danger",
-                });
+                toast.danger(result.error as string);
             }
         }
 
@@ -175,10 +148,7 @@ export default function Item({ uuid, user_id }: Props) {
                 setStateText(resultText.data)
             } else {
                 console.log(resultText.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
 
             const resultAudio = await getAudioDBAll(uuid)
@@ -186,10 +156,7 @@ export default function Item({ uuid, user_id }: Props) {
                 setStateData(resultAudio.data)
             } else {
                 console.log(resultAudio.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
             setStateLoading(false)
         }
@@ -201,24 +168,20 @@ export default function Item({ uuid, user_id }: Props) {
         <div className='w-full space-y-4 mb-10'>
             {stateLoading && (
                 <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
-                    <Spinner classNames={{ label: "text-foreground mt-4" }} variant="simple" />
+                    <Spinner />
                 </div>
             )}
 
             {stateText?.user_id === user_id ? (
                 <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300'>
                     <div className='flex flex-row w-full items-end justify-end'>
-                        <Button variant='solid' size="sm" color='primary'
+                        <Button variant="primary" size="sm"
                             isDisabled={!stateNeedSave || stateSaving} onPress={handleSaveText}
                         >
                             Save
                         </Button>
                     </div>
-                    <Textarea size='lg' className='w-full'
-                        classNames={{
-                            inputWrapper: "bg-sand-200",
-                            input: "text-xl",
-                        }}
+                    <TextArea className='w-full text-xl bg-sand-200'
                         defaultValue={stateText.text}
                         onChange={(e) => {
                             setStateText({ ...stateText, text: e.target.value })
@@ -233,7 +196,7 @@ export default function Item({ uuid, user_id }: Props) {
             )}
 
             <div className='flex flex-col md:flex-row items-center justify-center gap-4 my-4'>
-                <Button variant='solid' color='primary' id='button-toggel-recording'
+                <Button variant="primary" id='button-toggel-recording'
                     isDisabled={!stateRecording && stateProcessing}
                     onPress={async () => {
                         if (stateCurrent) {
@@ -253,7 +216,7 @@ export default function Item({ uuid, user_id }: Props) {
                     <div className='flex flex-col w-full p-2 rounded-lg bg-sand-300'>
                         <div className="flex flex-row items-center justify-start">
                             <div className="text-md text-foreground-400">recognized from audio:</div>
-                            <Button isIconOnly variant='light' className='h-fit'
+                            <Button isIconOnly variant='ghost' className='h-fit'
                                 onPress={async () => {
                                     let audioBlob = getBlobFromWeakCache(stateCurrent.uuid);
                                     if (!audioBlob) {
@@ -261,10 +224,7 @@ export default function Item({ uuid, user_id }: Props) {
                                         if (audioBlob) {
                                             cacheBlobInMemory(stateCurrent.uuid, audioBlob);
                                         } else {
-                                            addToast({
-                                                title: "Blob of audio not found",
-                                                color: "danger",
-                                            });
+                                            toast.danger("Blob of audio not found");
                                         }
                                     }
                                     if (audioBlob) {
@@ -284,7 +244,7 @@ export default function Item({ uuid, user_id }: Props) {
                             {highlightDifferences(stateText!.text, stateCurrent.recognized ?? '')}
                         </div>
                     </div>
-                    <Button variant='solid' color='primary'
+                    <Button variant="primary"
                         isDisabled={stateSaving} onPress={handleAddAndSave}
                     >
                         Add & Save
@@ -299,7 +259,7 @@ export default function Item({ uuid, user_id }: Props) {
                             <div className="flex flex-row items-center justify-start">
                                 <div className="flex flex-row items-center justify-start w-full">
                                     <div className="text-md text-foreground-400">recognized from audio:</div>
-                                    <Button isIconOnly variant='light' className='h-fit'
+                                    <Button isIconOnly variant='ghost' className='h-fit'
                                         onPress={() => {
                                             const audio = new Audio(v.audio_path ?? '');
                                             audio.play();
@@ -309,7 +269,7 @@ export default function Item({ uuid, user_id }: Props) {
                                     </Button>
                                 </div>
                                 <div className="flex flex-row items-center justify-end">
-                                    <Button isIconOnly variant='light' color='danger' className='w-fit h-fit'
+                                    <Button isIconOnly variant="ghost" className='w-fit h-fit'
                                         onPress={() => {
                                             if (window.confirm("Are you sure to delete?")) {
                                                 handleDelete(v);

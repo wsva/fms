@@ -41,13 +41,18 @@ export default function WordTable({ words, language, email }: Props) {
                     {/* Word + badges */}
                     <div className='flex items-center gap-2.5 min-w-0 flex-1'>
                         {item.in_dict === 'Y' ? (
-                            <Tooltip content="in dictionary" placement='right' showArrow>
-                                <span
-                                    tabIndex={0}
-                                    className='text-base font-semibold text-stone-800 cursor-default leading-none'
-                                >
-                                    {item.word}
-                                </span>
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <span
+                                        tabIndex={0}
+                                        className='text-base font-semibold text-stone-800 cursor-default leading-none'
+                                    >
+                                        {item.word}
+                                    </span>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content placement='right'>
+                                    in dictionary
+                                </Tooltip.Content>
                             </Tooltip>
                         ) : (
                             <span className='text-base font-semibold text-stone-500 leading-none'>

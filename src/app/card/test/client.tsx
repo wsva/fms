@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, Link, CircularProgress, Input, addToast } from "@heroui/react";
+import { Button, Link, toast } from "@heroui/react";
 import { useEffect, useState } from 'react'
 import { card_review } from '@/lib/types';
 import { getCardTest, getCardTestByUUID, saveCardReview } from '@/app/actions/card';
@@ -55,7 +55,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
     const handleFeedback = async (familiarity: number) => {
         if (!stateCard) return
         if (user_id !== stateCard.user_id) {
-            addToast({ title: "this is not your card", color: "danger" });
+            toast.danger("this is not your card");
             return
         }
 
@@ -98,11 +98,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
         if (result.status === 'success') {
             await loadNextCard()
         } else {
-            addToast({
-                title: "save review error",
-                description: typeof result.error === 'string' ? result.error : undefined,
-                color: "danger",
-            });
+            toast.danger("save review error", { description: typeof result.error === 'string' ? result.error : undefined });
         }
     }
 
@@ -124,10 +120,12 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                     {stateTag?.tag}
                 </span>
                 <div className="flex gap-2">
-                    <Button as={Link} size="sm" color="secondary" href={`/card/${stateCard.card_uuid}/?edit=y`} target="_blank">
-                        Edit
-                    </Button>
-                    <Button size="sm" color="secondary" onPress={loadNextCard}>
+                    <Link href={`/card/${stateCard.card_uuid}/?edit=y`} target="_blank">
+                        <Button variant="secondary" size="sm">
+                            Edit
+                        </Button>
+                    </Link>
+                    <Button variant="secondary" size="sm" onPress={loadNextCard}>
                         Next
                     </Button>
                 </div>
@@ -148,8 +146,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                 {stateCard.card.suggestion.length > 0 && (
                     <Button
                         size="sm"
-                        variant={stateSuggestion ? "solid" : "bordered"}
-                        color="default"
+                        variant={stateSuggestion ? "primary" : "outline"}
                         onPress={() => setStateSuggestion(!stateSuggestion)}
                     >
                         {stateSuggestion ? 'hide hint' : 'hint'}
@@ -157,8 +154,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                 )}
                 <Button
                     size="sm"
-                    variant={stateAnswer ? "solid" : "bordered"}
-                    color="default"
+                    variant={stateAnswer ? "primary" : "outline"}
                     onPress={() => setStateAnswer(!stateAnswer)}
                 >
                     {stateAnswer ? 'hide answer' : 'answer'}
@@ -181,17 +177,14 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
 
             {/* Examples search */}
             <div className="flex gap-2 items-center">
-                <Input
-                    isClearable
+                <input
+                    className="border rounded px-2 py-1 text-sm flex-1"
                     placeholder="custom keyword"
                     value={stateKeyword}
-                    onClear={() => setStateKeyword("")}
                     onChange={(e) => setStateKeyword(e.target.value)}
-                    endContent={stateLoading ? <CircularProgress size="sm" aria-label="Loading..." /> : null}
                 />
                 <Button
-                    color="primary"
-                    variant="bordered"
+                    variant="outline"
                     isDisabled={stateLoading}
                     onPress={async () => {
                         setStateLoading(true)

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Checkbox, Input, Textarea, Select, SelectItem, SelectSection, CheckboxGroup } from "@heroui/react";
+import { Modal, Button, Checkbox, TextArea, Select, CheckboxGroup, ListBox, Label, TextField } from "@heroui/react";
 import { useForm } from 'react-hook-form';
 import { card_ext, topword } from '@/lib/types';
 import { FamiliarityList } from '@/lib/card';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from "zod";
 import { dataset_tag } from "@/generated/prisma/client";
+import MdEditor from '@/components/MdEditor';
 
 
 type Props = {
@@ -16,7 +17,7 @@ type Props = {
     tag_list: dataset_tag[];
     isOpen: boolean;
     isDisabled: boolean;
-    onOpenChange: () => void;
+    onOpenChange: (isOpen: boolean) => void;
     onSubmit: (formData: card_ext) => Promise<void>
 }
 
@@ -27,7 +28,7 @@ export default function Page({ word, language, tag_list, isOpen, isDisabled, onO
         [`word_${language}_by_system`]
     );
 
-    const { register, handleSubmit, formState } = useForm<card_basic>({
+    const { register, handleSubmit } = useForm<card_basic>({
         resolver: zodResolver(z.object({
             question: z.string().min(1, { message: "question cannot be empty" }),
             suggestion: z.string(),
@@ -52,71 +53,86 @@ export default function Page({ word, language, tag_list, isOpen, isDisabled, onO
     }
 
     return (
-        <Modal
-            isOpen={isOpen}
-            onOpenChange={onOpenChange}
-            placement='top-center'
-            size='xl'
-        >
-            <ModalContent>
-                {(onClose) => (
-                    <form onSubmit={handleSubmit(onSubmitWithPreprocess)}>
-                        <ModalHeader className='flex flex-col gap-1'>Edit Card</ModalHeader>
-                        <ModalBody>
-                            <Input label='question' variant='bordered'
-                                defaultValue={word.word}
-                                {...register('question')}
-                                isInvalid={!!formState.errors.question}
-                                errorMessage={formState.errors.question?.message}
-                            />
-                            <Select aria-label='select familiarity'
-                                selectionMode='single'
-                                defaultSelectedKeys={["0"]}
-                                {...register('familiarity')}
-                            >
-                                <SelectSection items={FamiliarityList}>
-                                    {FamiliarityList.map((v) =>
-                                        <SelectItem key={v.value} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</SelectItem>
-                                    )}
-                                </SelectSection>
-                            </Select>
-                            {tag_list.length > 0
-                                ? (<CheckboxGroup
-                                    color="success"
-                                    value={stateSelectedTags}
-                                    onValueChange={setStateSelectedTags}
-                                    orientation="horizontal"
-                                >
-                                    {tag_list.map((v) => {
-                                        return <Checkbox key={v.uuid} value={v.uuid}>{v.tag}</Checkbox>
-                                    })}
-                                </CheckboxGroup>)
-                                : (<div>not tag found</div>)
-                            }
-                            <Input label='suggestion' variant='bordered'
-                                {...register('suggestion')}
-                            />
-                            <Textarea label='answer' variant='bordered'
-                                {...register('answer')}
-                                isInvalid={!!formState.errors.answer}
-                                errorMessage={formState.errors.answer?.message}
-                            />
-                            <Textarea label='Note' variant='bordered'
-                                defaultValue={`{"type":"word", "language":${JSON.stringify(language)}, "lemma":${JSON.stringify(word.word)}, "in_dict":${word.in_dict ? "true" : "false"}}`}
-                                {...register('note')}
-                            />
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button color='danger' variant='flat' onPress={onClose}>
-                                Cancel
-                            </Button>
-                            <Button color='primary' type='submit' isDisabled={isDisabled} >
-                                Submit
-                            </Button>
-                        </ModalFooter>
-                    </form>
-                )}
-            </ModalContent>
+        <Modal>
+            <Modal.Backdrop isOpen={isOpen} onOpenChange={onOpenChange}>
+                <Modal.Container size="cover" placement="top">
+                    <Modal.Dialog>
+                        {({ close }) => (
+                            <form onSubmit={handleSubmit(onSubmitWithPreprocess)}>
+                                <Modal.Header>
+                                    <Modal.Heading>Edit Card</Modal.Heading>
+                                </Modal.Header>
+                                <Modal.Body>
+                                    <TextField>
+                                        <Label>question</Label>
+                                        <TextArea className='text-xl leading-tight font-roboto'
+                                            defaultValue={word.word}
+                                            {...register('question')}
+                                        />
+                                    </TextField>
+                                    <Select aria-label='select familiarity'
+                                        name="familiarity"
+                                        defaultValue="0"
+                                    >
+                                        <Select.Trigger>
+                                            <Select.Value />
+                                            <Select.Indicator />
+                                        </Select.Trigger>
+                                        <Select.Popover>
+                                            <ListBox>
+                                                {FamiliarityList.map((v) =>
+                                                    <ListBox.Item id={String(v.value)} key={v.value} textValue={`${v.value} - ${v.label}`} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</ListBox.Item>
+                                                )}
+                                            </ListBox>
+                                        </Select.Popover>
+                                    </Select>
+                                    {tag_list.length > 0
+                                        ? (<CheckboxGroup
+                                            value={stateSelectedTags}
+                                            onChange={(v) => setStateSelectedTags(v)}
+                                            className="flex flex-row flex-wrap gap-2"
+                                        >
+                                            {tag_list.map((v) => (
+                                                <Checkbox key={v.uuid} value={v.uuid}>
+                                                    <Checkbox.Control>
+                                                        <Checkbox.Indicator />
+                                                    </Checkbox.Control>
+                                                    <Checkbox.Content>
+                                                        <Label>{v.tag}</Label>
+                                                    </Checkbox.Content>
+                                                </Checkbox>
+                                            ))}
+                                        </CheckboxGroup>)
+                                        : (<div>not tag found</div>)
+                                    }
+                                    <TextField>
+                                        <Label>suggestion</Label>
+                                        <TextArea className='text-xl leading-tight font-roboto'
+                                            {...register('suggestion')}
+                                        />
+                                    </TextField>
+                                    <MdEditor
+                                        label="answer"
+                                        {...register('answer')}
+                                    />
+                                    <TextArea
+                                        defaultValue={`{"type":"word", "language":${JSON.stringify(language)}, "lemma":${JSON.stringify(word.word)}, "in_dict":${word.in_dict ? "true" : "false"}}`}
+                                        {...register('note')}
+                                    />
+                                </Modal.Body>
+                                <Modal.Footer>
+                                    <Button variant="danger-soft" onPress={close}>
+                                        Cancel
+                                    </Button>
+                                    <Button variant="primary" type='submit' isDisabled={isDisabled}>
+                                        Submit
+                                    </Button>
+                                </Modal.Footer>
+                            </form>
+                        )}
+                    </Modal.Dialog>
+                </Modal.Container>
+            </Modal.Backdrop>
         </Modal>
     );
 }

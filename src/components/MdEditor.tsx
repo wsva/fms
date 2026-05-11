@@ -184,8 +184,13 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
                 <div className='text-xs text-foreground-400 uppercase tracking-wide mb-1'>Symbols</div>
                 <div className='flex flex-wrap gap-1'>
                     {char1.map((v, i) =>
-                        <Tooltip key={`c1-${i}`} content={char1Tips[i]} size='sm'>
-                            <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v, '')}>{v}</Button>
+                        <Tooltip key={`c1-${i}`}>
+                            <Tooltip.Trigger>
+                                <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v, '')}>{v}</Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>
+                                {char1Tips[i]}
+                            </Tooltip.Content>
                         </Tooltip>
                     )}
                 </div>
@@ -194,8 +199,13 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
                 <div className='text-xs text-foreground-400 uppercase tracking-wide mb-1'>German</div>
                 <div className='flex flex-wrap gap-1'>
                     {char2.map((v, i) =>
-                        <Tooltip key={`c2-${i}`} content={v} size='sm'>
-                            <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v, '')}>{v}</Button>
+                        <Tooltip key={`c2-${i}`}>
+                            <Tooltip.Trigger>
+                                <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v, '')}>{v}</Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>
+                                v
+                            </Tooltip.Content>
                         </Tooltip>
                     )}
                 </div>
@@ -204,13 +214,23 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
                 <div className='text-xs text-foreground-400 uppercase tracking-wide mb-1'>Format</div>
                 <div className='flex flex-wrap gap-1'>
                     {char3.map((v, i) =>
-                        <Tooltip key={`c3-${i}`} content={v.tip} size='sm'>
-                            <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v.start, v.end)}>{v.label}</Button>
+                        <Tooltip key={`c3-${i}`}>
+                            <Tooltip.Trigger>
+                                <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v.start, v.end)}>{v.label}</Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>
+                                v.tip
+                            </Tooltip.Content>
                         </Tooltip>
                     )}
                     {char4.map((v, i) =>
-                        <Tooltip key={`c4-${i}`} content={v.tip} size='sm'>
-                            <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v.start, v.end)}>{v.label}</Button>
+                        <Tooltip key={`c4-${i}`}>
+                            <Tooltip.Trigger>
+                                <Button size='sm' isIconOnly className='text-xl' onPress={() => insertToAnswer(v.start, v.end)}>{v.label}</Button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>
+                                v.tip
+                            </Tooltip.Content>
                         </Tooltip>
                     )}
                 </div>
@@ -218,11 +238,21 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
             <div>
                 <div className='text-xs text-foreground-400 uppercase tracking-wide mb-1'>Lists</div>
                 <div className='flex flex-wrap gap-1'>
-                    <Tooltip content='unordered list' size='sm'>
-                        <Button size='sm' isIconOnly className='text-base font-mono' onPress={() => insertAtLineStart('- ')}>-</Button>
+                    <Tooltip>
+                        <Tooltip.Trigger>
+                            <Button size='sm' isIconOnly className='text-base font-mono' onPress={() => insertAtLineStart('- ')}>-</Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content>
+                            unordered list
+                        </Tooltip.Content>
                     </Tooltip>
-                    <Tooltip content='ordered list' size='sm'>
-                        <Button size='sm' isIconOnly className='text-base font-mono' onPress={() => insertAtLineStart('1. ')}>1.</Button>
+                    <Tooltip>
+                        <Tooltip.Trigger>
+                            <Button size='sm' isIconOnly className='text-base font-mono' onPress={() => insertAtLineStart('1. ')}>1.</Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content>
+                            ordered list
+                        </Tooltip.Content>
                     </Tooltip>
                 </div>
             </div>
@@ -231,41 +261,56 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
 
     return (
         <div className={stateFullscreen
-            ? 'fixed inset-0 z-50 flex flex-col bg-sand-100 p-4'
-            : 'flex flex-col gap-1 px-3 py-0.5 bg-default-100 hover:bg-default-200 rounded-medium'
+            ? 'fixed inset-0 z-50 flex flex-col bg-sand-200 p-4 w-full'
+            : 'flex flex-col py-0.5 bg-sand-200 w-full'
         }>
             {/* Header */}
-            <div className='flex items-center justify-between'>
+            <div className='flex items-center justify-between bg-sand-400 px-2 rounded-t-lg'>
                 <div className='flex gap-1 items-center'>
                     <label className='text-foreground-500 text-small'>{label}</label>
                     <Button
                         size='sm'
-                        variant={insertOpen ? 'solid' : 'light'}
+                        variant={insertOpen ? 'tertiary' : 'ghost'}
                         onPress={() => setInsertOpen(v => !v)}
                     >
                         Tools
                     </Button>
                 </div>
                 <div className='flex gap-1 items-center'>
-                    <Tooltip content='keyboard shortcuts' size='sm'>
-                        <Button size='sm' variant='light' isIconOnly
-                            onPress={() => setStateShowShortcuts(v => !v)}>
-                            <BiHelpCircle className='text-lg' />
-                        </Button>
+                    <Tooltip>
+                        <Tooltip.Trigger>
+                            <Button size='sm' variant='ghost' isIconOnly
+                                onPress={() => setStateShowShortcuts(v => !v)}>
+                                <BiHelpCircle className='text-lg' />
+                            </Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content>
+                            keyboard shortcuts
+                        </Tooltip.Content>
                     </Tooltip>
-                    <Tooltip content={stateSpellCheck ? 'disable spell check' : 'enable spell check'} size='sm'>
-                        <Button size='sm' variant={stateSpellCheck ? 'solid' : 'light'}
-                            onPress={() => setStateSpellCheck(v => !v)}>
-                            ABC
-                        </Button>
+                    <Tooltip>
+                        <Tooltip.Trigger>
+                            <Button size='sm' variant={stateSpellCheck ? 'tertiary' : 'ghost'}
+                                onPress={() => setStateSpellCheck(v => !v)}>
+                                ABC
+                            </Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content>
+                            stateSpellCheck ? 'disable spell check' : 'enable spell check'
+                        </Tooltip.Content>
                     </Tooltip>
-                    <Button size='sm' variant='light' onPress={() => setStatePreview(v => !v)}>
+                    <Button size='sm' variant='ghost' onPress={() => setStatePreview(v => !v)}>
                         {statePreview ? 'editor' : 'preview'}
                     </Button>
-                    <Tooltip content={stateFullscreen ? 'exit fullscreen' : 'fullscreen'} size='sm'>
-                        <Button size='sm' variant='light' isIconOnly onPress={toggleFullscreen}>
-                            {stateFullscreen ? <BiCollapse className='text-lg' /> : <BiExpand className='text-lg' />}
-                        </Button>
+                    <Tooltip>
+                        <Tooltip.Trigger>
+                            <Button size='sm' variant='ghost' isIconOnly onPress={toggleFullscreen}>
+                                {stateFullscreen ? <BiCollapse className='text-lg' /> : <BiExpand className='text-lg' />}
+                            </Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content>
+                            stateFullscreen ? 'exit fullscreen' : 'fullscreen'
+                        </Tooltip.Content>
                     </Tooltip>
                 </div>
             </div>
@@ -284,10 +329,10 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
                 </div>
             )}
 
-            {/* Textarea */}
+            {/* TextArea */}
             <textarea
                 className={[
-                    'w-full text-xl leading-tight font-roboto px-1.5 outline-none bg-transparent resize-none overflow-hidden',
+                    'w-full text-xl leading-tight font-roboto p-1.5 outline-none resize-none overflow-hidden bg-sand-300 rounded-b-lg',
                     stateFullscreen ? 'flex-1 min-h-0' : 'min-h-40',
                     statePreview ? 'hidden' : '',
                 ].join(' ')}
@@ -315,7 +360,7 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
             {/* Preview */}
             {statePreview && (
                 <div className={[
-                    'text-xl bg-sand-200 rounded-md p-2',
+                    'text-xl bg-sand-300 rounded-md p-2',
                     stateFullscreen ? 'flex-1 overflow-y-auto' : 'min-h-40',
                 ].join(' ')}>
                     <Markdown2Html content={stateValue} withTOC />

@@ -1,7 +1,8 @@
 'use client'
+import SimplePagination from '@/components/SimplePagination';
 
 import { useEffect, useState } from 'react'
-import { CircularProgress, Input, Pagination } from "@heroui/react"
+import { ProgressCircle, InputGroup } from "@heroui/react"
 import { qsa_card } from "@/generated/prisma/client";
 import { getCardAll } from '@/app/actions/card';
 import { FilterType, TagUnspecified } from "@/lib/card";
@@ -60,34 +61,30 @@ export default function CardTable({ user_id }: Props) {
 
     const pager = stateTotalPages > 1 && (
         <div className="flex flex-row items-center justify-center gap-4 py-2">
-            <Pagination showControls loop variant="bordered"
-                total={stateTotalPages} page={stateCurrentPage} onChange={(p) => {
+            <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={(p) => {
                     setStateCurrentPage(p)
                     window.scrollTo({ top: 0 })
-                }}
-            />
+                }} />
         </div>
     )
 
     return (
         <div className="flex flex-col w-full gap-3 py-2 px-2">
-            <Input
-                isClearable
-                radius="md"
-                size="sm"
-                placeholder="search question or answer"
-                startContent={
+            <InputGroup>
+                <InputGroup.Prefix>
                     <BiSearch className="mb-0.5 dark:text-white/90 text-slate-400 pointer-events-none flex-shrink-0" />
-                }
-                value={stateKeyword}
-                onClear={() => { setStateKeyword(""); setStateCurrentPage(1); setStateSearch("") }}
-                onChange={(e) => setStateKeyword(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
-            />
+                </InputGroup.Prefix>
+                <InputGroup.Input
+                    placeholder="search question or answer"
+                    value={stateKeyword}
+                    onChange={(e) => setStateKeyword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearch() }}
+                />
+            </InputGroup>
 
             {stateLoading ? (
                 <div className="flex justify-center py-8">
-                    <CircularProgress label="Loading..." />
+                    <ProgressCircle aria-label="Loading" />
                 </div>
             ) : (
                 <>

@@ -1,4 +1,4 @@
-import { Button, ButtonProps, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@heroui/react";
+import { Button, ButtonProps, Modal } from "@heroui/react";
 import { ReactNode } from 'react';
 
 type Props = {
@@ -12,40 +12,40 @@ type Props = {
 }
 
 export default function AppModal({ isOpen, onClose, header, body, footerButtons, imageModal, className }: Props) {
-    
+
     const handleClose = () => {
         setTimeout(() => onClose(), 10);
     }
-    
+
     return (
-        <Modal
-            isOpen={isOpen}
-            onClose={handleClose}
-            placement='top-center'
-            classNames={{
-                base: `${imageModal ? 'border-2 border-white' : ''} ${className ?? ''}`,
-                body: `${imageModal ? 'p-0': ''}`
-            }}
-            motionProps={{
-                variants: {
-                    enter: { y: 0, scale: 1, opacity: 1, transition: { duration: 0.3 } },
-                    exit: { y: 100, scale: 1, opacity: 0, transition: { duration: 0.3 } }
-                }
-            }}
-        >
-            <ModalContent>
-                {!imageModal &&
-                <ModalHeader className='flex flex-col gap-1'>{header}</ModalHeader>}
-                <ModalBody>{body}</ModalBody>
-                {!imageModal &&
-                <ModalFooter>
-                    {footerButtons && footerButtons.map((props: ButtonProps, index) => (
-                        <Button {...props} key={index}>
-                            {props.children}
-                        </Button>
-                    ))}
-                </ModalFooter>}
-            </ModalContent>
+        <Modal>
+            <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) handleClose() }}>
+                <Modal.Container placement="top" className={`${imageModal ? 'border-2 border-white' : ''} ${className ?? ''}`}>
+                    <Modal.Dialog>
+                        {({ close: _close }) => (
+                            <>
+                                {!imageModal && header && (
+                                    <Modal.Header>
+                                        <Modal.Heading>{header}</Modal.Heading>
+                                    </Modal.Header>
+                                )}
+                                <Modal.Body className={imageModal ? 'p-0' : ''}>
+                                    {body}
+                                </Modal.Body>
+                                {!imageModal && footerButtons && (
+                                    <Modal.Footer>
+                                        {footerButtons.map((props: ButtonProps, index) => (
+                                            <Button {...props} key={index}>
+                                                {props.children}
+                                            </Button>
+                                        ))}
+                                    </Modal.Footer>
+                                )}
+                            </>
+                        )}
+                    </Modal.Dialog>
+                </Modal.Container>
+            </Modal.Backdrop>
         </Modal>
     )
 }

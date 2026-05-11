@@ -4,7 +4,7 @@ import { trashWord } from '@/app/actions/word';
 import { saveCard, saveCardTag } from '@/app/actions/card';
 import { getTagAllOwned } from '@/app/actions/dataset';
 import { getUUID } from '@/lib/utils';
-import { addToast, Button, ButtonGroup, Link, Tooltip, useDisclosure } from "@heroui/react"
+import { toast, Button, ButtonGroup, Link, Tooltip, useOverlayState } from "@heroui/react"
 import { dataset_tag } from "@/generated/prisma/client";
 import { useState } from 'react';
 import CardModal from './modal';
@@ -21,7 +21,7 @@ type Props = {
 export default function Page({ word, language, email }: Props) {
     const [stateDisabled, setStateDisabled] = useState<boolean>(!email || word.in_card === "Y");
     const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
-    const { isOpen, onOpen, onOpenChange } = useDisclosure();
+    const modalState = useOverlayState();
 
     const addCardEasy = async () => {
         const card_uuid = getUUID()
@@ -38,16 +38,10 @@ export default function Page({ word, language, email }: Props) {
         })
         if (result.status === 'success') {
             setStateDisabled(true)
-            addToast({
-                title: "save data success",
-                color: "success",
-            });
+            toast.success("save data success");
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
 
         const default_tags = await getKey('default_card_tags')
@@ -56,16 +50,10 @@ export default function Page({ word, language, email }: Props) {
             tag_list_new: default_tags?.split(","),
         })
         if (result_tag.status === 'success') {
-            addToast({
-                title: "save data success",
-                color: "success",
-            });
+            toast.success("save data success");
         } else {
             console.log(result_tag.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
     }
 
@@ -85,16 +73,10 @@ export default function Page({ word, language, email }: Props) {
         })
         if (result.status === 'success') {
             setStateDisabled(true)
-            addToast({
-                title: "save data success",
-                color: "success",
-            });
+            toast.success("save data success");
         } else {
             console.log(result.error);
-            addToast({
-                title: "save data error",
-                color: "danger",
-            });
+            toast.danger("save data error");
         }
 
         const default_tags = await getKey('default_card_tags')
@@ -111,16 +93,10 @@ export default function Page({ word, language, email }: Props) {
             tag_list_new: formData.tag_list_new,
         })
         if (result_tag.status === 'success') {
-            addToast({
-                title: "save tags success",
-                color: "success",
-            });
+            toast.success("save tags success");
         } else {
             console.log(result_tag.error);
-            addToast({
-                title: "save tags error",
-                color: "danger",
-            });
+            toast.danger("save tags error");
         }
     }
 
@@ -128,62 +104,76 @@ export default function Page({ word, language, email }: Props) {
         const result = await trashWord(word.word!, email!)
         if (result.status === 'success') {
             setStateDisabled(true)
-            addToast({
-                title: "trash data success",
-                color: "success",
-            });
+            toast.success("trash data success");
         } else {
             console.log(result.error);
-            addToast({
-                title: "trash data error",
-                color: "danger",
-            });
+            toast.danger("trash data error");
         }
     }
 
     return (
         <>
-            <ButtonGroup variant='light'>
-                <Tooltip color='primary' content="easy & never appear again">
-                    <Button isIconOnly variant='light' isDisabled={stateDisabled} onPress={addCardEasy} >
-                        <BiSolidBolt size={20} />
-                    </Button>
+            <ButtonGroup variant='ghost'>
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant='ghost' isDisabled={stateDisabled} onPress={addCardEasy} >
+                            <BiSolidBolt size={20} />
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        easy & never appear again
+                    </Tooltip.Content>
                 </Tooltip>
-                <Tooltip color='primary' closeDelay={0} content='add card'>
-                    <Button isIconOnly variant='light' isDisabled={stateDisabled}
-                        onPress={async () => {
-                            const result = await getTagAllOwned(email || "", "card")
-                            if (result.status === "success") {
-                                setStateTagList(result.data)
-                            }
-                            onOpen()
-                        }}
-                    >
-                        <BiPlus size={20} />
-                    </Button>
+                <Tooltip closeDelay={0}>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant='ghost' isDisabled={stateDisabled}
+                            onPress={async () => {
+                                const result = await getTagAllOwned(email || "", "card")
+                                if (result.status === "success") {
+                                    setStateTagList(result.data)
+                                }
+                                modalState.open()
+                            }}
+                        >
+                            <BiPlus size={20} />
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        add card
+                    </Tooltip.Content>
                 </Tooltip>
-                <Tooltip color="primary" content="view examples">
-                    <Button isIconOnly variant='light' as={Link} target='_blank'
-                        href={`/word/sentence?word_id=${word.id}`}
-                    >
-                        <BiLinkExternal size={20} />
-                    </Button>
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Link href={`/word/sentence?word_id=${word.id}`} target='_blank'>
+                            <Button isIconOnly variant='ghost'>
+                                <BiLinkExternal size={20} />
+                            </Button>
+                        </Link>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        view examples
+                    </Tooltip.Content>
                 </Tooltip>
-                <Tooltip color="danger" content="move to trash">
-                    <Button isIconOnly variant='light' isDisabled={stateDisabled}
-                        onPress={moveToTrash}
-                    >
-                        <BiTrash size={20} />
-                    </Button>
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant='ghost' isDisabled={stateDisabled}
+                            onPress={moveToTrash}
+                        >
+                            <BiTrash size={20} />
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        move to trash
+                    </Tooltip.Content>
                 </Tooltip>
             </ButtonGroup >
             <CardModal
                 word={word}
                 language={language}
                 tag_list={stateTagList}
-                isOpen={isOpen}
+                isOpen={modalState.isOpen}
                 isDisabled={stateDisabled}
-                onOpenChange={onOpenChange}
+                onOpenChange={modalState.setOpen}
                 onSubmit={addCardAdvance}
             />
         </>

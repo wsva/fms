@@ -34,108 +34,125 @@ export default function DictationSentence({ item, index, media, with_translation
 
     return (
         (<div className='flex flex-row items-center justify-start w-full gap-1' >
-            <Tooltip content='turn green on success: punctuation does not matter'>
-                <Avatar size='sm' radius="sm" name={`${item.position}`}
-                    color={stateSuccess ? 'success' : 'default'}
-                />
+            <Tooltip>
+                <Tooltip.Trigger>
+                    <Avatar size='sm' color={stateSuccess ? 'success' : 'default'}>
+                        <Avatar.Fallback>{`${item.position}`}</Avatar.Fallback>
+                    </Avatar>
+                </Tooltip.Trigger>
+                <Tooltip.Content>
+                    turn green on success: punctuation does not matter
+                </Tooltip.Content>
             </Tooltip>
-            <Tooltip content='shortcut: Ctrl+S, Ctrl+D, or type two spaces at the end'>
-                <Button isIconOnly variant='light' tabIndex={-1}
-                    onPress={() => {
-                        if (media.paused) {
-                            item.playMedia(media, false)
-                        } else {
-                            media.pause()
-                        }
-                    }}
-                >
-                    <MdPlayCircle size={30} />
-                </Button>
+            <Tooltip>
+                <Tooltip.Trigger>
+                    <Button isIconOnly variant='ghost'
+                        onPress={() => {
+                            if (media.paused) {
+                                item.playMedia(media, false)
+                            } else {
+                                media.pause()
+                            }
+                        }}
+                    >
+                        <MdPlayCircle size={30} />
+                    </Button>
+                </Tooltip.Trigger>
+                <Tooltip.Content>
+                    shortcut: Ctrl+S, Ctrl+D, or type two spaces at the end
+                </Tooltip.Content>
             </Tooltip>
-            <Tooltip isOpen={stateTips} placement='top'
-                className='bg-slate-300'
-                content={
+            <Tooltip isOpen={stateTips}>
+                <Tooltip.Trigger>
+                    <Input aria-label='input answer'
+                        id={`d-s-i-${index}`}
+                        className='text-xl font-bold'
+                        value={stateInput}
+                        onChange={(e) => {
+                            const content = e.target.value
+                            if (content.endsWith('  ')) {
+                                if (media.paused) {
+                                    item.playMedia(media, false)
+                                } else {
+                                    media.pause()
+                                }
+                            } else {
+                                // ❚ ▪ ◾ • 🔹
+                                setStateInput(content)
+                                if (!stateSuccess && isSuccess(content))
+                                    setStateSuccess(true)
+                                if (stateSuccess && !isSuccess(content))
+                                    setStateSuccess(false)
+                            }
+                        }}
+                        onFocus={() => { setStateTips(true) }}
+                        onBlur={() => { setStateTips(false) }}
+                        onKeyDown={(e) => {
+                            if (e.ctrlKey && 'sS'.includes(e.key)) {
+                                if (media.paused) {
+                                    item.playMedia(media, false)
+                                } else {
+                                    media.pause()
+                                }
+                                e.preventDefault()
+                            }
+                            if (e.ctrlKey && 'dD'.includes(e.key)) {
+                                if (media.paused) {
+                                    item.playMedia(media, true)
+                                } else {
+                                    media.pause()
+                                }
+                                e.preventDefault()
+                            }
+                        }}
+                    />
+                </Tooltip.Trigger>
+                <Tooltip.Content placement='top' className='bg-slate-300'>
                     <div className='flex flex-col items-start justify-start text-xl px-4 py-2'>
                         <div>{getTip(stateInput)}</div>
                     </div>
-                }
-            >
-                <Input aria-label='input answer' variant='bordered'
-                    id={`d-s-i-${index}`}
-                    classNames={{ input: 'text-xl font-bold' }}
-                    value={stateInput}
-                    onChange={(e) => {
-                        const content = e.target.value
-                        if (content.endsWith('  ')) {
-                            if (media.paused) {
-                                item.playMedia(media, false)
-                            } else {
-                                media.pause()
-                            }
-                        } else {
-                            // ❚ ▪ ◾ • 🔹
-                            setStateInput(content)
-                            if (!stateSuccess && isSuccess(content))
-                                setStateSuccess(true)
-                            if (stateSuccess && !isSuccess(content))
-                                setStateSuccess(false)
-                        }
-                    }}
-                    onFocus={() => { setStateTips(true) }}
-                    onBlur={() => { setStateTips(false) }}
-                    onKeyDown={(e) => {
-                        if (e.ctrlKey && 'sS'.includes(e.key)) {
-                            if (media.paused) {
-                                item.playMedia(media, false)
-                            } else {
-                                media.pause()
-                            }
-                            e.preventDefault()
-                        }
-                        if (e.ctrlKey && 'dD'.includes(e.key)) {
-                            if (media.paused) {
-                                item.playMedia(media, true)
-                            } else {
-                                media.pause()
-                            }
-                            e.preventDefault()
-                        }
-                    }}
-                />
+                </Tooltip.Content>
             </Tooltip>
             {with_translation ? (
-                <Tooltip placement='top-end' className='bg-slate-300'
-                    content={
+                <Tooltip>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant='ghost'>
+                            <MdHelpOutline size={30} />
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content placement='top end' className='bg-slate-300'>
                         <div className='flex flex-col items-start justify-start text-xl px-4 py-2'>
                             <pre>
                                 {item.translation_list.length > 0 ?
                                     item.translation().replaceAll(/\d/g, 'x') : 'no translation'}
                             </pre>
                         </div>
-                    }
-                >
-                    <Button isIconOnly variant='light' tabIndex={-1} >
-                        <MdHelpOutline size={30} />
-                    </Button>
+                    </Tooltip.Content>
                 </Tooltip>
             ) : null}
-            <Tooltip placement='top-end' className='bg-slate-300'
-                content={
+            <Tooltip>
+                <Tooltip.Trigger>
+                    <Button isIconOnly variant='ghost'>
+                        <MdHelp size={30} />
+                    </Button>
+                </Tooltip.Trigger>
+                <Tooltip.Content placement='top end' className='bg-slate-300'>
                     <div className='text-xl px-4 py-2'>
                         {item.content()}
                     </div>
-                }
-            >
-                <Button isIconOnly variant='light' tabIndex={-1} >
-                    <MdHelp size={30} />
-                </Button>
+                </Tooltip.Content>
             </Tooltip>
-            <Tooltip color='primary' content="add card">
-                <Button isIconOnly variant='light' tabIndex={-1} as={Link} target='_blank'
-                    href={`/card/add?edit=y&question=${encodeURIComponent(item.content())}`}
-                >
-                    <MdFavorite size={20} />
-                </Button>
+            <Tooltip>
+                <Tooltip.Trigger>
+                    <Link href={`/card/add?edit=y&question=${encodeURIComponent(item.content())}`} target='_blank'>
+                        <Button isIconOnly variant='ghost'>
+                            <MdFavorite size={20} />
+                        </Button>
+                    </Link>
+                </Tooltip.Trigger>
+                <Tooltip.Content>
+                    add card
+                </Tooltip.Content>
             </Tooltip>
         </div>)
     );

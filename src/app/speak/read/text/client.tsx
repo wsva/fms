@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Select, SelectItem, Spinner } from "@heroui/react"
+import { Select, Spinner, ListBox, Label } from "@heroui/react"
 import { book_meta, book_chapter } from "@/generated/prisma/client"
 import { getBookMetaAll, getBookChapterAll, getBookSentenceAll } from "@/app/actions/book"
 import { SentenceClient, flattenChapters, groupIntoParagraphs } from '../types'
@@ -43,31 +43,49 @@ export default function TextClient({ email }: Props) {
 
     return (
         <div className="flex flex-col w-full gap-6 my-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-                <Select label="Book" className="w-full sm:max-w-xs"
-                    selectedKeys={stateBookUUID ? [stateBookUUID] : []}
-                    onChange={e => setStateBookUUID(e.target.value)}
+            <div className="flex flex-col sm:flex-row w-full gap-3">
+                <Select className="w-full"
+                    value={stateBookUUID ?? null}
+                    onChange={(v) => setStateBookUUID(v ? String(v) : "")}
                 >
-                    {stateBooks.map(b => (
-                        <SelectItem key={b.uuid} textValue={b.title ?? ''}>{b.title}</SelectItem>
-                    ))}
+                    <Label>Book</Label>
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            {stateBooks.map(b => (
+                                <ListBox.Item id={b.uuid} key={b.uuid} textValue={b.title ?? ''}>{b.title}</ListBox.Item>
+                            ))}
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
 
-                <Select label="Chapter" className="w-full sm:max-w-xs"
-                    selectedKeys={stateChapterUUID ? [stateChapterUUID] : []}
-                    onChange={e => setStateChapterUUID(e.target.value)}
+                <Select className="w-full"
+                    value={stateChapterUUID ?? null}
+                    onChange={(v) => setStateChapterUUID(v ? String(v) : "")}
                     isDisabled={flatChapters.length === 0}
                 >
-                    {flatChapters.map(c => (
-                        <SelectItem key={c.uuid} textValue={c.title ?? ''}>
-                            {'　'.repeat(c.depth)}{c.depth > 0 ? '└ ' : ''}{c.title}
-                        </SelectItem>
-                    ))}
+                    <Label>Chapter</Label>
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            {flatChapters.map(c => (
+                                <ListBox.Item id={c.uuid} key={c.uuid} textValue={c.title ?? ''}>
+                                    {'　'.repeat(c.depth)}{c.depth > 0 ? '└ ' : ''}{c.title}
+                                </ListBox.Item>
+                            ))}
+                        </ListBox>
+                    </Select.Popover>
                 </Select>
             </div>
 
             {stateLoading && (
-                <div className="flex justify-center my-8"><Spinner variant="simple" /></div>
+                <div className="flex justify-center my-8"><Spinner /></div>
             )}
 
             {!stateLoading && stateChapterUUID && (

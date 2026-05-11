@@ -41,14 +41,14 @@
 
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addToast, Button, Chip, CircularProgress, Input, Link, Select, SelectItem, Tab, Tabs } from "@heroui/react"
+import { toast, Button, Chip, ProgressCircle, Input, InputGroup, Link, Select, Tabs, ListBox, Label, TextField } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag } from "@/generated/prisma/client";
 import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag, saveSubtitle } from '@/app/actions/listen'
 import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
-import { MdFileUpload, MdPlayCircle, MdClosedCaption, MdMic, MdDescription, MdNotes, MdCheckCircle, MdPeople } from 'react-icons/md'
+import { MdPlayCircle, MdClosedCaption, MdDescription, MdNotes, MdCheckCircle, MdPeople } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
 import { buildVTT, Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
@@ -57,6 +57,7 @@ import CueEditor from './cue_editor'
 import Subtitle from './subtitle'
 import Note from './note'
 import Transcript from './transcript'
+import { ArrowShapeUpFromLine, Headphones } from '@gravity-ui/icons';
 
 const newMedia = (user_id: string): listen_media_ext => ({
     media: {
@@ -151,10 +152,7 @@ export default function Page({ user_id, uuid }: Props) {
                 } else {
                     console.log(result.error)
 
-                    addToast({
-                        title: 'Load data error',
-                        color: 'danger',
-                    })
+                    toast.danger('Load data error')
                 }
             } finally {
                 setStateLoading(false)
@@ -279,10 +277,7 @@ export default function Page({ user_id, uuid }: Props) {
                 } else {
                     console.log(result.error)
 
-                    addToast({
-                        title: 'Load data error',
-                        color: 'danger',
-                    })
+                    toast.danger('Load data error')
                 }
             } finally {
                 setStateLoading(false)
@@ -315,10 +310,7 @@ export default function Page({ user_id, uuid }: Props) {
                 } else {
                     console.log(result.error)
 
-                    addToast({
-                        title: 'Load data error',
-                        color: 'danger',
-                    })
+                    toast.danger('Load data error')
                 }
             } finally {
                 setStateLoading(false)
@@ -347,10 +339,7 @@ export default function Page({ user_id, uuid }: Props) {
                     break
 
                 default:
-                    addToast({
-                        title: 'Invalid subtitle format',
-                        color: 'danger',
-                    })
+                    toast.danger('Invalid subtitle format')
                     return
             }
 
@@ -552,17 +541,11 @@ export default function Page({ user_id, uuid }: Props) {
                     )
                 )
 
-                addToast({
-                    title: 'save subtitle success',
-                    color: 'success',
-                })
+                toast.success('save subtitle success')
 
                 setStateEditingCue(null)
             } else {
-                addToast({
-                    title: 'save subtitle error',
-                    color: 'danger',
-                })
+                toast.danger('save subtitle error')
             }
         } finally {
             setStateDictSaving(false)
@@ -573,10 +556,10 @@ export default function Page({ user_id, uuid }: Props) {
         setStateSaving(true)
         const result = await saveMedia(stateMedia.media)
         if (result.status === "success") {
-            addToast({ title: "save data success", color: "success" })
+            toast.success("save data success")
         } else {
             console.log(result.error)
-            addToast({ title: "save data error", color: "danger" })
+            toast.danger("save data error")
             setStateSaving(false)
             return
         }
@@ -591,7 +574,7 @@ export default function Page({ user_id, uuid }: Props) {
             setStateMedia({ ...stateMedia, tag_list_added: tag_list_selected })
         } else {
             console.log(result_tag.error)
-            addToast({ title: "save tag error", color: "danger" })
+            toast.danger("save tag error")
         }
         setStateSaving(false)
     }
@@ -601,10 +584,10 @@ export default function Page({ user_id, uuid }: Props) {
         setStateSaving(true)
         const result = await removeMedia(stateMediaUUID)
         if (result.status === "success") {
-            addToast({ title: "remove data success", color: "success" })
+            toast.success("remove data success")
         } else {
             console.log(result.error)
-            addToast({ title: "remove data error", color: "danger" })
+            toast.danger("remove data error")
         }
         setStateSaving(false)
     }
@@ -651,7 +634,7 @@ export default function Page({ user_id, uuid }: Props) {
                 <div className="hidden lg:flex flex-col bg-sand-100 rounded-xl p-3 gap-0.5 overflow-y-auto flex-1 min-h-0">
                     <div className="flex items-center justify-between px-1 mb-2">
                         <span className="text-xs font-semibold text-foreground-400 uppercase tracking-wider">Library</span>
-                        {stateLoading && <CircularProgress size="sm" aria-label="Loading" />}
+                        {stateLoading && <ProgressCircle size="sm" aria-label="Loading" />}
                     </div>
 
                     <button className={sidebarBtnClass(stateTagUUID === 'invalid-subtitle')}
@@ -706,24 +689,36 @@ export default function Page({ user_id, uuid }: Props) {
 
                 {/* Mobile nav (hidden lg+) */}
                 <div className="flex flex-col sm:flex-row items-center gap-2 lg:hidden">
-                    <Select label="Tag" labelPlacement="outside-left" size="sm"
-                        onChange={(e) => { setStateTagUUID(e.target.value); setStateMediaUUID('') }}
-                        endContent={stateLoading && <CircularProgress aria-label="Loading..." color="default" />}
-                    >
-                        {[
-                            ...stateTagList.map(v => (
-                                <SelectItem key={v.uuid} textValue={v.tag}>{v.tag}</SelectItem>
-                            )),
-                            <SelectItem key="invalid-subtitle" textValue="Invalid Subtitle">Invalid Subtitle</SelectItem>
-                        ]}
+                    <Select onChange={(v) => { setStateTagUUID(String(v ?? '')); setStateMediaUUID('') }}>
+                        <Label>Tag</Label>
+                        <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                            <ListBox>
+                                {[
+                                    ...stateTagList.map(v => (
+                                        <ListBox.Item id={v.uuid} key={v.uuid} textValue={v.tag}>{v.tag}</ListBox.Item>
+                                    )),
+                                    <ListBox.Item id="invalid-subtitle" key="invalid-subtitle" textValue="Invalid Subtitle">Invalid Subtitle</ListBox.Item>
+                                ]}
+                            </ListBox>
+                        </Select.Popover>
                     </Select>
-                    <Select label="Media" labelPlacement="outside-left" size="sm"
-                        onChange={(e) => setStateMediaUUID(e.target.value)}
-                        endContent={stateLoading && <CircularProgress aria-label="Loading..." color="default" />}
-                    >
-                        {stateMediaList.map(v => (
-                            <SelectItem key={v.uuid} textValue={v.title}>{v.title}</SelectItem>
-                        ))}
+                    <Select onChange={(v) => setStateMediaUUID(String(v ?? ''))}>
+                        <Label>Media</Label>
+                        <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                            <ListBox>
+                                {stateMediaList.map(v => (
+                                    <ListBox.Item id={v.uuid} key={v.uuid} textValue={v.title}>{v.title}</ListBox.Item>
+                                ))}
+                            </ListBox>
+                        </Select.Popover>
                     </Select>
                 </div>
 
@@ -737,139 +732,54 @@ export default function Page({ user_id, uuid }: Props) {
                 )}
 
                 {/* Tabs */}
-                <div className="bg-sand-300 rounded-xl p-3">
-                    <Tabs variant="underlined" placement="top" size="lg"
-                        className="font-bold w-full"
-                        defaultSelectedKey="dictation"
+                <div className="bg-sand-300 rounded-xl p-1">
+                    <Tabs className="font-bold w-full" variant="secondary"
                         onSelectionChange={(v) => setStateDictation(v === "dictation")}
                     >
-                        <Tab key="media"
-                            title={<div className="flex items-center gap-1.5"><MdPlayCircle size={16} /><span>Media</span></div>}
-                            className="flex flex-col w-full gap-3"
-                        >
-                            <Input label="Title" className="w-full"
-                                value={stateMedia.media.title}
-                                onChange={(e) => setStateMedia({ ...stateMedia, media: { ...stateMedia.media, title: e.target.value } })}
-                            />
-                            <Input label="Source" className="w-full"
-                                value={stateMedia.media.source}
-                                onChange={(e) => setStateMedia({ ...stateMedia, media: { ...stateMedia.media, source: e.target.value } })}
-                                endContent={
-                                    <Button isIconOnly size="sm">
-                                        <label>
-                                            <MdFileUpload size={24} />
-                                            <input type="file" className="hidden"
-                                                onChange={(e) => {
-                                                    const files = e.target.files
-                                                    if (!files || files.length === 0) return
-                                                    const file = files[0]
-                                                    setStateMediaFile(file)
-                                                    const ext = file.name.split('.').pop()?.toLowerCase()
-                                                    setStateMedia({
-                                                        ...stateMedia,
-                                                        media: { ...stateMedia.media, source: `/api/data/listen/media/${stateMedia.media.uuid}.${ext}` },
-                                                    })
-                                                    e.target.value = ""
-                                                }}
-                                                accept="audio/*,video/*"
-                                            />
-                                        </label>
-                                    </Button>
-                                }
-                            />
-                            <Input label="Note" className="w-full"
-                                value={stateMedia.media.note}
-                                onChange={(e) => setStateMedia({ ...stateMedia, media: { ...stateMedia.media, note: e.target.value } })}
-                            />
+                        <Tabs.ListContainer>
+                            <Tabs.List aria-label="Media tabs">
+                                <Tabs.Tab id="dictation">
+                                    <Tabs.Separator /><Headphones className='pr-1' /><span className='hidden lg:block'>Dictation</span>
+                                    <Tabs.Indicator />
+                                </Tabs.Tab>
+                                <Tabs.Tab id="media">
+                                    <MdPlayCircle size={16} /><span className='hidden lg:block'>Media</span>
+                                    <Tabs.Indicator />
+                                </Tabs.Tab>
+                                <Tabs.Tab id="subtitle">
+                                    <Tabs.Separator /><MdClosedCaption size={16} /><span className='hidden lg:block'>Subtitle</span>
+                                    <Tabs.Indicator />
+                                </Tabs.Tab>
+                                <Tabs.Tab id="transcript">
+                                    <Tabs.Separator /><MdDescription size={16} /><span className='hidden lg:block'>Transcript</span>
+                                    <Tabs.Indicator />
+                                </Tabs.Tab>
+                                <Tabs.Tab id="note">
+                                    <Tabs.Separator /><MdNotes size={16} /><span className='hidden lg:block'>Note</span>
+                                    <Tabs.Indicator />
+                                </Tabs.Tab>
+                            </Tabs.List>
+                        </Tabs.ListContainer>
 
-                            {stateTagList.length > 0 && (
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-sm text-foreground-500">Tags</span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {stateTagList.map(v => {
-                                            const selected = stateMedia.tag_list_selected.includes(v.uuid)
-                                            return (
-                                                <Chip key={v.uuid}
-                                                    variant={selected ? "solid" : "bordered"}
-                                                    color={selected ? "success" : "default"}
-                                                    classNames={{ base: "cursor-pointer select-none" }}
-                                                    onClick={() => setStateMedia({
-                                                        ...stateMedia,
-                                                        tag_list_selected: selected
-                                                            ? stateMedia.tag_list_selected.filter(id => id !== v.uuid)
-                                                            : [...stateMedia.tag_list_selected, v.uuid],
-                                                    })}
-                                                >
-                                                    {v.tag}
-                                                </Chip>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {stateMedia.media.user_id === user_id && (
-                                <div className="flex justify-end gap-2 pt-3 border-t border-sand-200 mt-1">
-                                    <Button color="danger" variant="flat" size="sm" isDisabled={stateSaving} onPress={handleRemove}>
-                                        Remove
-                                    </Button>
-                                    <Button color="primary" variant="solid" size="sm" isDisabled={stateSaving} onPress={handleSave}>
-                                        Save
-                                    </Button>
-                                </div>
-                            )}
-                        </Tab>
-
-                        <Tab key="subtitle"
-                            title={<div className="flex items-center gap-1.5"><MdClosedCaption size={16} /><span>Subtitle</span></div>}
-                            className="flex flex-col w-full gap-3"
-                        >
-                            <div className="flex flex-row items-center justify-end gap-4">
-                                <Select aria-label="Select subtitle" size="sm"
-                                    selectedKeys={stateSubtitle ? [stateSubtitle.uuid] : []}
-                                    onChange={(e) => setStateSubtitle(stateSubtitleList.find(v => v.uuid === e.target.value))}
-                                >
-                                    {stateSubtitleList.map(v => (
-                                        <SelectItem key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
-                                            {`${v.language} (${v.user_id})`}
-                                        </SelectItem>
-                                    ))}
-                                </Select>
-                                <Button variant="solid" color="primary" size="sm"
-                                    onPress={() => {
-                                        const s: listen_subtitle = {
-                                            uuid: getUUID(), user_id, media_uuid: "",
-                                            language: "en", subtitle: "", format: "vtt",
-                                            created_at: new Date(), updated_at: new Date(),
-                                        }
-                                        setStateSubtitle(s)
-                                        setStateSubtitleList(cur => [s, ...cur])
-                                    }}
-                                >
-                                    New
-                                </Button>
-                            </div>
-                            {!!stateSubtitle && (
-                                <Subtitle item={stateSubtitle} user_id={user_id} media={videoRef.current}
-                                    setStateSubtitle={setStateSubtitle}
-                                    setStateSubtitleList={setStateSubtitleList}
-                                />
-                            )}
-                        </Tab>
-
-                        <Tab key="dictation"
-                            title={<div className="flex items-center gap-1.5"><MdMic size={16} /><span>Dictation</span></div>}
-                            className="flex flex-col w-full gap-3"
-                        >
-                            <Select label="Select subtitle" labelPlacement="outside-left" size="sm"
-                                selectedKeys={stateSubtitle ? [stateSubtitle.uuid] : []}
-                                onChange={(e) => setStateSubtitle(stateSubtitleList.find(v => v.uuid === e.target.value))}
+                        <Tabs.Panel id="dictation" className="flex flex-col w-full gap-3">
+                            <Select
+                                value={stateSubtitle?.uuid ?? null}
+                                onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
                             >
-                                {stateSubtitleList.map(v => (
-                                    <SelectItem key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
-                                        {`${v.language} (${v.user_id})`}
-                                    </SelectItem>
-                                ))}
+                                <Label>Select subtitle</Label>
+                                <Select.Trigger>
+                                    <Select.Value />
+                                    <Select.Indicator />
+                                </Select.Trigger>
+                                <Select.Popover>
+                                    <ListBox>
+                                        {stateSubtitleList.map(v => (
+                                            <ListBox.Item id={v.uuid} key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
+                                                {`${v.language} (${v.user_id})`}
+                                            </ListBox.Item>
+                                        ))}
+                                    </ListBox>
+                                </Select.Popover>
                             </Select>
 
                             {stateCues.length > 0 && (
@@ -878,11 +788,10 @@ export default function Page({ user_id, uuid }: Props) {
                                         {stateDictSuccessSet.size} / {stateCues.length} ✓
                                     </span>
                                     <Button size="sm"
-                                        variant={stateDictStatus === 'complete' ? 'solid' : 'bordered'}
-                                        color={stateDictStatus === 'complete' ? 'success' : 'default'}
-                                        startContent={stateDictStatus === 'complete' ? <MdCheckCircle size={16} /> : undefined}
+                                        variant={stateDictStatus === 'complete' ? 'primary' : 'secondary'}
                                         onPress={handleDictStatusToggle}
                                     >
+                                        {stateDictStatus === 'complete' && <MdCheckCircle size={16} />}
                                         {stateDictStatus === 'complete' ? 'Complete' : 'Mark Complete'}
                                     </Button>
                                 </div>
@@ -959,14 +868,138 @@ export default function Page({ user_id, uuid }: Props) {
                                     />
                                 </div>
                             ))}
-                        </Tab>
+                        </Tabs.Panel>
 
-                        <Tab key="transcript"
-                            title={<div className="flex items-center gap-1.5"><MdDescription size={16} /><span>Transcript</span></div>}
-                            className="flex flex-col w-full gap-3"
-                        >
+                        <Tabs.Panel id="media" className="flex flex-col w-full gap-3">
+                            <TextField className="w-full">
+                                <Label>Title</Label>
+                                <Input
+                                    value={stateMedia.media.title}
+                                    onChange={(e) => setStateMedia({ ...stateMedia, media: { ...stateMedia.media, title: e.target.value } })}
+                                />
+                            </TextField>
+                            <TextField className="w-full">
+                                <Label>Source</Label>
+                                <InputGroup>
+                                    <InputGroup.Input data-no-voice
+                                        value={stateMedia.media.source}
+                                        onChange={(e) => setStateMedia({ ...stateMedia, media: { ...stateMedia.media, source: e.target.value } })}
+                                    />
+                                    <InputGroup.Suffix>
+                                        <Button isIconOnly variant='ghost'>
+                                            <label>
+                                                <ArrowShapeUpFromLine />
+                                                <input type="file" className="hidden"
+                                                    onChange={(e) => {
+                                                        const files = e.target.files
+                                                        if (!files || files.length === 0) return
+                                                        const file = files[0]
+                                                        setStateMediaFile(file)
+                                                        const ext = file.name.split('.').pop()?.toLowerCase()
+                                                        setStateMedia({
+                                                            ...stateMedia,
+                                                            media: { ...stateMedia.media, source: `/api/data/listen/media/${stateMedia.media.uuid}.${ext}` },
+                                                        })
+                                                        e.target.value = ""
+                                                    }}
+                                                    accept="audio/*,video/*"
+                                                />
+                                            </label>
+                                        </Button>
+                                    </InputGroup.Suffix>
+                                </InputGroup>
+                            </TextField>
+                            <TextField className="w-full">
+                                <Label>Note</Label>
+                                <Input
+                                    value={stateMedia.media.note}
+                                    onChange={(e) => setStateMedia({ ...stateMedia, media: { ...stateMedia.media, note: e.target.value } })}
+                                />
+                            </TextField>
+
+                            {stateTagList.length > 0 && (
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-sm text-foreground-500">Tags</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {stateTagList.map(v => {
+                                            const selected = stateMedia.tag_list_selected.includes(v.uuid)
+                                            return (
+                                                <Chip key={v.uuid}
+                                                    variant={selected ? "primary" : "secondary"}
+                                                    color={selected ? "success" : "default"}
+                                                    className="cursor-pointer select-none"
+                                                    onClick={() => setStateMedia({
+                                                        ...stateMedia,
+                                                        tag_list_selected: selected
+                                                            ? stateMedia.tag_list_selected.filter(id => id !== v.uuid)
+                                                            : [...stateMedia.tag_list_selected, v.uuid],
+                                                    })}
+                                                >
+                                                    {v.tag}
+                                                </Chip>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {stateMedia.media.user_id === user_id && (
+                                <div className="flex justify-end gap-2 pt-3 border-t border-sand-200 mt-1">
+                                    <Button variant="danger-soft" size="sm" isDisabled={stateSaving} onPress={handleRemove}>
+                                        Remove
+                                    </Button>
+                                    <Button variant="primary" size="sm" isDisabled={stateSaving} onPress={handleSave}>
+                                        Save
+                                    </Button>
+                                </div>
+                            )}
+                        </Tabs.Panel>
+
+                        <Tabs.Panel id="subtitle" className="flex flex-col w-full gap-3">
+                            <div className="flex flex-row items-center justify-end gap-4">
+                                <Select aria-label="Select subtitle"
+                                    value={stateSubtitle?.uuid ?? null}
+                                    onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
+                                >
+                                    <Select.Trigger>
+                                        <Select.Value />
+                                        <Select.Indicator />
+                                    </Select.Trigger>
+                                    <Select.Popover>
+                                        <ListBox>
+                                            {stateSubtitleList.map(v => (
+                                                <ListBox.Item id={v.uuid} key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
+                                                    {`${v.language} (${v.user_id})`}
+                                                </ListBox.Item>
+                                            ))}
+                                        </ListBox>
+                                    </Select.Popover>
+                                </Select>
+                                <Button variant="primary" size="sm"
+                                    onPress={() => {
+                                        const s: listen_subtitle = {
+                                            uuid: getUUID(), user_id, media_uuid: "",
+                                            language: "en", subtitle: "", format: "vtt",
+                                            created_at: new Date(), updated_at: new Date(),
+                                        }
+                                        setStateSubtitle(s)
+                                        setStateSubtitleList(cur => [s, ...cur])
+                                    }}
+                                >
+                                    New
+                                </Button>
+                            </div>
+                            {!!stateSubtitle && (
+                                <Subtitle item={stateSubtitle} user_id={user_id} media={videoRef.current}
+                                    setStateSubtitle={setStateSubtitle}
+                                    setStateSubtitleList={setStateSubtitleList}
+                                />
+                            )}
+                        </Tabs.Panel>
+
+                        <Tabs.Panel id="transcript" className="flex flex-col w-full gap-3">
                             <div className="flex flex-row items-center justify-end w-full gap-2">
-                                <Button variant="solid" color="primary" size="sm"
+                                <Button variant="primary" size="sm"
                                     onPress={() => {
                                         const t: listen_transcript = {
                                             uuid: getUUID(), user_id, media_uuid: stateMedia.media.uuid,
@@ -984,14 +1017,11 @@ export default function Page({ user_id, uuid }: Props) {
                                     setStateReloadTranscript={setStateReloadTranscript}
                                 />
                             ))}
-                        </Tab>
+                        </Tabs.Panel>
 
-                        <Tab key="note"
-                            title={<div className="flex items-center gap-1.5"><MdNotes size={16} /><span>Note</span></div>}
-                            className="w-full bg-sand-300 rounded-lg p-2"
-                        >
+                        <Tabs.Panel id="note" className="w-full bg-sand-300 rounded-lg p-2">
                             <div className="flex flex-row items-center justify-end w-full gap-2">
-                                <Button variant="solid" color="primary" size="sm"
+                                <Button variant="primary" size="sm"
                                     onPress={() => {
                                         const n: listen_note = {
                                             uuid: getUUID(), user_id, media_uuid: stateMedia.media.uuid,
@@ -1006,7 +1036,7 @@ export default function Page({ user_id, uuid }: Props) {
                             {stateNoteList.map((v, i) => (
                                 <Note key={i} item={v} user_id={user_id} setStateReloadNote={setStateReloadNote} />
                             ))}
-                        </Tab>
+                        </Tabs.Panel>
                     </Tabs>
                 </div>
             </div>

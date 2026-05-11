@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { addToast, Button, CircularProgress, Chip } from "@heroui/react"
+import { toast, Button, ProgressCircle, Chip } from "@heroui/react"
 import { dataset_tag } from "@/generated/prisma/client"
 import { getSharedTags, subscribeTag, unsubscribeTag } from '@/app/actions/dataset'
 import { MdPeople, MdLibraryAdd, MdLibraryAddCheck } from 'react-icons/md'
@@ -21,7 +21,7 @@ export default function Client({ user_id }: Props) {
         if (result.status === 'success') {
             setStateList(result.data)
         } else {
-            addToast({ title: "Failed to load market", color: "danger" })
+            toast.danger("Failed to load market")
         }
         setStateLoading(false)
     }, [user_id])
@@ -39,7 +39,7 @@ export default function Client({ user_id }: Props) {
                 d.tag.uuid === tag_uuid ? { ...d, subscribed: !d.subscribed } : d
             ))
         } else {
-            addToast({ title: "Action failed", color: "danger" })
+            toast.danger("Action failed")
         }
         setStateBusy(prev => { const next = new Set(prev); next.delete(tag_uuid); return next })
     }
@@ -51,7 +51,7 @@ export default function Client({ user_id }: Props) {
                     <h1 className="text-2xl font-bold text-foreground">Media Market</h1>
                     <p className="text-sm text-foreground-500 mt-0.5">Browse and subscribe to shared datasets</p>
                 </div>
-                {stateLoading && <CircularProgress size="sm" aria-label="Loading" className="ml-auto" />}
+                {stateLoading && <ProgressCircle size="sm" aria-label="Loading" className="ml-auto" />}
             </div>
 
             {!stateLoading && stateList.length === 0 && (
@@ -71,7 +71,7 @@ export default function Client({ user_id }: Props) {
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-base font-semibold text-foreground">{item.tag.tag}</span>
                                     {item.subscribed && (
-                                        <Chip size="sm" color="primary" variant="flat">Subscribed</Chip>
+                                        <Chip size="sm" variant="tertiary">Subscribed</Chip>
                                     )}
                                 </div>
                                 <span className="text-xs text-foreground-400">Shared by: {item.tag.user_id}</span>
@@ -83,16 +83,14 @@ export default function Client({ user_id }: Props) {
                                 </span>
                             </div>
                             <Button
-                                size="sm"
-                                variant={item.subscribed ? "flat" : "solid"}
-                                color={item.subscribed ? "default" : "primary"}
-                                isLoading={stateBusy.has(item.tag.uuid)}
-                                startContent={!stateBusy.has(item.tag.uuid) && (
+                                variant={item.subscribed ? "ghost" : "primary"}
+                                isPending={stateBusy.has(item.tag.uuid)}
+                                onPress={() => handleToggle(item)}
+                                className="shrink-0 text-sm"
+                            >
+                                {!stateBusy.has(item.tag.uuid) && (
                                     item.subscribed ? <MdLibraryAddCheck size={16} /> : <MdLibraryAdd size={16} />
                                 )}
-                                onPress={() => handleToggle(item)}
-                                className="shrink-0"
-                            >
                                 {item.subscribed ? "Unsubscribe" : "Subscribe"}
                             </Button>
                         </div>

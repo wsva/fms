@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useImmer } from 'use-immer'
-import { addToast, Button, Spinner } from "@heroui/react"
-import { MdLibraryBooks, MdViewHeadline, MdViewStream } from 'react-icons/md'
+import { toast, Button, Spinner, Tooltip } from "@heroui/react"
+import { MdViewHeadline, MdViewStream } from 'react-icons/md'
 import { book_chapter, book_meta } from "@/generated/prisma/client"
 import {
     getBookMetaAll, getBookChapterAll,
@@ -18,6 +18,7 @@ import { removeAudio, saveAudio } from '@/app/actions/audio'
 import { SentenceClient, Paragraph, DrawerState, flattenChapters, groupIntoParagraphs, toDbSentence } from './types'
 import ParagraphList from './ParagraphList'
 import SentenceDrawer from './SentenceDrawer'
+import { BookOpen, Books } from '@gravity-ui/icons'
 
 type Props = { email: string }
 
@@ -123,7 +124,7 @@ export default function Client({ email }: Props) {
                     r.data.forEach(s => d.push({ ...s, modified: false, hasLocalAudio: false }))
                 })
             } else {
-                addToast({ title: 'load error', color: 'danger' })
+                toast.danger('load error')
             }
             setStateLoading(false)
             setStateNeedSave(false)
@@ -173,7 +174,7 @@ export default function Client({ email }: Props) {
             if (!stateDrawerContent) setStateDrawerContent(text)
             setStateDrawerRecognized(text)
             setStateDrawerHasLocalAudio(true)
-            if (result.status === 'error') addToast({ title: result.error as string, color: 'danger' })
+            if (result.status === 'error') toast.danger(result.error as string)
         }
         await toggleRecording({
             mode: 'audio',
@@ -203,7 +204,7 @@ export default function Client({ email }: Props) {
 
     // ── Save add ────────────────────────────────────────────────────────────
     const handleSaveAdd = async () => {
-        if (!stateDrawerContent) { addToast({ title: 'content is empty', color: 'danger' }); return }
+        if (!stateDrawerContent) { toast.danger('content is empty'); return }
         if (stateDrawer?.mode !== 'add') return
         setStateSaving(true)
 
@@ -243,7 +244,7 @@ export default function Client({ email }: Props) {
 
         const r = await saveBookSentence(toDbSentence(newSentence))
         if (r.status !== 'success') {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
             setStateSaving(false)
             return
         }
@@ -253,7 +254,7 @@ export default function Client({ email }: Props) {
             const shifted = stateData.slice(insertIndex).map((s, i) => toDbSentence({ ...s, order_num: insertIndex + 2 + i }))
             const r2 = await saveBookSentenceMany(shifted)
             if (r2.status !== 'success') {
-                addToast({ title: 'save order error', color: 'danger' })
+                toast.danger('save order error')
                 setStateSaving(false)
                 return
             }
@@ -320,7 +321,7 @@ export default function Client({ email }: Props) {
 
         const r = await saveBookSentence(toDbSentence(updated))
         if (r.status !== 'success') {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
             setStateSaving(false)
             return
         }
@@ -350,7 +351,7 @@ export default function Client({ email }: Props) {
 
         const r = await removeBookSentence(sentence.uuid)
         if (r.status !== 'success') {
-            addToast({ title: 'delete error', color: 'danger' })
+            toast.danger('delete error')
             setStateSaving(false)
             return
         }
@@ -377,7 +378,7 @@ export default function Client({ email }: Props) {
             updateStateData(d => { d.forEach(s => { s.modified = false }) })
             setStateNeedSave(false)
         } else {
-            addToast({ title: 'save order error', color: 'danger' })
+            toast.danger('save order error')
         }
         setStateSaving(false)
     }
@@ -410,7 +411,7 @@ export default function Client({ email }: Props) {
             setStateNeedSave(true)
             setStateDrawer(null)
         } else {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
         }
         setStateSaving(false)
     }
@@ -434,7 +435,7 @@ export default function Client({ email }: Props) {
         if (r.status === 'success') {
             updateStateData(d => { d.push(breakSentence) })
         } else {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
         }
         setStateSaving(false)
     }
@@ -460,7 +461,7 @@ export default function Client({ email }: Props) {
             }
             const r = await saveBookSentence(toDbSentence(breakSentence))
             if (r.status !== 'success') {
-                addToast({ title: 'save error', color: 'danger' })
+                toast.danger('save error')
                 setStateSaving(false)
                 return
             }
@@ -470,7 +471,7 @@ export default function Client({ email }: Props) {
         const subPath = `reading/${stateBookUUID}/${stateChapterUUID}`
         const r = await saveAudio(file, subPath, `${breakSentence.uuid}.wav`)
         if (r.status !== 'success') {
-            addToast({ title: 'upload error', color: 'danger' })
+            toast.danger('upload error')
             setStateSaving(false)
             return
         }
@@ -479,7 +480,7 @@ export default function Client({ email }: Props) {
         const updated = { ...breakSentence, audio_path: audioPath }
         const r2 = await saveBookSentence(toDbSentence(updated))
         if (r2.status !== 'success') {
-            addToast({ title: 'save error', color: 'danger' })
+            toast.danger('save error')
             setStateSaving(false)
             return
         }
@@ -510,7 +511,7 @@ export default function Client({ email }: Props) {
             if (s.hasLocalAudio) { await deleteBlobFromIndexedDB(s.uuid); dropWeakCache(s.uuid) }
             const r = await removeBookSentence(s.uuid)
             if (r.status !== 'success') {
-                addToast({ title: 'delete error', color: 'danger' })
+                toast.danger('delete error')
                 setStateSaving(false)
                 return
             }
@@ -534,7 +535,7 @@ export default function Client({ email }: Props) {
         setStateSaving(true)
         const r = await removeBookSentence(breakSentence.uuid)
         if (r.status !== 'success') {
-            addToast({ title: 'delete error', color: 'danger' })
+            toast.danger('delete error')
             setStateSaving(false)
             return
         }
@@ -576,9 +577,10 @@ export default function Client({ email }: Props) {
                 style={{ height: `${selectorHeight}px` }}
             >
                 <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">
-                    <div className="flex items-center justify-between px-1 mb-2">
-                        <span className="text-xs font-semibold text-foreground-400 uppercase tracking-wider">Library</span>
-                        {stateLoading && <Spinner size="sm" variant="simple" />}
+                    <div className="flex flex-row items-center justify-start px-1 mb-2">
+                        <Books />
+                        <span className="text-xs font-semibold text-foreground-400 tracking-wider px-2">Library</span>
+                        {stateLoading && <Spinner size="sm" />}
                     </div>
                     {stateBooks.map(book => (
                         <div key={book.uuid}>
@@ -587,7 +589,7 @@ export default function Client({ email }: Props) {
                                 onClick={() => setStateBookUUID(book.uuid)}
                             >
                                 <div className='flex flex-row items-center justify-start w-full gap-2'>
-                                    <MdLibraryBooks />
+                                    <BookOpen />
                                     {book.title}
                                 </div>
                             </button>
@@ -621,24 +623,30 @@ export default function Client({ email }: Props) {
             {stateChapterUUID && !stateLoading && (
                 <div className="flex flex-row items-center justify-end gap-2">
                     {stateNeedSave && (
-                        <Button size="sm" color="primary" isDisabled={stateSaving} onPress={handleSaveOrder}>
+                        <Button variant="primary" size="sm" isDisabled={stateSaving} onPress={handleSaveOrder}>
                             Save Order
                         </Button>
                     )}
-                    <Button size="sm" variant="flat" onPress={() => window.open(`/blog/${stateChapterUUID}?description=${encodeURIComponent(chapterPath)}`, '_blank')}>
+                    <Button size="sm" variant="ghost" onPress={() => window.open(`/blog/${stateChapterUUID}?description=${encodeURIComponent(chapterPath)}`, '_blank')}>
                         note
                     </Button>
-                    <Button isIconOnly size="sm" variant="flat"
-                        title={stateViewMode === 'line' ? 'Switch to paragraph view' : 'Switch to line view'}
-                        onPress={() => setStateViewMode(m => m === 'line' ? 'inline' : 'line')}
-                    >
-                        {stateViewMode === 'line' ? <MdViewStream size={18} /> : <MdViewHeadline size={18} />}
-                    </Button>
+                    <Tooltip>
+                        <Tooltip.Trigger>
+                            <Button isIconOnly size="sm" variant="ghost"
+                                onPress={() => setStateViewMode(m => m === 'line' ? 'inline' : 'line')}
+                            >
+                                {stateViewMode === 'line' ? <MdViewStream size={18} /> : <MdViewHeadline size={18} />}
+                            </Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content>
+                            {stateViewMode === 'line' ? 'Switch to paragraph view' : 'Switch to line view'}
+                        </Tooltip.Content>
+                    </Tooltip>
                 </div>
             )}
 
             {stateLoading && (
-                <div className="flex justify-center my-8"><Spinner variant="simple" /></div>
+                <div className="flex justify-center my-8"><Spinner /></div>
             )}
 
             {/* Paragraphs */}
@@ -657,7 +665,7 @@ export default function Client({ email }: Props) {
             {/* New Paragraph button at bottom */}
             {stateChapterUUID && !stateLoading && (
                 <div className="flex justify-center">
-                    <Button size="sm" variant="flat" isDisabled={stateSaving} onPress={handleNewParagraph}>
+                    <Button size="sm" variant="ghost" isDisabled={stateSaving} onPress={handleNewParagraph}>
                         + New Paragraph
                     </Button>
                 </div>
@@ -676,16 +684,16 @@ export default function Client({ email }: Props) {
                             {stateDeleteTarget.sentences.length} sentence(s)
                         </p>
                         <div className="flex flex-col gap-2">
-                            <Button color="danger" isDisabled={stateSaving} onPress={handleDeleteAll}>
+                            <Button variant="danger" isDisabled={stateSaving} onPress={handleDeleteAll}>
                                 Delete all sentences
                             </Button>
-                            <Button variant="flat" color="danger"
+                            <Button variant="danger-soft"
                                 isDisabled={stateSaving || !stateDeleteTarget.breakSentence}
                                 onPress={handleDeleteBreakOnly}
                             >
                                 Delete paragraph break only
                             </Button>
-                            <Button variant="flat" onPress={() => setStateDeleteTarget(null)}>Cancel</Button>
+                            <Button variant="ghost" onPress={() => setStateDeleteTarget(null)}>Cancel</Button>
                         </div>
                     </div>
                 </div>

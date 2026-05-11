@@ -3,7 +3,7 @@
 import { getExample, searchExample } from '@/app/actions/word'
 import { useEffect, useState } from 'react'
 import { ActionResult } from '@/lib/types';
-import { CircularProgress, Input, Link } from "@heroui/react";
+import { ProgressCircle, InputGroup, Link } from "@heroui/react";
 import { BiSearch } from 'react-icons/bi';
 
 type Props = {
@@ -32,24 +32,25 @@ export default function Sentence({ word_id, keyword }: Props) {
 
     return (
         <div className='flex flex-col gap-4 my-10'>
-            <Input isClearable radius="md" size='sm' placeholder="search sentence with keyword"
-                startContent={
+            <InputGroup>
+                <InputGroup.Prefix>
                     <BiSearch className="mb-0.5 text-foreground-400 pointer-events-none flex-shrink-0" />
-                }
-                value={stateKeyword}
-                onClear={() => setStateKeyword("")}
-                onChange={(e) => setStateKeyword(e.target.value.trim())}
-                onKeyDown={async (e) => {
-                    if (e.key == 'Enter' && !!stateKeyword) {
-                        setStateLoading(true)
-                        setStateResult(await searchExample(stateKeyword))
-                        setStateLoading(false)
-                    }
-                }}
-            />
+                </InputGroup.Prefix>
+                <InputGroup.Input placeholder="search sentence with keyword"
+                    value={stateKeyword}
+                    onChange={(e) => setStateKeyword(e.target.value.trim())}
+                    onKeyDown={async (e) => {
+                        if (e.key == 'Enter' && !!stateKeyword) {
+                            setStateLoading(true)
+                            setStateResult(await searchExample(stateKeyword))
+                            setStateLoading(false)
+                        }
+                    }}
+                />
+            </InputGroup>
             {stateLoading ? (
                 <div className='flex flex-row w-full items-center justify-center gap-4'>
-                    <CircularProgress label="Loading..." />
+                    <ProgressCircle aria-label="Loading" />
                 </div >
             ) : (
                 <>

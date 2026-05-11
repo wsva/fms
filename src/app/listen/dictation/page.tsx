@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useRef, useState } from 'react'
-import { Button, ButtonGroup, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Input, Textarea, Link } from "@heroui/react";
+import { Button, ButtonGroup, Dropdown, Label, Description, Input, TextArea, Link } from "@heroui/react";
 import { SRTItem, parse_srt_content } from './srt'
 import DictationSentence from './DictationSentence'
 import { BiCaretDown } from 'react-icons/bi';
@@ -93,7 +93,7 @@ export default function DictationPage() {
                     }}
                 />
                 {(!stateAudioURL && !stateVideoURL) && (
-                    <Button variant='solid' color='primary'
+                    <Button variant="primary"
                         onPress={() => refUploadMedia.current?.click()}
                     >
                         select audio/video
@@ -119,38 +119,41 @@ export default function DictationPage() {
                 />
                 {(!!stateAudioURL || !!stateVideoURL) && (
                     <>
-                        <ButtonGroup variant='solid' color='primary'
+                        <ButtonGroup variant="primary"
                             isDisabled={!stateAudioURL && !stateVideoURL}
                         >
-                            <Dropdown placement="bottom-end">
-                                <DropdownTrigger>
-                                    <Button>
-                                        select subtitle <BiCaretDown />
-                                    </Button>
-                                </DropdownTrigger>
-                                <DropdownMenu
-                                    disallowEmptySelection
-                                    className="max-w-[300px]"
-                                    selectionMode="single"
-                                    onSelectionChange={(keys) => {
-                                        if (keys.currentKey === 'no_translation') {
-                                            setStateWithTranslation(false)
-                                        } else {
-                                            setStateWithTranslation(true)
-                                        }
-                                        refUploadHTML.current?.click()
-                                    }}
-                                >
-                                    <DropdownItem key="no_translation" description='This subtitle file does not contain translations.'>
-                                        No Translation
-                                    </DropdownItem>
-                                    <DropdownItem key="with_translation" description='This subtitle file contains translations.'>
-                                        With Translation
-                                    </DropdownItem>
-                                </DropdownMenu>
+                            <Dropdown>
+                                <Button>
+                                    select subtitle <BiCaretDown />
+                                </Button>
+                                <Dropdown.Popover placement="bottom end">
+                                    <Dropdown.Menu
+                                        disallowEmptySelection
+                                        className="max-w-[300px]"
+                                        selectionMode="single"
+                                        onSelectionChange={(keys) => {
+                                            const selectedKey = Array.from(keys as Set<string>)[0]
+                                            if (selectedKey === 'no_translation') {
+                                                setStateWithTranslation(false)
+                                            } else {
+                                                setStateWithTranslation(true)
+                                            }
+                                            refUploadHTML.current?.click()
+                                        }}
+                                    >
+                                        <Dropdown.Item id="no_translation" textValue="No Translation">
+                                            <Label>No Translation</Label>
+                                            <Description>This subtitle file does not contain translations.</Description>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item id="with_translation" textValue="With Translation">
+                                            <Label>With Translation</Label>
+                                            <Description>This subtitle file contains translations.</Description>
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown.Popover>
                             </Dropdown>
                         </ButtonGroup>
-                        <Button variant='solid' color='primary'
+                        <Button variant="primary"
                             isDisabled={!stateAudioURL && !stateVideoURL}
                             onPress={() => setStateEditSRT(!stateEditSRT)}
                         >
@@ -164,7 +167,7 @@ export default function DictationPage() {
                 <pre className='my-4'>{stateSRTError}</pre>
             )}
             {stateEditSRT && (
-                <Textarea variant='bordered' value={stateSRTContent} className='my-4'
+                <TextArea variant='secondary' value={stateSRTContent} className='my-4'
                     onChange={(e) => initSRT(e.target.value)}
                 />
             )}
@@ -213,7 +216,7 @@ export default function DictationPage() {
                     </pre>
                     <p>6, 如下字幕格式是<b>不正确</b>的，因为原文除了文本，还有字体、颜色等格式信息：</p>
                     <pre className='ps-8 bg-sand-100'>
-                        {'45\n00:02:32,560 --> 00:02:34,240\n<font color="#ffffff">Wie bitte?</font>'}
+                        {'45\n00:02:32,560 --> 00:02:34,240\n<font>Wie bitte?</font>'}
                     </pre>
                 </div>
             )}

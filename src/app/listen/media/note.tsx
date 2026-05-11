@@ -1,7 +1,7 @@
 'use client'
 
 import { removeNote, saveNote } from "@/app/actions/listen";
-import { addToast, Button, Textarea } from "@heroui/react";
+import { toast, Button, TextArea } from "@heroui/react";
 import { listen_note } from "@/generated/prisma/client";
 import React, { useState } from "react";
 
@@ -20,30 +20,24 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
         <div className='flex flex-col items-center justify-start w-full my-2'>
             <div className='flex flex-row items-center justify-end w-full gap-2'>
                 {item.user_id === user_id && (
-                    <Button variant='solid' size="sm" color="secondary"
+                    <Button variant="secondary" size="sm"
                         onPress={() => setStateEdit(!stateEdit)}
                     >
                         {stateEdit ? "View" : "Edit"}
                     </Button>
                 )}
                 {stateEdit && (
-                    <Button variant='solid' size="sm" color="secondary"
+                    <Button variant="secondary" size="sm"
                         isDisabled={stateSaving}
                         onPress={async () => {
                             setStateSaving(true);
                             const result = await saveNote({ ...stateData, updated_at: new Date() });
                             if (result.status === "success") {
-                                addToast({
-                                    title: "save data success",
-                                    color: "success",
-                                });
+                                toast.success("save data success");
                                 setStateReloadNote(current => current + 1);
                             } else {
                                 console.log(result.error);
-                                addToast({
-                                    title: "save data error",
-                                    color: "danger",
-                                });
+                                toast.danger("save data error");
                             }
                             setStateSaving(false);
                         }}
@@ -53,23 +47,17 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
                 )}
                 {item.user_id === user_id && (
                     <div className="flex flex-row items-center justify-center gap-2">
-                        <Button variant='solid' size="sm" color="danger"
+                        <Button variant="danger" size="sm"
                             isDisabled={stateSaving}
                             onPress={async () => {
                                 setStateSaving(true);
                                 const result = await removeNote(item.uuid);
                                 if (result.status === "success") {
-                                    addToast({
-                                        title: "remove data success",
-                                        color: "success",
-                                    });
+                                    toast.success("remove data success");
                                     setStateReloadNote(current => current + 1);
                                 } else {
                                     console.log(result.error);
-                                    addToast({
-                                        title: "remove data error",
-                                        color: "danger",
-                                    });
+                                    toast.danger("remove data error");
                                 }
                                 setStateSaving(false);
                             }}
@@ -80,16 +68,13 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
                 )}
             </div>
             {stateEdit ? (
-                <Textarea
-                    classNames={{
-                        "input": 'text-xl leading-tight font-roboto',
-                    }}
+                <TextArea
+                    className='text-xl leading-tight font-roboto w-full'
                     value={stateData.note}
-                    minRows={10}
-                    maxRows={30}
                     autoComplete='off'
                     autoCorrect='off'
                     spellCheck='false'
+                    rows={10}
                     onChange={(e) => {
                         setStateData({ ...stateData, note: e.target.value })
                     }}

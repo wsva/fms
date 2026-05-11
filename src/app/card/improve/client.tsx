@@ -1,7 +1,8 @@
 'use client'
+import SimplePagination from '@/components/SimplePagination';
 
 import { useState, useEffect } from 'react'
-import { Button, Chip, CircularProgress, Divider, Pagination, addToast } from "@heroui/react"
+import { Button, Chip, ProgressCircle, Separator, toast } from "@heroui/react"
 import type { qsa_card, qsa_card_improve } from "@/generated/prisma/client"
 import {
     getCardImproveAll,
@@ -116,10 +117,10 @@ function ImproveItem({
 
             {item.status === 'pending' && (
                 <div className="flex flex-row gap-2 pt-1">
-                    <Button size="sm" color="success" isDisabled={busy} onPress={() => handle(onAccept)}>
+                    <Button variant="primary" size="sm" isDisabled={busy} onPress={() => handle(onAccept)}>
                         Accept
                     </Button>
-                    <Button size="sm" color="danger" variant="flat" isDisabled={busy} onPress={() => handle(onReject)}>
+                    <Button size="sm" variant="danger-soft" isDisabled={busy} onPress={() => handle(onReject)}>
                         Reject
                     </Button>
                 </div>
@@ -175,20 +176,20 @@ export default function ImproveClient({ user_id }: Props) {
     const handleAccept = async (uuid: string) => {
         const result = await applyCardImprove(uuid)
         if (result.status === 'success') {
-            addToast({ title: 'Applied to card', color: 'success' })
+            toast.success('Applied to card')
             refresh()
         } else {
-            addToast({ title: result.error as string, color: 'danger' })
+            toast.danger(result.error as string)
         }
     }
 
     const handleReject = async (uuid: string) => {
         const result = await rejectCardImprove(uuid)
         if (result.status === 'success') {
-            addToast({ title: 'Rejected', color: 'default' })
+            toast('Rejected')
             refresh()
         } else {
-            addToast({ title: result.error as string, color: 'danger' })
+            toast.danger(result.error as string)
         }
     }
 
@@ -196,17 +197,17 @@ export default function ImproveClient({ user_id }: Props) {
         <div className="flex flex-col w-full gap-4 py-2 px-2 max-w-5xl">
             {/* Stats */}
             <div className="flex flex-row gap-2 flex-wrap items-center">
-                <Chip color="warning" variant="flat">Pending: {stateStats.pending}</Chip>
-                <Chip color="success" variant="flat">Approved: {stateStats.approved}</Chip>
-                <Chip color="danger" variant="flat">Rejected: {stateStats.rejected}</Chip>
+                <Chip variant="tertiary">Pending: {stateStats.pending}</Chip>
+                <Chip variant="tertiary">Approved: {stateStats.approved}</Chip>
+                <Chip variant="soft" color="danger">Rejected: {stateStats.rejected}</Chip>
                 {stateTodoCount !== null && (
-                    <Chip color="default" variant="flat">
+                    <Chip variant="tertiary">
                         Unimproved: {stateTodoCount}
                     </Chip>
                 )}
             </div>
 
-            <Divider />
+            <Separator />
 
             {/* Status filter */}
             <div className="flex flex-row gap-2 flex-wrap items-center">
@@ -226,7 +227,7 @@ export default function ImproveClient({ user_id }: Props) {
             {/* List */}
             {stateLoading ? (
                 <div className="flex justify-center py-8">
-                    <CircularProgress label="Loading..." />
+                    <ProgressCircle aria-label="Loading" />
                 </div>
             ) : stateItems.length === 0 ? (
                 <div className="text-default-400 text-sm py-4">No improvements found.</div>
@@ -244,14 +245,7 @@ export default function ImproveClient({ user_id }: Props) {
                     </div>
                     {stateTotalPages > 1 && (
                         <div className="flex justify-center">
-                            <Pagination
-                                showControls
-                                loop
-                                variant="bordered"
-                                total={stateTotalPages}
-                                page={statePage}
-                                onChange={setStatePage}
-                            />
+                            <SimplePagination total={stateTotalPages} page={statePage} onChange={setStatePage} />
                         </div>
                     )}
                 </>

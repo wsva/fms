@@ -1,6 +1,6 @@
 'use client';
 
-import { addToast, Button } from "@heroui/react";
+import { toast, Button } from "@heroui/react";
 import { useState, useEffect } from 'react';
 import Section from './section';
 
@@ -32,7 +32,7 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
             setNewName('');
             await loadKeys();
         } else {
-            addToast({ title: 'Failed to create key', color: 'danger' });
+            toast.danger('Failed to create key');
         }
         setLoading(false);
     };
@@ -43,7 +43,7 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
         if (r.ok) {
             setKeys(k => k.filter(x => x.uuid !== uuid));
         } else {
-            addToast({ title: 'Failed to revoke key', color: 'danger' });
+            toast.danger('Failed to revoke key');
         }
     };
 
@@ -59,7 +59,7 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
                     onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCreate()}
                 />
-                <Button size="sm" color="primary" isDisabled={loading} onPress={handleCreate}>
+                <Button variant="primary" size="sm" isDisabled={loading} onPress={handleCreate}>
                     Generate
                 </Button>
             </div>
@@ -69,11 +69,11 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
                     <p className="text-xs text-yellow-700 font-medium">Copy this key now — it won't be shown again.</p>
                     <div className="flex flex-row gap-2 items-center">
                         <code className="text-sm flex-1 break-all">{newKey}</code>
-                        <Button size="sm" variant="flat" onPress={() => { navigator.clipboard.writeText(newKey); addToast({ title: 'Copied' }); }}>
+                        <Button size="sm" variant="ghost" onPress={() => { navigator.clipboard.writeText(newKey); toast('Copied'); }}>
                             Copy
                         </Button>
                     </div>
-                    <Button size="sm" variant="light" className="self-end text-xs" onPress={() => setNewKey(null)}>
+                    <Button size="sm" variant="ghost" className="self-end text-xs" onPress={() => setNewKey(null)}>
                         Dismiss
                     </Button>
                 </div>
@@ -89,7 +89,7 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
                                 <span className="text-sm font-medium">{k.name}</span>
                                 <span className="text-xs text-foreground-400 ml-2">{new Date(k.created_at).toLocaleDateString()}</span>
                             </div>
-                            <Button size="sm" color="danger" variant="light" onPress={() => handleDelete(k.uuid)}>
+                            <Button size="sm" variant="ghost" onPress={() => handleDelete(k.uuid)}>
                                 Revoke
                             </Button>
                         </div>

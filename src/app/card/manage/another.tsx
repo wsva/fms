@@ -1,7 +1,8 @@
 'use client'
+import SimplePagination from '@/components/SimplePagination';
 
 import { useEffect, useState } from 'react'
-import { addToast, Button, CircularProgress, Pagination, Select, SelectItem } from "@heroui/react"
+import { toast, Button, ProgressCircle, Select, ListBox, Label } from "@heroui/react"
 import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import CardList from '@/components/card/CardList';
 import { getCardAll } from '@/app/actions/card';
@@ -34,10 +35,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                 setStateMyTags(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
             setStateLoading(false)
         }
@@ -49,10 +47,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                 setStateTagsOfAnother(result.data)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
             setStateLoading(false)
         }
@@ -65,10 +60,7 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
                 setStateTotalPages(result.total_pages || 0)
             } else {
                 console.log(result.error);
-                addToast({
-                    title: "load data error",
-                    color: "danger",
-                });
+                toast.danger("load data error");
             }
             setStateLoading(false)
         }
@@ -80,44 +72,50 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
 
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
-            <Select label="Tag" labelPlacement='outside-left'
-                onChange={(e) => setStateTagUUIDOfAnother(e.target.value)}
-                endContent={stateLoading && (<CircularProgress aria-label="Loading..." color="default" />)}
-            >
-                {stateTagsOfAnother.map((v) => (
-                    <SelectItem key={v.uuid} textValue={v.tag}>{v.tag}</SelectItem>
-                ))}
+            <Select onChange={(v) => setStateTagUUIDOfAnother(String(v ?? ''))}>
+                <Label>Tag</Label>
+                <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                    <ListBox>
+                        {stateTagsOfAnother.map((v) => (
+                            <ListBox.Item id={v.uuid} key={v.uuid} textValue={v.tag}>{v.tag}</ListBox.Item>
+                        ))}
+                    </ListBox>
+                </Select.Popover>
             </Select>
 
             <div className='flex flex-col items-start justify-center gap-4 bg-sand-300 rounded-lg p-2'>
                 <div>copy to my cards</div>
                 <div className='flex flex-col lg:flex-row items-center justify-center w-full gap-4'>
-                    <Select label="Copy to" labelPlacement='outside-left'
-                        onChange={(e) => setStateMyTagUUID(e.target.value)}
-                        endContent={stateLoading && (<CircularProgress aria-label="Loading..." color="default" />)}
-                    >
-                        {stateMyTags.map((v) => (
-                            <SelectItem key={v.uuid} textValue={v.tag}>{v.tag}</SelectItem>
-                        ))}
+                    <Select onChange={(v) => setStateMyTagUUID(String(v ?? ''))}>
+                        <Label>Copy to</Label>
+                        <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                            <ListBox>
+                                {stateMyTags.map((v) => (
+                                    <ListBox.Item id={v.uuid} key={v.uuid} textValue={v.tag}>{v.tag}</ListBox.Item>
+                                ))}
+                            </ListBox>
+                        </Select.Popover>
                     </Select>
-                    <Button variant='solid' color='primary' id='button-toggel-recording'
+                    <Button variant="primary" id='button-toggel-recording'
                         isDisabled={!stateMyTagUUID || !stateTagUUIDOfAnother || stateSaving}
                         onPress={async () => {
                             if (window.confirm("Are you sure to copy all cards to your account?")) {
                                 setStateSaving(true)
                                 const result = await copyCardsByTag(user_id_another, stateTagUUIDOfAnother, user_id_my, stateMyTagUUID);
                                 if (result.status === "success") {
-                                    addToast({
-                                        title: "clear data success",
-                                        color: "success",
-                                    });
+                                    toast.success("clear data success");
                                     setStateReload(current => current + 1)
                                 } else {
                                     console.log(result.error);
-                                    addToast({
-                                        title: "clear data error",
-                                        color: "danger",
-                                    });
+                                    toast.danger("clear data error");
                                 }
                                 setStateSaving(false)
                             }
@@ -130,22 +128,18 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
 
             {stateLoading ? (
                 <div className='flex flex-row w-full items-center justify-center gap-4'>
-                    <CircularProgress label="Loading..." />
+                    <ProgressCircle aria-label="Loading" />
                 </div >
             ) : (
                 <>
                     <div className='flex flex-row items-center justify-center gap-4'>
                         <div>Page</div>
-                        <Pagination showControls loop variant='bordered'
-                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                        />
+                        <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage} />
                     </div>
                     <CardList user_id={user_id_my} card_list={stateData} />
                     <div className='flex flex-row items-center justify-center gap-4'>
                         <div>Page</div>
-                        <Pagination showControls loop variant='bordered'
-                            total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage}
-                        />
+                        <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={setStateCurrentPage} />
                     </div>
                 </>
             )}
