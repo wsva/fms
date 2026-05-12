@@ -1,7 +1,7 @@
 'use client'
 
 import { getProperty, getUUID } from '@/lib/utils';
-import { toast, Button, Checkbox, CheckboxGroup, Separator, Link, Select, TextArea, ListBox, Label } from "@heroui/react";
+import { toast, Button, Separator, Link, Select, TextArea, ListBox } from "@heroui/react";
 import { useEffect, useRef, useState } from 'react'
 import MdEditor from '@/components/MdEditor'
 import { useSearchParams } from 'next/navigation'
@@ -13,6 +13,7 @@ import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
 import Markdown2Html from '@/components/markdown/markdown';
 import AppModal from '@/components/AppModal';
+import TagSelector from '@/app/dataset/tag/selector';
 
 type Props = {
     card_ext: Partial<card_ext>,
@@ -29,9 +30,8 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     const [stateEdit, setStateEdit] = useState(edit_view);
     const [stateCard, setStateCard] = useState<qsa_card>();
     const [stateBackupData, setStateBackupData] = useState<Record<string, unknown> | null>(null);
-    const [stateTagList, setStateTagList] = useState<dataset_tag[]>([]);
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
-    const [stateTagSelected, setStateTagSelected] = useState<string[]>([]);
+    const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag>>(new Map());
     const { register, handleSubmit, formState, watch, reset, getValues, control } = useForm<qsa_card>({});
 
     const formRef = useRef<HTMLFormElement>(null);
@@ -80,7 +80,6 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             if (tag_list_result.status !== "success") {
                 return
             }
-            setStateTagList(tag_list_result.data)
 
             // detect backup and prompt user — do not auto-load
             const backup = localStorage.getItem(BACKUP_KEY)
@@ -121,8 +120,12 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                 const selected = card_ext.tag_list_suggestion
                     ? Array.from(new Set([...card_tag_result.data.tag_list_added, ...card_ext.tag_list_suggestion]))
                     : card_tag_result.data.tag_list_added
-                setStateTagSelected(selected.filter((v) =>
-                    tag_list_result.data.map((v0) => v0.uuid).includes(v)))
+
+                const selectedMap: Map<string, dataset_tag> = new Map()
+                tag_list_result.data
+                    .filter((v) => selected.includes(v.uuid))
+                    .forEach((v) => selectedMap.set(v.uuid, v))
+                setStateTagSelected(selectedMap)
             }
         };
         loadData();
@@ -205,11 +208,11 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
         const result_tag = await saveCardTag({
             uuid: stateCard!.uuid,
-            tag_list_new: stateTagSelected.filter((v) => !stateTagAdded.includes(v)),
-            tag_list_remove: stateTagAdded.filter((v) => !stateTagSelected.includes(v)),
+            tag_list_new: [...stateTagSelected.keys()].filter((v) => !stateTagAdded.includes(v)),
+            tag_list_remove: stateTagAdded.filter((v) => ![...stateTagSelected.keys()].includes(v)),
         })
         if (result_tag.status === 'success') {
-            setStateTagAdded(stateTagSelected)
+            setStateTagAdded([...stateTagSelected.keys()])
         } else {
             console.log(result_tag.error);
             toast.danger("save tag error");
@@ -314,22 +317,10 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                                 )}
                             />
                         )}
-                        <CheckboxGroup
-                            value={stateTagSelected}
-                            onChange={(v) => setStateTagSelected(v)}
-                            className="flex flex-row flex-wrap gap-2"
-                        >
-                            {stateTagList.map((v) => (
-                                <Checkbox key={v.uuid} value={v.uuid}>
-                                    <Checkbox.Control>
-                                        <Checkbox.Indicator />
-                                    </Checkbox.Control>
-                                    <Checkbox.Content>
-                                        <Label>{v.tag}</Label>
-                                    </Checkbox.Content>
-                                </Checkbox>
-                            ))}
-                        </CheckboxGroup>
+                        <TagSelector user_id={email} scope="card" selectionMode="multiple" hideSelector={true} readOnly={false}
+                            stateSelected={stateTagSelected}
+                            setStateSelected={setStateTagSelected}
+                        />
                         {!simple && (
                             <TextArea className='w-full rounded-lg bg-sand-300 text-xl leading-tight font-roboto'
                                 placeholder='suggestion'
@@ -368,23 +359,10 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                                 </ListBox>
                             </Select.Popover>
                         </Select>
-                        <CheckboxGroup
-                            value={stateTagSelected}
-                            onChange={(v) => setStateTagSelected(v)}
-                            className="flex flex-row flex-wrap gap-2"
-                            isDisabled
-                        >
-                            {stateTagList.filter((v) => stateTagSelected.includes(v.uuid)).map((v) => (
-                                <Checkbox key={v.uuid} value={v.uuid}>
-                                    <Checkbox.Control>
-                                        <Checkbox.Indicator />
-                                    </Checkbox.Control>
-                                    <Checkbox.Content>
-                                        <Label>{v.tag}</Label>
-                                    </Checkbox.Content>
-                                </Checkbox>
-                            ))}
-                        </CheckboxGroup>
+                        <TagSelector user_id={email} scope="card" selectionMode="multiple" hideSelector={true} readOnly={true}
+                            stateSelected={stateTagSelected}
+                            setStateSelected={setStateTagSelected}
+                        />
                         <Separator />
                         <div className='text-md font-roboto mx-8'>
                             {watch('suggestion', getDefault('suggestion') as string || '')}

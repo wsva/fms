@@ -24,7 +24,7 @@ function getPageRange(page: number, total: number): (number | '...')[] {
 export default function SimplePagination({ page, total, onChange }: Props) {
     const pages = getPageRange(page, total);
     return (
-        <Pagination>
+        <Pagination className="justify-center">
             <Pagination.Content>
                 <Pagination.Item>
                     <Pagination.Previous onPress={() => onChange(page <= 1 ? total : page - 1)}>
@@ -37,8 +37,7 @@ export default function SimplePagination({ page, total, onChange }: Props) {
                             <Pagination.Item key={`ellipsis-${i}`}>
                                 <Pagination.Ellipsis />
                             </Pagination.Item>
-                        )
-                        : (
+                        ) : (
                             <Pagination.Item key={p}>
                                 <Pagination.Link isActive={p === page} onPress={() => onChange(p as number)}>
                                     {p}

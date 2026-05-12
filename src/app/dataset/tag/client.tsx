@@ -6,6 +6,7 @@ import { getTagAllOwned, removeTag, saveTag } from '@/app/actions/dataset';
 import { getUUID } from "@/lib/utils";
 import { dataset_tag } from "@/generated/prisma/client";
 import { FloppyDisk, PencilToSquare, TrashBin, Xmark } from "@gravity-ui/icons";
+import TagSelector from "./selector";
 
 const SCOPE_OPTIONS = ['card', 'listen'] as const;
 
@@ -240,7 +241,7 @@ export default function Page({ user_id }: Props) {
             return;
         }
         if (!stateNew.parent_uuid) {
-            
+
         }
         setStateSaving(true);
         const result = await saveTag({
@@ -344,6 +345,8 @@ export default function Page({ user_id }: Props) {
                     {stateShowForm ? "Cancel" : "+ New Tag"}
                 </Button>
             </div>
+
+            <TagSelector user_id={user_id} scope="" selectionMode="multiple" hideSelector={false} readOnly={true} stateSelected={new Map()} setStateSelected={() => { }} />
 
             {/* New tag form */}
             {stateShowForm && (

@@ -31,14 +31,14 @@ export default function Card({ user_id, card, tag_list }: Props) {
     return (
         <div className={`flex flex-col w-full items-start rounded-md p-1 ${getColor(stateFamiliarity)}`}>
             <div className='flex flex-row w-full items-center justify-start gap-2'>
-                <Link target='_blank' className='text-2xl text-blue-600 hover:underline'
+                <Link target='_blank' className='text-2xl text-blue-600 no-underline hover:underline'
                     href={`/card/${card.uuid}`}
                 >
                     <Markdown2Html content={card.question} />
                 </Link>
             </div>
             {!isOwner && (
-                <Link target='_blank' className='text-sm text-foreground-500 hover:underline'
+                <Link target='_blank' className='text-sm text-foreground-500 no-underline hover:underline'
                     href={`/card/market?user_id=${card.user_id}`}
                 >
                     {`by ${card.user_id}`}
@@ -47,9 +47,7 @@ export default function Card({ user_id, card, tag_list }: Props) {
             <div className="flex flex-row w-full items-end justify-end w-full gap-4">
                 {isOwner && (
                     <Dropdown>
-                        <Dropdown.Trigger>
-                            <Button variant="ghost">familiarity - {stateFamiliarity}</Button>
-                        </Dropdown.Trigger>
+                        <Button variant="ghost">familiarity - {stateFamiliarity}</Button>
                         <Dropdown.Popover placement="bottom end" className="bg-sand-200 rounded-lg">
                             <Dropdown.Menu
                                 disallowEmptySelection

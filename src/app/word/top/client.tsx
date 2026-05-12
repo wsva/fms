@@ -97,7 +97,7 @@ export default function WordStore({ email, language, keyword, all }: Props) {
 
             {/* Top pagination */}
             {stateTotalPages > 1 && (
-                <div className='flex w-full items-center justify-center'>
+                <div className='flex flex-row w-full items-center justify-center'>
                     <SimplePagination total={stateTotalPages} page={stateCurrentPage} onChange={(page) => {
                             setStateCurrentPage(page)
                             loadData(stateKeyword, page)
