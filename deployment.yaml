@@ -39,16 +39,26 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: AUTH_SECRET
-            - name: REDIS_PASSWORD
+            - name: SMTP_HOST
               valueFrom:
                 secretKeyRef:
                   name: secrets
-                  key: REDIS_PASSWORD
-            - name: GEMINI_API_KEY
+                  key: SMTP_HOST
+            - name: SMTP_USER
               valueFrom:
                 secretKeyRef:
                   name: secrets
-                  key: GEMINI_API_KEY
+                  key: SMTP_USER
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: SMTP_PASS
+            - name: SMTP_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: SMTP_FROM
           command:
             - sh
             - -c
@@ -59,25 +69,36 @@ spec:
               echo 'DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db:5432/fmsdb' > .env
               echo 'BETTER_AUTH_URL=https://lusworkshop.site' >> .env
               echo 'BETTER_AUTH_SECRET="${AUTH_SECRET}"' >> .env
-              echo 'OAUTH2_AUTHORIZATION=https://lusworkshop.site/oauth2/authorize' >> .env
-              echo 'OAUTH2_TOKEN=https://lusworkshop.site/oauth2/token' >> .env
-              echo 'OAUTH2_USERINFO=https://lusworkshop.site/oauth2/userinfo' >> .env
-              echo 'OAUTH2_LOGOUT=https://lusworkshop.site/oauth2/logout' >> .env
+              echo 'OAUTH2_AUTHORIZATION=https://lusworkshop.site/api/oauth2/authorize' >> .env
+              echo 'OAUTH2_TOKEN=https://lusworkshop.site/api/oauth2/token' >> .env
+              echo 'OAUTH2_USERINFO=https://lusworkshop.site/api/oauth2/userinfo' >> .env
+              echo 'OAUTH2_LOGOUT=https://lusworkshop.site/api/oauth2/logout' >> .env
               echo 'OAUTH2_CLIENT_ID=als_next.js' >> .env
-              echo 'REDIS_HOST=redis' >> .env
-              echo 'REDIS_PASSWORD=${REDIS_PASSWORD}' >> .env
-              echo 'GEMINI_API_KEY=${GEMINI_API_KEY}' >> .env
+              echo 'OAUTH2_CHECK_IP=false' >> .env
+              echo 'OAUTH2_RSA_KEY_FILE="/ssl/rsa.key"' >> .env
+              echo 'OAUTH2_RSA_PUB_FILE="/ssl/rsa.pub"' >> .env
+              echo 'SMTP_HOST=${SMTP_HOST}' >> .env
+              echo 'SMTP_PORT=465' >> .env
+              echo 'SMTP_SECURE=true' >> .env
+              echo 'SMTP_USER=${SMTP_USER}' >> .env
+              echo 'SMTP_PASS=${SMTP_PASS}' >> .env
+              echo 'SMTP_FROM=${SMTP_FROM}' >> .env
               node server.js
           ports:
             - containerPort: 3000
           volumeMounts:
             - name: fms-data
               mountPath: /fms_data
+            - name: ssl
+              mountPath: /ssl
       volumes:
         - name: fms-data
           hostPath:
             path: /wsva/data/fms_data
             type: Directory
+        - name: ssl
+          hostPath:
+            path: /wsva/ssl
 ---
 apiVersion: v1
 kind: Service

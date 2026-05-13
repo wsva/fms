@@ -10,19 +10,10 @@ const publicRoutes = [
     '/speak/just-speaking',
 ]
 
-const publicRoutesReg = [
-    '/^\/blog/',
-]
-
 function isPublicRoute(pathname: string): boolean {
-    if (publicRoutes.includes(pathname)) {
-        return true
-    }
-    for (const reg in publicRoutesReg) {
-        if (RegExp(reg).test(pathname)) {
-            return true
-        }
-    }
+    if (publicRoutes.includes(pathname)) return true
+    if (pathname.startsWith('/blog')) return true
+    if (pathname.startsWith('/oauth2')) return true
     return false
 }
 

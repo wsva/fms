@@ -74,16 +74,12 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
     const branchNodes = useMemo(() => tree.filter(v => v.children.length > 0), [tree])
     const selectedTags = useMemo(() => Array.from(stateSelected.values()), [stateSelected])
 
-
-    console.log(tree)
-
     useEffect(() => {
         const loadData = async () => {
             setStateLoading(true)
             const result = await getTagAllOwned(user_id, scope)
             if (result.status === "success") {
                 setStateData(result.data)
-                console.log(result.data)
             } else {
                 console.log(result.error)
                 toast.danger("Failed to load tags")

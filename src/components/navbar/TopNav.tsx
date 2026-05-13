@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, ButtonGroup, Separator, Dropdown, Label, Description, Link, Tooltip } from "@heroui/react"
+import { Button, ButtonGroup, Separator, Dropdown, Label, Description, Link, Tooltip, Header } from "@heroui/react"
 import { useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
 import { MdMenu, MdClose } from "react-icons/md";
@@ -70,7 +70,10 @@ export default function TopNav() {
         await deleteAuthTokens();
         const formData = new FormData();
         formData.append("user_id", stateUser!.email);
-        await fetch(`${process.env.OAUTH2_LOGOUT}`, {
+        // here is client side code, so we cannot get the url through `${process.env.OAUTH2_LOGOUT}`
+        // use "/api/oauth2/logout" directly if oauth2 is implemented in this project
+        // create a server action instead to call `${process.env.OAUTH2_LOGOUT}` if use third-party oauth2 service
+        await fetch("/api/oauth2/logout", {
             method: "POST",
             body: formData,
         });
@@ -166,19 +169,21 @@ export default function TopNav() {
                     </ul>
 
                     {/* Right: theme + user */}
-                    <div className="hidden lg:flex items-center gap-3 ml-auto">
+                    <div className="flex items-center gap-3 ml-auto">
                         <ThemeSelector />
                         {!!stateUser ? (
                             <Dropdown>
                                 <Button size="sm" className="text-lg bg-sand-400">
                                     {stateUser.name}
                                 </Button>
-                                <Dropdown.Popover placement="bottom start">
+                                <Dropdown.Popover placement="bottom right" className="min-w-[320px] bg-sand-200">
                                     <Dropdown.Menu aria-label="User Actions">
-                                        <Dropdown.Item id="profile" textValue="Profile" className="h-14 gap-2">
-                                            <p className="font-bold">{stateUser.name}</p>
-                                            <p className="font-bold">{stateUser.email}</p>
-                                        </Dropdown.Item>
+                                        <Dropdown.Section>
+                                            <Header className="font-bold text-sm">Profile</Header>
+                                            <Header className="font-bold ml-2 text-sm">{stateUser.name}</Header>
+                                            <Header className="font-bold ml-2 text-sm">{stateUser.email}</Header>
+                                        </Dropdown.Section>
+                                        <Separator />
                                         <Dropdown.Item id="logout" textValue="Sign Out" variant="danger" onPress={handleSignOut}>
                                             <Label>Sign Out</Label>
                                         </Dropdown.Item>
@@ -207,49 +212,6 @@ export default function TopNav() {
                     <div className="flex justify-center">
                         <Link href='/' onPress={() => setIsMenuOpen(false)}>
                             <NavIcon size={280} />
-                        </Link>
-                    </div>
-                    <div className="flex flex-row items-center justify-center px-1 mb-3">
-                        Select Theme:
-                        <ThemeSelector />
-                    </div>
-                    <div className="bg-sand-300 rounded-sm p-2 mb-5">
-                        {!!stateUser ? (
-                            <div className="flex flex-col w-full">
-                                <div className="flex flex-row items-center justify-start gap-2 w-full">
-                                    <div className="flex-1">
-                                        <Button size="sm" isDisabled className="text-lg bg-sand-400 disabled:opacity-100">
-                                            {stateUser.name}
-                                        </Button>
-                                    </div>
-                                    <Button variant="danger" size="sm"
-                                        onPress={handleSignOut}
-                                    >
-                                        Sign Out
-                                    </Button>
-                                </div>
-                                <div className="select-none">{stateUser.email}</div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-row items-center justify-center gap-2 w-full">
-                                <Button variant="primary" size="sm"
-                                    onPress={async () => {
-                                        await authClient.signIn.social({
-                                            provider: "wsva_oauth2",
-                                            callbackURL: redirectUrl,
-                                        });
-                                    }}
-                                >
-                                    Login
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                    <div className="my-1">
-                        <Link className="w-full text-blue-600 underline font-bold text-xl" href={"/"}
-                            onPress={() => setIsMenuOpen(false)}
-                        >
-                            Home
                         </Link>
                     </div>
                     {menuList.map((group) => (

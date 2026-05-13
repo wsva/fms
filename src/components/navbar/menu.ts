@@ -16,7 +16,7 @@ export const menuList: MenuGroup[] = [
         items: [
             { key: "word_top", name: "Top Words", description: "top words", href: "/word/top" },
             { key: "word_sentence", name: "Sentence", description: "search sentences", href: "/word/sentence" },
-            { key: "word_pdf_reader", name: "PDF Reader", description: "read a PDF file", href: "/word/pdf_reader" },
+            { key: "word_pdf_reader", name: "PDF Reader", description: "read a PDF file", href: "/tools/pdf_reader" },
         ],
     },
     {
@@ -67,7 +67,7 @@ export const menuList: MenuGroup[] = [
         name: "Tools",
         items: [
             { key: "plan_main", name: "My Plans", description: "make plans", href: "/plan" },
-            { key: "word_pdf_reader", name: "PDF Reader", description: "PDF reader", href: "/word/pdf_reader" },
+            { key: "tools_pdf_reader", name: "PDF Reader", description: "PDF reader", href: "/tools/pdf_reader" },
         ],
     },
     {
