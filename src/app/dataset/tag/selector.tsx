@@ -81,8 +81,6 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
     const tree = useMemo(() => buildTree(stateData), [stateData])
     const leafNodes = useMemo(() => tree.filter(v => v.children.length === 0), [tree])
     const branchNodes = useMemo(() => tree.filter(v => v.children.length > 0), [tree])
-    const selectedTags = useMemo(() => Array.from(stateSelected.values()), [stateSelected])
-    console.log("selectedTags", selectedTags)
 
     useEffect(() => {
         const loadData = async () => {
@@ -92,23 +90,8 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
                 setStateData(result.data)
 
                 const next: Map<string, dataset_tag | null> = new Map()
-                let needUpdate = false
-                stateSelected.forEach((v0, k0) => {
-                    const obj = result.data.find((v1) => v1.uuid === k0)
-                    console.log("obj", obj)
-                    if (!obj) {
-                        needUpdate = true
-                    } else {
-                        if (!v0) {
-                            needUpdate = true
-                        }
-                        next.set(k0, obj)
-                        console.log("next", next)
-                    }
-                })
-                if (needUpdate) {
-                    setStateSelected(next)
-                }
+                result.data.filter(t => stateSelected.has(t.uuid)).forEach(t => next.set(t.uuid, t))
+                setStateSelected(next)
             } else {
                 console.log(result.error)
                 toast.danger("Failed to load tags")
@@ -132,8 +115,8 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
                     Dataset Tags:
                 </span>
                 <div className="flex-1 flex flex-wrap gap-1 min-w-0">
-                    {selectedTags.length > 0 && (
-                        selectedTags.filter(t => !!t).map(t => (
+                    {stateSelected.size > 0 && (
+                        stateData.filter(t => stateSelected.has(t.uuid)).map(t => (
                             <span key={t.uuid} className="text-xs bg-sand-300 text-sand-700 rounded px-1.5 py-0.5 font-medium">
                                 {t.tag}
                             </span>
