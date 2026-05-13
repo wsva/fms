@@ -603,7 +603,7 @@ export default function Page({ user_id, uuid }: Props) {
         <div className="flex flex-col lg:flex-row w-full gap-3 py-3 px-3">
 
             {/* LEFT SIDEBAR — player always visible; library desktop only */}
-            <aside className="flex flex-col gap-3 shrink-0 w-full sticky top-0 z-10 lg:static lg:z-auto lg:w-[var(--sidebar-width)] lg:self-start lg:sticky lg:top-3 relative lg:max-h-[calc(100vh-1.5rem)] lg:overflow-hidden"
+            <aside className="flex flex-col gap-3 shrink-0 w-full sticky top-16 z-10 lg:w-[var(--sidebar-width)] lg:self-start relative lg:max-h-[calc(100vh-1.5rem)] lg:overflow-hidden"
                 style={{ "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
             >
                 {/* Player */}
