@@ -18,8 +18,8 @@ function buildTree(flat: dataset_tag[], parentUuid: string | null = null): TagNo
 type NodeHandlers = {
     selectionMode: "single" | "multiple"
     stateShowDescription: boolean
-    stateSelected: Map<string, dataset_tag>
-    setStateSelected: React.Dispatch<React.SetStateAction<Map<string, dataset_tag>>>
+    stateSelected: Map<string, dataset_tag | null>
+    setStateSelected: React.Dispatch<React.SetStateAction<Map<string, dataset_tag | null>>>
 }
 
 function TagItem({ node, depth, h }: { node: TagNode; depth: number; h: NodeHandlers }) {
@@ -67,8 +67,8 @@ type Props = {
     selectionMode: "single" | "multiple"
     hideSelector: boolean
     readOnly: boolean
-    stateSelected: Map<string, dataset_tag>
-    setStateSelected: React.Dispatch<React.SetStateAction<Map<string, dataset_tag>>>
+    stateSelected: Map<string, dataset_tag | null>
+    setStateSelected: React.Dispatch<React.SetStateAction<Map<string, dataset_tag | null>>>
 }
 
 export default function TagSelector({ user_id, scope, selectionMode, hideSelector, readOnly, stateSelected, setStateSelected }: Props) {
@@ -98,6 +98,25 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
         loadData()
     }, [user_id, stateReload])
 
+    useEffect(() => {
+        const next: Map<string, dataset_tag | null> = new Map()
+        let needUpdate = false
+        stateSelected.forEach((v0, k0) => {
+            const obj = stateData.find((v1) => v1.uuid === k0)
+            if (!obj) {
+                needUpdate = true
+            } else {
+                if (!v0) {
+                    needUpdate = true
+                }
+                next.set(k0, obj)
+            }
+        })
+        if (needUpdate) {
+            setStateSelected(next)
+        }
+    }, [stateData])
+
     const tagHandlers: NodeHandlers = {
         stateSelected,
         selectionMode,
@@ -113,7 +132,7 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
                 </span>
                 <div className="flex-1 flex flex-wrap gap-1 min-w-0">
                     {selectedTags.length > 0 && (
-                        selectedTags.map(t => (
+                        selectedTags.filter(t => !!t).map(t => (
                             <span key={t.uuid} className="text-xs bg-sand-300 text-sand-700 rounded px-1.5 py-0.5 font-medium">
                                 {t.tag}
                             </span>

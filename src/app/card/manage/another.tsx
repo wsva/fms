@@ -18,8 +18,8 @@ type Props = {
 export default function CardMarket({ user_id_my, user_id_another }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
     const [stateTagUUIDOfAnother, setStateTagUUIDOfAnother] = useState<string>("")
-    const [stateTagSelectedMy, setStateTagSelectedMy] = useState<Map<string, dataset_tag>>(new Map())
-    const [stateTagSelectedOfAnother, setStateTagSelectedOfAnother] = useState<Map<string, dataset_tag>>(new Map())
+    const [stateTagSelectedMy, setStateTagSelectedMy] = useState<Map<string, dataset_tag | null>>(new Map())
+    const [stateTagSelectedOfAnother, setStateTagSelectedOfAnother] = useState<Map<string, dataset_tag | null>>(new Map())
     const [stateMyTagUUID, setStateMyTagUUID] = useState<string>("")
     const [stateData, setStateData] = useState<qsa_card[]>([])
     const [stateReload, setStateReload] = useState<number>(1);
@@ -57,14 +57,12 @@ export default function CardMarket({ user_id_my, user_id_another }: Props) {
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
             <TagSelector user_id={user_id_another} scope="card" selectionMode="single" hideSelector={false} readOnly={false}
-                stateSelected={stateTagSelectedOfAnother}
-                setStateSelected={setStateTagSelectedOfAnother}
+                stateSelected={stateTagSelectedOfAnother} setStateSelected={setStateTagSelectedOfAnother}
             />
 
             <div>copy to my cards</div>
             <TagSelector user_id={user_id_my} scope="card" selectionMode="single" hideSelector={false} readOnly={false}
-                stateSelected={stateTagSelectedMy}
-                setStateSelected={setStateTagSelectedMy}
+                stateSelected={stateTagSelectedMy} setStateSelected={setStateTagSelectedMy}
             />
             <Button variant="primary" id='button-toggel-recording'
                 isDisabled={!stateMyTagUUID || !stateTagUUIDOfAnother || stateSaving}

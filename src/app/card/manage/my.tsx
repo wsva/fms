@@ -17,7 +17,7 @@ type Props = {
 export default function Page({ user_id_my }: Props) {
     const [stateLoading, setStateLoading] = useState<boolean>(false)
     const [stateMyTagUUID, setStateMyTagUUID] = useState<string>("")
-    const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag>>(new Map())
+    const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag | null>>(new Map())
     const [stateData, setStateData] = useState<qsa_card[]>([])
     const [stateReload, setStateReload] = useState<number>(1);
     const [stateCurrentPage, setStateCurrentPage] = useState<number>(1);
@@ -49,8 +49,7 @@ export default function Page({ user_id_my }: Props) {
     return (
         <div className='flex flex-col w-full gap-2 py-2 px-2'>
             <TagSelector user_id={user_id_my} scope="card" selectionMode="single" hideSelector={false} readOnly={false}
-                stateSelected={stateTagSelected}
-                setStateSelected={setStateTagSelected}
+                stateSelected={stateTagSelected} setStateSelected={setStateTagSelected}
             />
 
             <div className='flex flex-row items-center justify-center gap-4'>

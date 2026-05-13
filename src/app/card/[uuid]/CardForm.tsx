@@ -8,7 +8,6 @@ import { useSearchParams } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form';
 import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import { getCardTag, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
-import { getTagAllOwned } from '@/app/actions/dataset';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
 import Markdown2Html from '@/components/markdown/markdown';
@@ -31,7 +30,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     const [stateCard, setStateCard] = useState<qsa_card>();
     const [stateBackupData, setStateBackupData] = useState<Record<string, unknown> | null>(null);
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
-    const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag>>(new Map());
+    const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag | null>>(new Map());
     const { register, handleSubmit, formState, watch, reset, getValues, control } = useForm<qsa_card>({});
 
     const formRef = useRef<HTMLFormElement>(null);
@@ -75,12 +74,6 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     // 空依赖数组意味着仅在组件挂载时执行一次
     useEffect(() => {
         const loadData = async () => {
-            // init tag list
-            const tag_list_result = await getTagAllOwned(email, "card");
-            if (tag_list_result.status !== "success") {
-                return
-            }
-
             // detect backup and prompt user — do not auto-load
             const backup = localStorage.getItem(BACKUP_KEY)
             if (backup) {
@@ -121,10 +114,8 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                     ? Array.from(new Set([...card_tag_result.data.tag_list_added, ...card_ext.tag_list_suggestion]))
                     : card_tag_result.data.tag_list_added
 
-                const selectedMap: Map<string, dataset_tag> = new Map()
-                tag_list_result.data
-                    .filter((v) => selected.includes(v.uuid))
-                    .forEach((v) => selectedMap.set(v.uuid, v))
+                const selectedMap: Map<string, dataset_tag | null> = new Map()
+                selected.forEach((v) => selectedMap.set(v, null))
                 setStateTagSelected(selectedMap)
             }
         };

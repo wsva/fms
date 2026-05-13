@@ -65,6 +65,33 @@ export async function getTagAllUsed(email: string, scope: string): Promise<Actio
     }
 }
 
+// subscribed tags by user
+export async function getTagAllSubscribed(email: string, scope: string): Promise<ActionResult<dataset_tag[]>> {
+    try {
+        const subs = await prisma.dataset_subscription.findMany({
+            where: { user_id: email },
+            select: { tag_uuid: true },
+        })
+        const subUuids = subs.map(s => s.tag_uuid)
+        if (subUuids.length === 0) {
+            return { status: "success", data: [] }
+        }
+        const result = await prisma.dataset_tag.findMany({
+            where: {
+                AND: [
+                    { uuid: { in: subUuids } },
+                    { scope: { contains: scope } },
+                ]
+            },
+            orderBy: { tag: 'asc' },
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
 export async function getTag(uuid: string): Promise<ActionResult<dataset_tag>> {
     try {
         const result = await prisma.dataset_tag.findUnique({

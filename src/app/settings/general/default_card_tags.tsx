@@ -1,30 +1,31 @@
 'use client';
 
-import { toast, Button, Checkbox, CheckboxGroup, Label } from "@heroui/react";
+import { toast, Button } from "@heroui/react";
 import { useState, useEffect } from 'react';
 import { getKey, setKey } from '@/app/actions/settings_general';
-import { getTagAllOwned } from '@/app/actions/dataset';
 import { dataset_tag } from "@/generated/prisma/client";
 import Section from './section';
+import TagSelector from "@/app/dataset/tag/selector";
 
 export default function DefaultCardTagsSetting({ user_id }: { user_id: string }) {
-    const [tagList, setTagList] = useState<dataset_tag[]>([]);
-    const [selected, setSelected] = useState<string[]>([]);
+    const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag | null>>(new Map());
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         Promise.all([
-            getTagAllOwned(user_id, "card"),
             getKey('default_card_tags'),
-        ]).then(([tagsResult, savedTags]) => {
-            if (tagsResult.status === 'success') setTagList(tagsResult.data);
-            if (savedTags) setSelected(savedTags.split(',').filter(Boolean));
+        ]).then(([savedTags]) => {
+            if (savedTags) {
+                const next: Map<string, dataset_tag | null> = new Map()
+                savedTags.split(',').forEach(uuid => next.set(uuid, null))
+                setStateTagSelected(next)
+            }
         });
     }, [user_id]);
 
     const save = async () => {
         setSaving(true);
-        const result = await setKey('default_card_tags', selected.join(','));
+        const result = await setKey('default_card_tags', Array.from(stateTagSelected.keys()).join(','));
         if (result.status === 'success') {
             toast.success('Saved');
         } else {
@@ -36,25 +37,9 @@ export default function DefaultCardTagsSetting({ user_id }: { user_id: string })
     return (
         <Section title="Default Tags of New Cards">
             <p className="text-xs text-foreground-400">Tags applied automatically when creating a new card without a tag pre-selected via URL.</p>
-            <CheckboxGroup
-                value={selected}
-                onChange={(v) => setSelected(v)}
-                className="flex flex-row flex-wrap gap-2"
-            >
-                {tagList.map(t => (
-                    <Checkbox key={t.uuid} value={t.uuid}>
-                        <Checkbox.Control>
-                            <Checkbox.Indicator />
-                        </Checkbox.Control>
-                        <Checkbox.Content>
-                            <Label>{t.tag}</Label>
-                        </Checkbox.Content>
-                    </Checkbox>
-                ))}
-            </CheckboxGroup>
-            {tagList.length === 0 && (
-                <p className="text-sm text-foreground-400">No tags found.</p>
-            )}
+            <TagSelector user_id={user_id} scope="card" selectionMode="multiple" hideSelector={false} readOnly={false}
+                stateSelected={stateTagSelected} setStateSelected={setStateTagSelected}
+            />
             <div className="flex justify-end">
                 <Button variant="primary" size="sm" isDisabled={saving} onPress={save}>
                     Save
