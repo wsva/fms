@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { toast, Button, Spinner, Chip } from "@heroui/react"
+import { toast, Button, Spinner, Chip, Description } from "@heroui/react"
 import { dataset_tag } from "@/generated/prisma/client"
 import { getTagAllOwned } from "@/app/actions/dataset"
-import { ArrowsRotateLeft, ChevronsDownWide, ChevronsUpWide } from '@gravity-ui/icons'
+import { ArrowsRotateLeft, ChevronsDownWide, ChevronsUpWide, CircleInfo } from '@gravity-ui/icons'
 
 type TagNode = dataset_tag & { children: TagNode[] }
 
@@ -17,6 +17,7 @@ function buildTree(flat: dataset_tag[], parentUuid: string | null = null): TagNo
 
 type NodeHandlers = {
     selectionMode: "single" | "multiple"
+    stateShowDescription: boolean
     stateSelected: Map<string, dataset_tag>
     setStateSelected: React.Dispatch<React.SetStateAction<Map<string, dataset_tag>>>
 }
@@ -27,7 +28,7 @@ function TagItem({ node, depth, h }: { node: TagNode; depth: number; h: NodeHand
     return (
         <div className={depth > 0 ? 'border-l-1 ml-4' : ''}>
             <Chip
-                size='sm'
+                size='lg'
                 variant="primary"
                 color={isSelected ? "success" : "default"}
                 className='cursor-pointer font-semibold select-none ml-1 mt-1'
@@ -45,7 +46,14 @@ function TagItem({ node, depth, h }: { node: TagNode; depth: number; h: NodeHand
                 }}
             >
                 {node.tag}
+                {h.stateShowDescription && !!node.description && (
+                    <Description className='ml-4'>
+                        {node.description}
+                    </Description>
+                )}
             </Chip>
+
+
             {node.children.map(child => (
                 <TagItem key={child.uuid} node={child} depth={depth + 1} h={h} />
             ))}
@@ -68,6 +76,7 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
     const [stateLoading, setStateLoading] = useState(false)
     const [stateReload, setStateReload] = useState(1)
     const [stateHide, setStateHide] = useState(hideSelector)
+    const [stateShowDescription, setStateShowDescription] = useState(false)
 
     const tree = useMemo(() => buildTree(stateData), [stateData])
     const leafNodes = useMemo(() => tree.filter(v => v.children.length === 0), [tree])
@@ -92,6 +101,7 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
     const tagHandlers: NodeHandlers = {
         stateSelected,
         selectionMode,
+        stateShowDescription,
         setStateSelected: readOnly ? () => { } : setStateSelected
     }
 
@@ -122,6 +132,11 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
                         <ArrowsRotateLeft />
                     </Button>
                 )}
+                <Button isIconOnly size="sm" variant="ghost" className="shrink-0"
+                    onPress={() => setStateShowDescription(!stateShowDescription)}
+                >
+                    <CircleInfo />
+                </Button>
                 <Button isIconOnly size='sm' variant='ghost' className="shrink-0" onPress={() => setStateHide(!stateHide)}>
                     {stateHide ? <ChevronsDownWide /> : <ChevronsUpWide />}
                 </Button>
