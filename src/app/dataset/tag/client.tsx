@@ -168,6 +168,9 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                         </Select.Trigger>
                         <Select.Popover>
                             <ListBox>
+                                <ListBox.Item id="" key="none" textValue="None (root tag)">
+                                    <span className="text-sand-400 italic">None (root tag)</span>
+                                </ListBox.Item>
                                 {parentOptions.map(t => (
                                     <ListBox.Item id={t.uuid} key={t.uuid} textValue={t.tag}>{t.tag}</ListBox.Item>
                                 ))}
