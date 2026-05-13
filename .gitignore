@@ -47,3 +47,7 @@ next-env.d.ts
 
 # local AI scripts
 /tools
+
+/pki
+/.heroui-docs
+/scripts
