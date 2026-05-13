@@ -82,6 +82,7 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
     const leafNodes = useMemo(() => tree.filter(v => v.children.length === 0), [tree])
     const branchNodes = useMemo(() => tree.filter(v => v.children.length > 0), [tree])
     const selectedTags = useMemo(() => Array.from(stateSelected.values()), [stateSelected])
+    console.log("selectedTags", selectedTags)
 
     useEffect(() => {
         const loadData = async () => {
@@ -89,6 +90,25 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
             const result = await getTagAllOwned(user_id, scope)
             if (result.status === "success") {
                 setStateData(result.data)
+
+                const next: Map<string, dataset_tag | null> = new Map()
+                let needUpdate = false
+                stateSelected.forEach((v0, k0) => {
+                    const obj = result.data.find((v1) => v1.uuid === k0)
+                    console.log("obj", obj)
+                    if (!obj) {
+                        needUpdate = true
+                    } else {
+                        if (!v0) {
+                            needUpdate = true
+                        }
+                        next.set(k0, obj)
+                        console.log("next", next)
+                    }
+                })
+                if (needUpdate) {
+                    setStateSelected(next)
+                }
             } else {
                 console.log(result.error)
                 toast.danger("Failed to load tags")
@@ -97,25 +117,6 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
         }
         loadData()
     }, [user_id, stateReload])
-
-    useEffect(() => {
-        const next: Map<string, dataset_tag | null> = new Map()
-        let needUpdate = false
-        stateSelected.forEach((v0, k0) => {
-            const obj = stateData.find((v1) => v1.uuid === k0)
-            if (!obj) {
-                needUpdate = true
-            } else {
-                if (!v0) {
-                    needUpdate = true
-                }
-                next.set(k0, obj)
-            }
-        })
-        if (needUpdate) {
-            setStateSelected(next)
-        }
-    }, [stateData])
 
     const tagHandlers: NodeHandlers = {
         stateSelected,
