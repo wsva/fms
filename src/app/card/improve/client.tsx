@@ -76,7 +76,7 @@ function ImproveItem({
     const current = parseContent(item.current)
     const improved = parseContent(item.improved)
     const [busy, setBusy] = useState(false)
-    const [collapsed, setCollapsed] = useState(false)
+    const [collapsed, setCollapsed] = useState(true)
 
     const handle = async (fn: (uuid: string) => Promise<void>) => {
         setBusy(true)
