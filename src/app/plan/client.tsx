@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { toast, Button, Input, Select, ListBox } from "@heroui/react";
+import { toast, Button, Input } from "@heroui/react";
 import { getPlanAll, removePlan, savePlan } from '@/app/actions/plan';
 import Plan from './plan';
 import { getUUID } from '@/lib/utils';
@@ -14,7 +14,6 @@ type Props = {
 export default function Client({ user_id }: Props) {
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateShowOthers, setStateShowOthers] = useState<boolean>(false);
-    const [stateTimeSpan, setStateTimeSpan] = useState<number>(15);
     const [statePlanContent, setStatePlanContent] = useState<string>("");
     const [stateData, setStateData] = useState<plan_plan[]>([]);
     const [stateReload, setStateReload] = useState<number>(1);
@@ -52,7 +51,7 @@ export default function Client({ user_id }: Props) {
                 user_id: user_id,
                 content: content,
                 favorite: "N",
-                minutes: stateTimeSpan,
+                minutes: 15,
                 created_at: new Date(),
                 updated_at: new Date(),
             })
@@ -94,23 +93,7 @@ export default function Client({ user_id }: Props) {
                         onChange={(e) => setStatePlanContent(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
                     />
-                    <Select aria-label='time span' className='w-36'
-                        value={String(stateTimeSpan)}
-                        onChange={(v) => setStateTimeSpan(parseInt(String(v ?? '15')))}
-                    >
-                        <Select.Trigger className="bg-sand-200 rounded-sm">
-                            <Select.Value />
-                            <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover className="bg-sand-200 rounded-sm">
-                            <ListBox>
-                                <ListBox.Item id="15" key="15" textValue="15 min">15 min</ListBox.Item>
-                                <ListBox.Item id="30" key="30" textValue="30 min">30 min</ListBox.Item>
-                                <ListBox.Item id="60" key="60" textValue="1 hour">1 hour</ListBox.Item>
-                            </ListBox>
-                        </Select.Popover>
-                    </Select>
-                    <Button size='sm' variant="primary" className="rounded-sm"
+<Button size='sm' variant="primary" className="rounded-sm"
                         isDisabled={stateSaving}
                         onPress={handleAdd}
                     >

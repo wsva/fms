@@ -21,7 +21,10 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
     const [stateReload, setStateReload] = useState<number>(1);
     const [stateShowAll, setStateShowAll] = useState<boolean>(false);
 
+    const hasPending = stateData.length > 0 && stateData[0].status === 'pending';
+
     const handleAddRecord = async () => {
+        if (hasPending) return;
         const result = await saveRecord({
             uuid: getUUID(),
             user_id: user_id,
@@ -75,9 +78,9 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
                     <span className={`font-bold truncate ${simple ? 'text-base' : 'text-lg'}`}>
                         {item.content}
                     </span>
-                    <span className="shrink-0 text-xs font-semibold text-sand-700 bg-sand-200 rounded-full px-2 py-0.5">
+                    {/* <span className="shrink-0 text-xs font-semibold text-sand-700 bg-sand-200 rounded-full px-2 py-0.5">
                         {item.minutes}m
-                    </span>
+                    </span> */}
                 </div>
 
                 {/* End actions */}
@@ -85,12 +88,12 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
                     {!simple && (
                         <Tooltip>
                             <Tooltip.Trigger>
-                                <Button isIconOnly variant='ghost' onPress={handleAddRecord} >
+                                <Button isIconOnly variant='ghost' isDisabled={hasPending} onPress={handleAddRecord} >
                                     <PlayFill />
                                 </Button>
                             </Tooltip.Trigger>
                             <Tooltip.Content placement='bottom'>
-                                log a session
+                                {hasPending ? 'session in progress' : 'log a session'}
                             </Tooltip.Content>
                         </Tooltip>
                     )}

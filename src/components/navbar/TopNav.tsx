@@ -7,36 +7,19 @@ import { MdMenu, MdClose } from "react-icons/md";
 import { menuList } from "./menu";
 import { authClient } from "@/lib/auth-client";
 import { deleteAuthTokens } from "@/app/actions/auth";
-import { User } from "better-auth";
-import ThemeSelector from '@/components/ThemeSelector'
+import type { User } from "better-auth";
 import NavIcon from '@/components/design/NavIcon'
 import { useSearchParams } from 'next/navigation'
-import { ArrowUturnCcwLeft, ArrowUturnCwRight } from "@gravity-ui/icons";
-
-const ChevronDown = () => {
-    return (
-        <svg
-            fill="none"
-            height={16}
-            viewBox="0 0 24 24"
-            width={16}
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <path
-                d="m19.92 8.95-6.52 6.52c-.77.77-2.03.77-2.8 0L4.08 8.95"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeMiterlimit={10}
-                strokeWidth={1.5}
-            />
-        </svg>
-    );
-};
+import { ArrowUturnCcwLeft, ArrowUturnCwRight, ChevronDown } from "@gravity-ui/icons";
+import PlanCountdown from './PlanCountdown'
+import { useTheme } from '@/components/ThemeProvider'
+import { themes } from '@/lib/themes'
+import type { ThemeId } from '@/lib/themes'
 
 export default function TopNav() {
     const [stateUser, setStateUser] = useState<User>();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { theme, setTheme } = useTheme();
 
     const searchParams = useSearchParams();
     const redirectUrl = searchParams.get('redirect_url') ?? '/';
@@ -168,9 +151,10 @@ export default function TopNav() {
                         ))}
                     </ul>
 
-                    {/* Right: theme + user */}
+                    <PlanCountdown user_id={stateUser?.email ?? ''} />
+
+                    {/* Right: user */}
                     <div className="flex items-center gap-3 ml-auto">
-                        <ThemeSelector />
                         {!!stateUser ? (
                             <Dropdown>
                                 <Button size="sm" className="text-lg bg-sand-400">
@@ -182,6 +166,21 @@ export default function TopNav() {
                                             <Header className="font-bold text-sm">Profile</Header>
                                             <Header className="font-bold ml-2 text-sm">{stateUser.name}</Header>
                                             <Header className="font-bold ml-2 text-sm">{stateUser.email}</Header>
+                                        </Dropdown.Section>
+                                        <Separator />
+                                        <Dropdown.Section>
+                                            <Header className="font-bold text-sm">Theme</Header>
+                                            {themes.map(t => (
+                                                <Dropdown.Item key={t.id} id={`theme-${t.id}`} textValue={t.name}
+                                                    className={`ml-2 rounded-sm ${theme.id === t.id ? 'bg-sand-300' : ''}`}
+                                                    onPress={() => setTheme(t.id as ThemeId)}
+                                                >
+                                                    <span className="w-3 h-3 rounded-full inline-block shrink-0 border border-sand-400"
+                                                        style={{ backgroundColor: t.swatch }}
+                                                    />
+                                                    <Label>{t.name}</Label>
+                                                </Dropdown.Item>
+                                            ))}
                                         </Dropdown.Section>
                                         <Separator />
                                         <Dropdown.Item id="logout" textValue="Sign Out" variant="danger" onPress={handleSignOut}>
