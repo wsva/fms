@@ -76,6 +76,7 @@ function ImproveItem({
     const current = parseContent(item.current)
     const improved = parseContent(item.improved)
     const [busy, setBusy] = useState(false)
+    const [collapsed, setCollapsed] = useState(false)
 
     const handle = async (fn: (uuid: string) => Promise<void>) => {
         setBusy(true)
@@ -85,45 +86,55 @@ function ImproveItem({
 
     return (
         <div className="border border-default-200 rounded-xl p-4 flex flex-col gap-3">
-            <div className="flex flex-row items-center justify-between flex-wrap gap-2">
+            <div
+                className="flex flex-row items-center justify-between flex-wrap gap-2 cursor-pointer select-none"
+                onClick={() => setCollapsed(v => !v)}
+            >
                 <span className="font-semibold text-base">{item.card.question}</span>
-                <Chip
-                    size="sm"
-                    color={
-                        item.status === 'pending' ? 'warning' :
-                        item.status === 'approved' ? 'success' : 'danger'
-                    }
-                >
-                    {item.status}
-                </Chip>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                    <div className="text-xs font-bold text-default-500 uppercase mb-1">Current</div>
-                    <FieldDiff label="Question" current={current.question} improved={improved.question} side="current" />
-                    <FieldDiff label="Suggestion" current={current.suggestion} improved={improved.suggestion} side="current" />
-                    <FieldDiff label="Answer" current={current.answer} improved={improved.answer} side="current" />
-                    <FieldDiff label="Note" current={current.note} improved={improved.note} side="current" />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <div className="text-xs font-bold text-green-600 uppercase mb-1">Improved</div>
-                    <FieldDiff label="Question" current={current.question} improved={improved.question} side="improved" />
-                    <FieldDiff label="Suggestion" current={current.suggestion} improved={improved.suggestion} side="improved" />
-                    <FieldDiff label="Answer" current={current.answer} improved={improved.answer} side="improved" />
-                    <FieldDiff label="Note" current={current.note} improved={improved.note} side="improved" />
+                <div className="flex items-center gap-2">
+                    <Chip
+                        size="sm"
+                        color={
+                            item.status === 'pending' ? 'warning' :
+                            item.status === 'approved' ? 'success' : 'danger'
+                        }
+                    >
+                        {item.status}
+                    </Chip>
+                    <span className="text-default-400 text-sm">{collapsed ? '▶' : '▼'}</span>
                 </div>
             </div>
 
-            {item.status === 'pending' && (
-                <div className="flex flex-row gap-2 pt-1">
-                    <Button variant="primary" size="sm" isDisabled={busy} onPress={() => handle(onAccept)}>
-                        Accept
-                    </Button>
-                    <Button size="sm" variant="danger-soft" isDisabled={busy} onPress={() => handle(onReject)}>
-                        Reject
-                    </Button>
-                </div>
+            {!collapsed && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                            <div className="text-xs font-bold text-default-500 uppercase mb-1">Current</div>
+                            <FieldDiff label="Question" current={current.question} improved={improved.question} side="current" />
+                            <FieldDiff label="Suggestion" current={current.suggestion} improved={improved.suggestion} side="current" />
+                            <FieldDiff label="Answer" current={current.answer} improved={improved.answer} side="current" />
+                            <FieldDiff label="Note" current={current.note} improved={improved.note} side="current" />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <div className="text-xs font-bold text-green-600 uppercase mb-1">Improved</div>
+                            <FieldDiff label="Question" current={current.question} improved={improved.question} side="improved" />
+                            <FieldDiff label="Suggestion" current={current.suggestion} improved={improved.suggestion} side="improved" />
+                            <FieldDiff label="Answer" current={current.answer} improved={improved.answer} side="improved" />
+                            <FieldDiff label="Note" current={current.note} improved={improved.note} side="improved" />
+                        </div>
+                    </div>
+
+                    {item.status === 'pending' && (
+                        <div className="flex flex-row gap-2 pt-1">
+                            <Button variant="primary" size="sm" isDisabled={busy} onPress={() => handle(onAccept)}>
+                                Accept
+                            </Button>
+                            <Button size="sm" variant="danger-soft" isDisabled={busy} onPress={() => handle(onReject)}>
+                                Reject
+                            </Button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )
@@ -194,7 +205,7 @@ export default function ImproveClient({ user_id }: Props) {
     }
 
     return (
-        <div className="flex flex-col w-full gap-4 py-2 px-2 max-w-5xl">
+        <div className="flex flex-col w-full gap-4 py-2 px-2">
             {/* Stats */}
             <div className="flex flex-row gap-2 flex-wrap items-center">
                 <Chip variant="tertiary">Pending: {stateStats.pending}</Chip>
