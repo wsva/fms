@@ -4,11 +4,12 @@ import { toast, Button } from "@heroui/react";
 import { useState, useEffect } from 'react';
 import Section from './section';
 
-type KeyEntry = { uuid: string; name: string; created_at: string }
+type KeyEntry = { uuid: string; name: string; scope: string; created_at: string }
 
 export default function ApiKeysSetting({ user_id }: { user_id: string }) {
     const [keys, setKeys] = useState<KeyEntry[]>([]);
     const [newName, setNewName] = useState('');
+    const [newScope, setNewScope] = useState<'write' | 'read'>('write');
     const [newKey, setNewKey] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -24,7 +25,7 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
         const r = await fetch('/api/apikey', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: newName || 'default' }),
+            body: JSON.stringify({ name: newName || 'default', scope: newScope }),
         });
         if (r.ok) {
             const data = await r.json();
@@ -59,6 +60,17 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
                     onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCreate()}
                 />
+                <div className="flex flex-row rounded border border-sand-300 overflow-hidden text-sm shrink-0">
+                    {(['write', 'read'] as const).map(s => (
+                        <button
+                            key={s}
+                            className={`px-3 py-1.5 transition-colors ${newScope === s ? 'bg-sand-700 text-white' : 'bg-sand-50 text-foreground-600 hover:bg-sand-100'}`}
+                            onClick={() => setNewScope(s)}
+                        >
+                            {s}
+                        </button>
+                    ))}
+                </div>
                 <Button variant="primary" size="sm" isDisabled={loading} onPress={handleCreate}>
                     Generate
                 </Button>
@@ -85,9 +97,12 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
                 <div className="flex flex-col gap-2">
                     {keys.map(k => (
                         <div key={k.uuid} className="flex flex-row items-center justify-between border border-sand-200 rounded px-3 py-2">
-                            <div>
+                            <div className="flex flex-row items-center gap-2">
                                 <span className="text-sm font-medium">{k.name}</span>
-                                <span className="text-xs text-foreground-400 ml-2">{new Date(k.created_at).toLocaleDateString()}</span>
+                                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${k.scope === 'write' ? 'bg-blue-50 text-blue-700' : 'bg-sand-100 text-foreground-500'}`}>
+                                    {k.scope ?? 'write'}
+                                </span>
+                                <span className="text-xs text-foreground-400">{new Date(k.created_at).toLocaleDateString()}</span>
                             </div>
                             <Button size="sm" variant="ghost" onPress={() => handleDelete(k.uuid)}>
                                 Revoke
@@ -99,10 +114,27 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
 
             <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-400 mb-1 mt-1">Usage</h3>
-                <pre className="text-xs bg-sand-50 border border-sand-200 rounded p-3 overflow-x-auto whitespace-pre">{`curl -X POST https://your-domain/api/card \\
+                <pre className="text-xs bg-sand-50 border border-sand-200 rounded p-3 overflow-x-auto whitespace-pre">{`curl https://your-domain/api/card \\
+  -H "x-api-key: fms_..."
+
+curl -X POST https://your-domain/api/card \\
   -H "x-api-key: fms_..." \\
   -H "Content-Type: application/json" \\
-  -d '{"question": "...", "answer": "..."}'`}</pre>
+  -d '{"question": "Was ist das?", "answer": "What is this?"}'`}</pre>
+            </div>
+
+            <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-400 mb-1 mt-1">MCP (Claude Code)</h3>
+                <pre className="text-xs bg-sand-50 border border-sand-200 rounded p-3 overflow-x-auto whitespace-pre">{`# .claude/mcp.json
+{
+  "mcpServers": {
+    "fms": {
+      "type": "http",
+      "url": "https://your-domain/api/mcp",
+      "headers": { "x-api-key": "fms_..." }
+    }
+  }
+}`}</pre>
             </div>
         </Section>
     );

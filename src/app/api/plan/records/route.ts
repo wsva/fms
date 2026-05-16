@@ -1,51 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { resolveAuth, denyIfReadOnly, resolveEmail } from '@/lib/api-auth';
-import { getCard, getCardAll, removeCard, saveCard } from '@/app/actions/card';
+import { getRecord, getRecordAll, saveRecord, removeRecord, getPlan } from '@/app/actions/plan';
 import { getUUID } from '@/lib/utils';
-import { FilterType, TagUnspecified } from '@/lib/card';
 
-const CreateCardSchema = z.object({
-    question: z.string().min(1, 'question is required'),
-    answer: z.string().min(1, 'answer is required'),
-    suggestion: z.string().default(''),
-    note: z.string().default(''),
+const CreateRecordSchema = z.object({
+    plan_uuid: z.string().min(1),
+    status: z.string().default(''),
+    start_at: z.string().datetime().nullable().optional(),
 });
 
-const UpdateCardSchema = z.object({
-    uuid: z.string().min(1, 'uuid is required'),
-    answer: z.string().min(1, 'answer is required'),
-    question: z.string().optional(),
-    suggestion: z.string().optional(),
-    note: z.string().optional(),
+const UpdateRecordSchema = z.object({
+    uuid: z.string().min(1),
+    status: z.string().optional(),
+    start_at: z.string().datetime().nullable().optional(),
 });
 
+// GET /api/plan/records?plan_uuid=... (list) or ?uuid=... (single)
 export async function GET(request: NextRequest) {
     const email = await resolveEmail(request);
     if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = request.nextUrl;
     const uuid = searchParams.get('uuid');
-
     if (uuid) {
-        const result = await getCard(uuid);
+        const result = await getRecord(uuid);
         if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 404 });
         if (result.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         return NextResponse.json(result.data);
     }
 
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)));
-    const keyword = searchParams.get('keyword') ?? '';
-    const tag_uuid = searchParams.get('tag_uuid') ?? TagUnspecified;
-    const filter_raw = searchParams.get('filter') ?? '';
-    const filter_type = Object.values(FilterType).includes(filter_raw as FilterType)
-        ? (filter_raw as FilterType)
-        : FilterType.Unspecified;
+    const plan_uuid = searchParams.get('plan_uuid');
+    if (!plan_uuid) return NextResponse.json({ error: 'plan_uuid or uuid is required' }, { status: 400 });
 
-    const result = await getCardAll(email, filter_type, tag_uuid, keyword, page, limit);
+    const plan = await getPlan(plan_uuid);
+    if (plan.status === 'error') return NextResponse.json({ error: plan.error }, { status: 404 });
+    if (plan.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const result = await getRecordAll(plan_uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
-    return NextResponse.json(result);
+    return NextResponse.json(result.data);
 }
 
 export async function POST(request: NextRequest) {
@@ -59,24 +53,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const parsed = CreateCardSchema.safeParse(body);
+    const parsed = CreateRecordSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
 
+    const plan = await getPlan(parsed.data.plan_uuid);
+    if (plan.status === 'error') return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+    if (plan.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     const now = new Date();
-    const result = await saveCard({
+    const result = await saveRecord({
         uuid: getUUID(),
         user_id: ctx.email,
-        question: parsed.data.question,
-        answer: parsed.data.answer,
-        suggestion: parsed.data.suggestion,
-        note: parsed.data.note,
-        familiarity: 0,
+        plan_uuid: parsed.data.plan_uuid,
+        status: parsed.data.status,
+        start_at: parsed.data.start_at ? new Date(parsed.data.start_at) : null,
         created_at: now,
         updated_at: now,
     });
-
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data, { status: 201 });
 }
@@ -92,24 +87,21 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const parsed = UpdateCardSchema.safeParse(body);
+    const parsed = UpdateRecordSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
 
-    const existing = await getCard(parsed.data.uuid);
+    const existing = await getRecord(parsed.data.uuid);
     if (existing.status === 'error') return NextResponse.json({ error: existing.error }, { status: 404 });
     if (existing.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const result = await saveCard({
+    const result = await saveRecord({
         ...existing.data,
-        answer: parsed.data.answer,
-        ...(parsed.data.question !== undefined && { question: parsed.data.question }),
-        ...(parsed.data.suggestion !== undefined && { suggestion: parsed.data.suggestion }),
-        ...(parsed.data.note !== undefined && { note: parsed.data.note }),
+        ...(parsed.data.status !== undefined && { status: parsed.data.status }),
+        ...(parsed.data.start_at !== undefined && { start_at: parsed.data.start_at ? new Date(parsed.data.start_at) : null }),
         updated_at: new Date(),
     });
-
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data);
 }
@@ -123,11 +115,11 @@ export async function DELETE(request: NextRequest) {
     const uuid = request.nextUrl.searchParams.get('uuid');
     if (!uuid) return NextResponse.json({ error: 'uuid is required' }, { status: 400 });
 
-    const existing = await getCard(uuid);
+    const existing = await getRecord(uuid);
     if (existing.status === 'error') return NextResponse.json({ error: existing.error }, { status: 404 });
     if (existing.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const result = await removeCard(uuid);
+    const result = await removeRecord(uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json({ deleted: uuid });
 }

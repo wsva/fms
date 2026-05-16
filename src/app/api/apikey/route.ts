@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const keys = await prisma.settings_api_key.findMany({
         where: { user_id: session.user.email },
-        select: { uuid: true, name: true, created_at: true },
+        select: { uuid: true, name: true, scope: true, created_at: true },
         orderBy: { created_at: 'desc' },
     })
     return NextResponse.json(keys)
@@ -23,9 +23,10 @@ export async function POST(request: NextRequest) {
     const session = await auth.api.getSession({ headers: request.headers })
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    let body: { name?: string }
+    let body: { name?: string; scope?: string }
     try { body = await request.json() } catch { body = {} }
     const name = (body.name ?? '').trim() || 'default'
+    const scope = body.scope === 'read' ? 'read' : 'write'
 
     const raw = 'fms_' + randomBytes(24).toString('hex')
     await prisma.settings_api_key.create({
@@ -33,11 +34,12 @@ export async function POST(request: NextRequest) {
             uuid: getUUID(),
             user_id: session.user.email,
             name,
+            scope,
             key_hash: hashKey(raw),
         },
     })
 
-    return NextResponse.json({ name, key: raw }, { status: 201 })
+    return NextResponse.json({ name, scope, key: raw }, { status: 201 })
 }
 
 // DELETE — revoke a key by uuid

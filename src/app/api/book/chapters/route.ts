@@ -1,51 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { resolveAuth, denyIfReadOnly, resolveEmail } from '@/lib/api-auth';
-import { getCard, getCardAll, removeCard, saveCard } from '@/app/actions/card';
+import { getBookChapter, getBookChapterAll, saveBookChapter, removeBookChapter, getBookMeta } from '@/app/actions/book';
 import { getUUID } from '@/lib/utils';
-import { FilterType, TagUnspecified } from '@/lib/card';
 
-const CreateCardSchema = z.object({
-    question: z.string().min(1, 'question is required'),
-    answer: z.string().min(1, 'answer is required'),
-    suggestion: z.string().default(''),
-    note: z.string().default(''),
+const CreateChapterSchema = z.object({
+    book_uuid: z.string().min(1),
+    title: z.string().min(1),
+    order_num: z.number().int().default(0),
+    parent_uuid: z.string().nullable().optional(),
 });
 
-const UpdateCardSchema = z.object({
-    uuid: z.string().min(1, 'uuid is required'),
-    answer: z.string().min(1, 'answer is required'),
-    question: z.string().optional(),
-    suggestion: z.string().optional(),
-    note: z.string().optional(),
+const UpdateChapterSchema = z.object({
+    uuid: z.string().min(1),
+    title: z.string().optional(),
+    order_num: z.number().int().optional(),
+    parent_uuid: z.string().nullable().optional(),
 });
 
+// GET /api/book/chapters?book_uuid=... (list) or ?uuid=... (single)
 export async function GET(request: NextRequest) {
     const email = await resolveEmail(request);
     if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = request.nextUrl;
     const uuid = searchParams.get('uuid');
-
     if (uuid) {
-        const result = await getCard(uuid);
+        const result = await getBookChapter(uuid);
         if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 404 });
-        if (result.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         return NextResponse.json(result.data);
     }
 
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)));
-    const keyword = searchParams.get('keyword') ?? '';
-    const tag_uuid = searchParams.get('tag_uuid') ?? TagUnspecified;
-    const filter_raw = searchParams.get('filter') ?? '';
-    const filter_type = Object.values(FilterType).includes(filter_raw as FilterType)
-        ? (filter_raw as FilterType)
-        : FilterType.Unspecified;
+    const book_uuid = searchParams.get('book_uuid');
+    if (!book_uuid) return NextResponse.json({ error: 'book_uuid or uuid is required' }, { status: 400 });
 
-    const result = await getCardAll(email, filter_type, tag_uuid, keyword, page, limit);
+    const book = await getBookMeta(book_uuid);
+    if (book.status === 'error') return NextResponse.json({ error: book.error }, { status: 404 });
+    if (book.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const result = await getBookChapterAll(book_uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
-    return NextResponse.json(result);
+    return NextResponse.json(result.data);
 }
 
 export async function POST(request: NextRequest) {
@@ -59,24 +54,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const parsed = CreateCardSchema.safeParse(body);
+    const parsed = CreateChapterSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
 
+    const book = await getBookMeta(parsed.data.book_uuid);
+    if (book.status === 'error') return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    if (book.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     const now = new Date();
-    const result = await saveCard({
+    const result = await saveBookChapter({
         uuid: getUUID(),
-        user_id: ctx.email,
-        question: parsed.data.question,
-        answer: parsed.data.answer,
-        suggestion: parsed.data.suggestion,
-        note: parsed.data.note,
-        familiarity: 0,
+        book_uuid: parsed.data.book_uuid,
+        title: parsed.data.title,
+        order_num: parsed.data.order_num,
+        parent_uuid: parsed.data.parent_uuid ?? null,
         created_at: now,
         updated_at: now,
     });
-
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data, { status: 201 });
 }
@@ -92,24 +88,26 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const parsed = UpdateCardSchema.safeParse(body);
+    const parsed = UpdateChapterSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
 
-    const existing = await getCard(parsed.data.uuid);
+    const existing = await getBookChapter(parsed.data.uuid);
     if (existing.status === 'error') return NextResponse.json({ error: existing.error }, { status: 404 });
-    if (existing.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const result = await saveCard({
+    const book = await getBookMeta(existing.data.book_uuid);
+    if (book.status === 'error' || book.data.user_id !== ctx.email) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const result = await saveBookChapter({
         ...existing.data,
-        answer: parsed.data.answer,
-        ...(parsed.data.question !== undefined && { question: parsed.data.question }),
-        ...(parsed.data.suggestion !== undefined && { suggestion: parsed.data.suggestion }),
-        ...(parsed.data.note !== undefined && { note: parsed.data.note }),
+        ...(parsed.data.title !== undefined && { title: parsed.data.title }),
+        ...(parsed.data.order_num !== undefined && { order_num: parsed.data.order_num }),
+        ...(parsed.data.parent_uuid !== undefined && { parent_uuid: parsed.data.parent_uuid }),
         updated_at: new Date(),
     });
-
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data);
 }
@@ -123,11 +121,15 @@ export async function DELETE(request: NextRequest) {
     const uuid = request.nextUrl.searchParams.get('uuid');
     if (!uuid) return NextResponse.json({ error: 'uuid is required' }, { status: 400 });
 
-    const existing = await getCard(uuid);
+    const existing = await getBookChapter(uuid);
     if (existing.status === 'error') return NextResponse.json({ error: existing.error }, { status: 404 });
-    if (existing.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const result = await removeCard(uuid);
+    const book = await getBookMeta(existing.data.book_uuid);
+    if (book.status === 'error' || book.data.user_id !== ctx.email) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const result = await removeBookChapter(uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json({ deleted: uuid });
 }

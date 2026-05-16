@@ -1,51 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { resolveAuth, denyIfReadOnly, resolveEmail } from '@/lib/api-auth';
-import { getCard, getCardAll, removeCard, saveCard } from '@/app/actions/card';
+import { getMedia, getMediaAll, saveMedia, removeMedia } from '@/app/actions/listen';
 import { getUUID } from '@/lib/utils';
-import { FilterType, TagUnspecified } from '@/lib/card';
 
-const CreateCardSchema = z.object({
-    question: z.string().min(1, 'question is required'),
-    answer: z.string().min(1, 'answer is required'),
-    suggestion: z.string().default(''),
+const CreateMediaSchema = z.object({
+    title: z.string().min(1),
+    source: z.string().default(''),
     note: z.string().default(''),
 });
 
-const UpdateCardSchema = z.object({
-    uuid: z.string().min(1, 'uuid is required'),
-    answer: z.string().min(1, 'answer is required'),
-    question: z.string().optional(),
-    suggestion: z.string().optional(),
+const UpdateMediaSchema = z.object({
+    uuid: z.string().min(1),
+    title: z.string().optional(),
+    source: z.string().optional(),
     note: z.string().optional(),
 });
 
+// GET /api/listen?uuid=... or GET /api/listen (list)
 export async function GET(request: NextRequest) {
     const email = await resolveEmail(request);
     if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { searchParams } = request.nextUrl;
-    const uuid = searchParams.get('uuid');
-
+    const uuid = request.nextUrl.searchParams.get('uuid');
     if (uuid) {
-        const result = await getCard(uuid);
+        const result = await getMedia(uuid);
         if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 404 });
-        if (result.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (result.data.media.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         return NextResponse.json(result.data);
     }
 
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)));
-    const keyword = searchParams.get('keyword') ?? '';
-    const tag_uuid = searchParams.get('tag_uuid') ?? TagUnspecified;
-    const filter_raw = searchParams.get('filter') ?? '';
-    const filter_type = Object.values(FilterType).includes(filter_raw as FilterType)
-        ? (filter_raw as FilterType)
-        : FilterType.Unspecified;
-
-    const result = await getCardAll(email, filter_type, tag_uuid, keyword, page, limit);
+    const result = await getMediaAll(email);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
-    return NextResponse.json(result);
+    return NextResponse.json(result.data);
 }
 
 export async function POST(request: NextRequest) {
@@ -59,24 +46,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const parsed = CreateCardSchema.safeParse(body);
+    const parsed = CreateMediaSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
 
     const now = new Date();
-    const result = await saveCard({
+    const result = await saveMedia({
         uuid: getUUID(),
         user_id: ctx.email,
-        question: parsed.data.question,
-        answer: parsed.data.answer,
-        suggestion: parsed.data.suggestion,
+        title: parsed.data.title,
+        source: parsed.data.source,
         note: parsed.data.note,
-        familiarity: 0,
         created_at: now,
         updated_at: now,
     });
-
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data, { status: 201 });
 }
@@ -92,24 +76,22 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const parsed = UpdateCardSchema.safeParse(body);
+    const parsed = UpdateMediaSchema.safeParse(body);
     if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
 
-    const existing = await getCard(parsed.data.uuid);
+    const existing = await getMedia(parsed.data.uuid);
     if (existing.status === 'error') return NextResponse.json({ error: existing.error }, { status: 404 });
-    if (existing.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (existing.data.media.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const result = await saveCard({
-        ...existing.data,
-        answer: parsed.data.answer,
-        ...(parsed.data.question !== undefined && { question: parsed.data.question }),
-        ...(parsed.data.suggestion !== undefined && { suggestion: parsed.data.suggestion }),
+    const result = await saveMedia({
+        ...existing.data.media,
+        ...(parsed.data.title !== undefined && { title: parsed.data.title }),
+        ...(parsed.data.source !== undefined && { source: parsed.data.source }),
         ...(parsed.data.note !== undefined && { note: parsed.data.note }),
         updated_at: new Date(),
     });
-
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data);
 }
@@ -123,11 +105,11 @@ export async function DELETE(request: NextRequest) {
     const uuid = request.nextUrl.searchParams.get('uuid');
     if (!uuid) return NextResponse.json({ error: 'uuid is required' }, { status: 400 });
 
-    const existing = await getCard(uuid);
+    const existing = await getMedia(uuid);
     if (existing.status === 'error') return NextResponse.json({ error: existing.error }, { status: 404 });
-    if (existing.data.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (existing.data.media.user_id !== ctx.email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const result = await removeCard(uuid);
+    const result = await removeMedia(uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json({ deleted: uuid });
 }

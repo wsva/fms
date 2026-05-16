@@ -48,6 +48,7 @@ model settings_api_key {
   user_id    String   @db.VarChar(100)
   name       String   @db.VarChar(100)
   key_hash   String   @unique @db.VarChar(64)
+  scope      String   @default("write") @db.VarChar(20)
   created_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
