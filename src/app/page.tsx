@@ -2,6 +2,7 @@ import { IndexItem } from "@/components/IndexItem";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import HomePopup from '@/app/plan/home_popup';
+import MottoPopup from '@/app/motto_popup';
 import { getKey } from '@/app/actions/settings_general';
 
 export default async function Home() {
@@ -11,16 +12,20 @@ export default async function Home() {
     const email = session?.user?.email || '';
 
     let showReminder = false;
+    let motto = '';
     if (email) {
-        const [reminderSetting] = await Promise.all([
+        const [reminderSetting, mottoValue] = await Promise.all([
             getKey('show_plan_reminder'),
+            getKey('motto'),
         ]);
         if (reminderSetting !== null) showReminder = reminderSetting === 'true';
+        if (mottoValue) motto = mottoValue;
     }
 
     return (
         <div>
             {showReminder && <HomePopup user_id={email} />}
+            {motto && <MottoPopup motto={motto} />}
             <div className="container grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
                 <IndexItem href='/listen/media' label='Listening'
                     description='View or edit media. Dictation.'

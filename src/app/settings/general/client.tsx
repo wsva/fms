@@ -4,6 +4,7 @@ import LocalServiceSetting from './local_service';
 import DefaultCardTagsSetting from './default_card_tags';
 import ApiKeysSetting from './api_keys';
 import ShowPlanReminderSetting from './show_plan_reminder';
+import MottoSetting from './motto';
 
 export default function GeneralSettingsClient({ user_id }: { user_id: string }) {
     return (
@@ -14,6 +15,7 @@ export default function GeneralSettingsClient({ user_id }: { user_id: string }) 
             </div>
 
             <LocalServiceSetting />
+            <MottoSetting />
             <ShowPlanReminderSetting />
             <DefaultCardTagsSetting user_id={user_id} />
             <ApiKeysSetting user_id={user_id} />
