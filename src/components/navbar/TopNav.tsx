@@ -3,6 +3,7 @@
 import { Button, ButtonGroup, Separator, Dropdown, Label, Description, Link, Tooltip, Header } from "@heroui/react"
 import { useEffect, useState } from 'react';
 import { useRouter } from "next/navigation";
+import NextLink from 'next/link';
 import { MdMenu, MdClose } from "react-icons/md";
 import { menuList } from "./menu";
 import { authClient } from "@/lib/auth-client";
@@ -136,11 +137,12 @@ export default function TopNav() {
                                                         id={item.key}
                                                         textValue={item.name}
                                                         key={item.key}
-                                                        className="flex flex-col items-start justify-center gap-1 bg-sand-300 rounded-sm"
-                                                        onPress={() => router.push(item.href)}
+                                                        className="p-0 bg-sand-300 rounded-sm"
                                                     >
-                                                        <Label className="font-bold">{item.name}</Label>
-                                                        <Description>{item.description}</Description>
+                                                        <NextLink href={item.href} className="flex flex-col items-start justify-center gap-1 w-full px-3 py-2">
+                                                            <Label className="font-bold">{item.name}</Label>
+                                                            <Description>{item.description}</Description>
+                                                        </NextLink>
                                                     </Dropdown.Item>
                                                 )
                                             })}

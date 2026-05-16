@@ -152,7 +152,7 @@ export default function PlanCountdown({ user_id }: { user_id: string }) {
     if (!user_id) return null
 
     return (
-        <div className="flex flex-row items-center justify-center">
+        <div className="flex flex-row items-center justify-center mx-1">
             {/* Plan selector */}
             <Modal>
                 <Modal.Backdrop isOpen={showSelector} onOpenChange={open => { if (!open) setShowSelector(false) }}>
@@ -191,7 +191,7 @@ export default function PlanCountdown({ user_id }: { user_id: string }) {
 
             {/* Navbar widget */}
             {phase === 'idle' && (
-                <Button size="sm" variant="ghost" onPress={handleOpenSelector}>
+                <Button size="sm" className="text-lg bg-sand-400" onPress={handleOpenSelector}>
                     <PlayFill />
                     Start Plan
                 </Button>
