@@ -6,6 +6,8 @@ import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
 import { useState, useRef, useEffect } from 'react'
 import { getLocalServiceUrl } from '@/lib/local-stt'
+import { getBookSentenceWords } from '@/app/actions/book'
+import type { book_sentence_word } from '@/generated/prisma/client'
 
 const LS_KEY = 'read_auto_replace_rules'
 const DEFAULT_RULES_TEXT = `\
@@ -86,6 +88,7 @@ export default function SentenceDrawer({
     const [rulesText, setRulesText] = useState(DEFAULT_RULES_TEXT)
     const [showRulesEditor, setShowRulesEditor] = useState(false)
     const [hasLocalService, setHasLocalService] = useState(false)
+    const [words, setWords] = useState<book_sentence_word[]>([])
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
@@ -95,6 +98,13 @@ export default function SentenceDrawer({
     useEffect(() => {
         getLocalServiceUrl().then(url => setHasLocalService(!!url))
     }, [])
+
+    useEffect(() => {
+        if (drawer?.mode !== 'edit') { setWords([]); return }
+        getBookSentenceWords(drawer.sentence.uuid).then(r => {
+            if (r.status === 'success') setWords(r.data)
+        })
+    }, [drawer?.mode === 'edit' ? drawer.sentence.uuid : null])
 
     const openRulesEditor = () => {
         setShowRulesEditor(true)
@@ -319,6 +329,23 @@ export default function SentenceDrawer({
                             />
                         ))}
                     </div>
+
+                    {/* Words */}
+                    {words.length > 0 && (
+                        <div className="flex flex-row flex-wrap gap-1.5 pt-1 border-t border-sand-200">
+                            {words.map(w => (
+                                <Tooltip key={w.uuid}>
+                                    <Tooltip.Trigger>
+                                        <span className="inline-flex flex-col items-center px-2 py-0.5 rounded bg-sand-100 border border-sand-200 text-xs leading-tight cursor-default">
+                                            <span className="font-medium">{w.word}</span>
+                                            {w.word_type && <span className="text-foreground-400 text-[10px]">{w.word_type}</span>}
+                                        </span>
+                                    </Tooltip.Trigger>
+                                    {w.note && <Tooltip.Content>{w.note}</Tooltip.Content>}
+                                </Tooltip>
+                            ))}
+                        </div>
+                    )}
 
                 </div>
             </div>

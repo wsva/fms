@@ -31,7 +31,7 @@ The generated Prisma client lives at `src/generated/prisma/client` (not the defa
 
 ## API Documentation
 
-Full API reference: [`docs/api.md`](docs/api.md)
+Full API reference: [`docs/api/index.md`](docs/api/index.md)
 
 ## Architecture
 

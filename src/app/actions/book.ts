@@ -3,7 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errors";
-import { book_meta, book_chapter, book_sentence } from "@/generated/prisma/client";
+import { getUUID } from "@/lib/utils";
+import { book_meta, book_chapter, book_sentence, book_sentence_word } from "@/generated/prisma/client";
 
 // ─── book_meta ────────────────────────────────────────────────────────────────
 
@@ -206,6 +207,63 @@ export async function removeBookSentence(uuid: string): Promise<ActionResult<boo
     try {
         const result = await prisma.book_sentence.delete({ where: { uuid } });
         return { status: 'success', data: result };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+// ─── book_sentence_word ───────────────────────────────────────────────────────
+
+export async function getBookSentenceWords(sentence_uuid: string): Promise<ActionResult<book_sentence_word[]>> {
+    try {
+        const result = await prisma.book_sentence_word.findMany({
+            where: { sentence_uuid },
+        });
+        return { status: 'success', data: result };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+export async function getBookSentencesWithoutWords(
+    chapter_uuid: string,
+    user_id: string,
+): Promise<ActionResult<book_sentence[]>> {
+    try {
+        const sentences = await prisma.book_sentence.findMany({
+            where: { chapter_uuid, user_id },
+            orderBy: { order_num: 'asc' },
+        });
+        if (sentences.length === 0) return { status: 'success', data: [] };
+
+        const withWords = await prisma.book_sentence_word.findMany({
+            where: { sentence_uuid: { in: sentences.map(s => s.uuid) } },
+            select: { sentence_uuid: true },
+            distinct: ['sentence_uuid'],
+        });
+
+        const withWordsSet = new Set(withWords.map(w => w.sentence_uuid));
+        return { status: 'success', data: sentences.filter(s => !withWordsSet.has(s.uuid)) };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+export async function replaceBookSentenceWords(
+    sentence_uuid: string,
+    words: Array<{ word: string; word_type: string; note: string }>,
+): Promise<ActionResult<number>> {
+    try {
+        const count = await prisma.$transaction(async (tx) => {
+            await tx.book_sentence_word.deleteMany({ where: { sentence_uuid } });
+            const data = words.map(w => ({ uuid: getUUID(), sentence_uuid, ...w }));
+            const { count } = await tx.book_sentence_word.createMany({ data });
+            return count;
+        });
+        return { status: 'success', data: count };
     } catch (error) {
         console.error(error);
         return { status: 'error', error: toErrorMessage(error) };
