@@ -233,7 +233,7 @@ export async function getBookSentencesWithoutWords(
 ): Promise<ActionResult<book_sentence[]>> {
     try {
         const sentences = await prisma.book_sentence.findMany({
-            where: { chapter_uuid, user_id },
+            where: { chapter_uuid, user_id, sentence_type: "text" },
             orderBy: { order_num: 'asc' },
         });
         if (sentences.length === 0) return { status: 'success', data: [] };
