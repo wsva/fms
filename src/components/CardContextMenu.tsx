@@ -8,6 +8,7 @@ import { authClient } from '@/lib/auth-client'
 import { getKey } from '@/app/actions/settings_general'
 import { guessGermanBaseForm } from '@/lib/card'
 import { qsa_card } from '@/generated/prisma/client'
+import Markdown2Html from '@/components/markdown/markdown'
 
 type MenuPos = { x: number; y: number }
 
@@ -17,14 +18,18 @@ export default function CardContextMenu() {
     const [selectedText, setSelectedText] = useState('')
     const [cardLinks, setCardLinks] = useState<qsa_card[]>([])
     const [cardLinksLoading, setCardLinksLoading] = useState(false)
+    const [drawerCard, setDrawerCard] = useState<qsa_card | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
+    const drawerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         authClient.getSession().then((s) => setEmail(s.data?.user?.email || ''))
     }, [])
 
     useEffect(() => {
-        const onMouseUp = () => {
+        const onMouseUp = (e: MouseEvent) => {
+            if (menuRef.current?.contains(e.target as Node)) return
+            if (drawerRef.current?.contains(e.target as Node)) return
             const sel = window.getSelection()
             const text = sel?.toString().trim()
             if (!text || !sel?.rangeCount) return
@@ -34,6 +39,7 @@ export default function CardContextMenu() {
             setMenuPos({ x: rect.left + rect.width / 2, y: rect.top })
         }
         const onPointerDown = (e: MouseEvent) => {
+            if (drawerRef.current?.contains(e.target as Node)) return
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
                 setMenuPos(null)
             }
@@ -66,7 +72,7 @@ export default function CardContextMenu() {
         setMenuPos(null)
 
         const card_uuid = getUUID()
-        
+
         const result = await saveCard({
             uuid: card_uuid,
             user_id: email,
@@ -139,16 +145,57 @@ export default function CardContextMenu() {
                         {!cardLinksLoading && cardLinks.length > 0 && (
                             <div className="mt-1 space-y-1 max-h-40 overflow-y-auto">
                                 {cardLinks.map((c) => (
-                                    <a key={c.uuid} href={`/card/${c.uuid}`} target="_blank" rel="noreferrer"
-                                        className="block text-xs text-blue-600 dark:text-blue-400 hover:underline truncate"
+                                    <button key={c.uuid}
+                                        className="block w-full text-left text-xs text-blue-600 dark:text-blue-400 hover:underline truncate"
                                         title={c.question}
-                                        onClick={() => setMenuPos(null)}
+                                        onClick={() => setDrawerCard(c)}
                                     >
                                         [{c.user_id}] {c.question.slice(0, 60)}
-                                    </a>
+                                    </button>
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {drawerCard && (
+                <div ref={drawerRef} className="fixed inset-0 z-[10000]">
+                    <div
+                        className="absolute inset-0 bg-black/40"
+                        onClick={() => setDrawerCard(null)}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 rounded-t-2xl shadow-2xl flex flex-col max-h-[70vh]">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-700 shrink-0">
+                            <span className="text-xs text-gray-400">{drawerCard.user_id}</span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                    onClick={() => {
+                                        window.open(`/card/${drawerCard.uuid}`, '_blank')
+                                        setDrawerCard(null)
+                                    }}
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none"
+                                    onClick={() => setDrawerCard(null)}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                        <div className="overflow-y-auto p-4 space-y-4">
+                            <div className="text-lg font-medium">{drawerCard.question}</div>
+                            <hr className="border-slate-200 dark:border-zinc-700" />
+                            <div className="text-sm">
+                                <Markdown2Html content={drawerCard.answer} />
+                            </div>
+                            {drawerCard.note && (
+                                <pre className="text-xs text-gray-500 whitespace-pre-wrap">{drawerCard.note}</pre>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

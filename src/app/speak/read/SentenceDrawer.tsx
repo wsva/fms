@@ -106,6 +106,17 @@ export default function SentenceDrawer({
         })
     }, [drawer?.mode === 'edit' ? drawer.sentence.uuid : null])
 
+    const handleWordMouseDown = (e: React.MouseEvent<HTMLSpanElement>) => {
+        e.preventDefault()
+        const range = document.createRange()
+        range.selectNodeContents(e.currentTarget)
+        const sel = window.getSelection()
+        if (sel) {
+            sel.removeAllRanges()
+            sel.addRange(range)
+        }
+    }
+
     const openRulesEditor = () => {
         setShowRulesEditor(true)
     }
@@ -336,8 +347,8 @@ export default function SentenceDrawer({
                             {words.map(w => (
                                 <Tooltip key={w.uuid}>
                                     <Tooltip.Trigger>
-                                        <span className="inline-flex flex-col items-center px-2 py-0.5 rounded bg-sand-100 border border-sand-200 text-xs leading-tight cursor-default">
-                                            <span className="font-medium">{w.word}</span>
+                                        <span className="inline-flex flex-col items-center px-2 py-0.5 rounded bg-sand-100 border border-sand-200 text-xs leading-tight">
+                                            <span className="font-medium cursor-pointer hover:text-blue-600" onMouseDown={handleWordMouseDown}>{w.word}</span>
                                             {w.word_type && <span className="text-foreground-400 text-[10px]">{w.word_type}</span>}
                                         </span>
                                     </Tooltip.Trigger>

@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
         suggestion: parsed.data.suggestion,
         note: parsed.data.note,
         familiarity: 0,
+        question_hash: null,
         created_at: now,
         updated_at: now,
     });
