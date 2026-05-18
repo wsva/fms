@@ -81,6 +81,7 @@ export default function CardContextMenu() {
             suggestion: '',
             note: '',
             familiarity: 0,
+            question_hash: null,
             created_at: new Date(),
             updated_at: new Date(),
         })

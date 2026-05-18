@@ -33,6 +33,7 @@ export default function Page({ word, language, email }: Props) {
             answer: 'easy',
             familiarity: 6,
             note: `{"type":"topword", "word":${JSON.stringify(word.word)}}`,
+            question_hash: null,
             created_at: new Date(),
             updated_at: new Date(),
         })
@@ -68,6 +69,7 @@ export default function Page({ word, language, email }: Props) {
             answer: formData.answer || "",
             familiarity: formData.familiarity || 0,
             note: formData.note || "",
+            question_hash: null,
             created_at: new Date(),
             updated_at: new Date(),
         })
