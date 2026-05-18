@@ -1,3 +1,44 @@
+// Normalize before hashing so minor surface variants map to the same hash.
+// Rules (applied in order):
+//   1. trim + lowercase
+//   2. collapse internal whitespace
+//   3. strip trailing punctuation
+//   4. strip German article / reflexive prefix from two-token phrases
+//      (der/die/das/ein/eine/sich + single word)
+export function normalizeQuestion(question: string): string {
+    let q = question.trim().toLowerCase()
+    q = q.replace(/\s+/g, ' ')
+    q = q.replace(/[?.!,;:]+$/, '')
+    q = q.replace(/^(der|die|das|ein|eine|sich)\s+(\S+)$/, '$2')
+    return q
+}
+
+// Heuristic: guess the German infinitive from a conjugated verb form.
+// Only single words are processed; multi-word selections are returned unchanged.
+// Handles regular verb endings only; irregular verbs are not covered.
+export function guessGermanBaseForm(text: string): string {
+    const trimmed = text.trim()
+    if (/\s/.test(trimmed)) return trimmed  // phrases: leave as-is
+
+    const lower = trimmed.toLowerCase()
+    // Most-specific suffix first to avoid partial matches
+    const rules: [suffix: string, replacement: string][] = [
+        ['test', 'en'],  // lerntest  → lernen
+        ['tet',  'en'],  // lerntet   → lernen
+        ['ten',  'en'],  // lernten   → lernen
+        ['te',   'en'],  // lernte    → lernen
+        ['st',   'en'],  // lernst    → lernen
+    ]
+    const MIN_STEM = 3  // guards against mangling short words like "ist", "bist"
+    for (const [suffix, replacement] of rules) {
+        const stemLen = trimmed.length - suffix.length
+        if (lower.endsWith(suffix) && stemLen >= MIN_STEM) {
+            return trimmed.slice(0, stemLen) + replacement
+        }
+    }
+    return trimmed
+}
+
 export enum FilterType {
     Normal = "normal",
     Easy = "easy",

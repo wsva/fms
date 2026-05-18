@@ -316,15 +316,18 @@ model book_sentence_word {
 // ---------- card
 
 model qsa_card {
-  uuid        String   @id @db.VarChar(100)
-  user_id     String   @db.VarChar(100)
-  question    String
-  suggestion  String
-  answer      String
-  familiarity Int
-  note        String
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  uuid          String   @id @db.VarChar(100)
+  user_id       String   @db.VarChar(100)
+  question      String
+  suggestion    String
+  answer        String
+  familiarity   Int
+  note          String
+  question_hash String?  @db.VarChar(100)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([question_hash])
 }
 
 model qsa_card_review {

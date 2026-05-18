@@ -4,12 +4,18 @@
  * PrismaClient is unable to be run in the browser.
  */
 
+import { createHash } from 'crypto';
 import { prisma } from "@/lib/prisma";
 import { ActionResult, card_ext, card_review } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
 import { qsa_card, Prisma, qsa_card_tag, qsa_card_review } from "@/generated/prisma/client";
-import { FilterType, TagAll, TagUnspecified, TagNo } from "@/lib/card";
+
+import { FilterType, TagAll, TagUnspecified, TagNo, normalizeQuestion } from "@/lib/card";
+
+function computeQuestionHash(question: string): string {
+    return createHash('sha256').update(normalizeQuestion(question)).digest('hex')
+}
 
 export async function getCardAll(
     email: string,
@@ -157,7 +163,49 @@ export async function saveCard(item: qsa_card): Promise<ActionResult<qsa_card>> 
             update: item,
         })
 
+        const hash = computeQuestionHash(item.question)
+        await prisma.$executeRaw`UPDATE qsa_card SET question_hash = ${hash} WHERE uuid = ${item.uuid}`
+
         return { status: "success", data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function getCardsByQuestionHash(
+    question: string,
+    exclude_uuid?: string,
+): Promise<ActionResult<qsa_card[]>> {
+    if (!question.trim()) return { status: 'success', data: [] }
+    const hash = computeQuestionHash(question)
+    try {
+        const result = exclude_uuid
+            ? await prisma.$queryRaw<qsa_card[]>(
+                Prisma.sql`SELECT * FROM qsa_card WHERE question_hash = ${hash} AND uuid != ${exclude_uuid} LIMIT 10`
+            )
+            : await prisma.$queryRaw<qsa_card[]>(
+                Prisma.sql`SELECT * FROM qsa_card WHERE question_hash = ${hash} LIMIT 10`
+            )
+        return { status: 'success', data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+// Search cards matching any of the given question strings (after normalization + hashing).
+// Duplicate hashes are collapsed automatically.
+export async function getCardsByQuestionHashes(
+    questions: string[],
+): Promise<ActionResult<qsa_card[]>> {
+    const hashes = [...new Set(questions.map(q => q.trim()).filter(Boolean).map(computeQuestionHash))]
+    if (!hashes.length) return { status: 'success', data: [] }
+    try {
+        const result = await prisma.$queryRaw<qsa_card[]>(
+            Prisma.sql`SELECT * FROM qsa_card WHERE question_hash IN (${Prisma.join(hashes)}) LIMIT 20`
+        )
+        return { status: 'success', data: result }
     } catch (error) {
         console.error(error)
         return { status: 'error', error: toErrorMessage(error) }

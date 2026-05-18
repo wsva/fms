@@ -7,7 +7,7 @@ import MdEditor from '@/components/MdEditor'
 import { useSearchParams } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form';
 import { qsa_card, dataset_tag } from "@/generated/prisma/client";
-import { getCardTag, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
+import { getCardTag, getCardsByQuestionHash, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
 import { FamiliarityList } from '@/lib/card';
 import { card_ext } from '@/lib/types';
 import Markdown2Html from '@/components/markdown/markdown';
@@ -31,6 +31,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     const [stateBackupData, setStateBackupData] = useState<Record<string, unknown> | null>(null);
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
     const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag | null>>(new Map());
+    const [stateDuplicates, setStateDuplicates] = useState<qsa_card[]>([]);
     const { register, handleSubmit, formState, watch, reset, getValues, control } = useForm<qsa_card>({});
 
     const formRef = useRef<HTMLFormElement>(null);
@@ -149,8 +150,8 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
     // auto save form data to localStorage
     useEffect(() => {
-        // Skip until stateCard is ready — avoids overwriting a valid backup on mount
-        if (!stateCard) return;
+        // Skip until stateCard is ready and the user has actually edited something
+        if (!stateCard || !formState.isDirty) return;
         try {
             localStorage.setItem(
                 BACKUP_KEY,
@@ -168,6 +169,19 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             console.error('save backup error:', error)
         }
     }, [stateCard, watch('question'), watch('suggestion'), watch('answer'), watch('familiarity'), watch('note')]);
+
+    const questionValue = watch('question')
+    useEffect(() => {
+        if (!stateCard || !questionValue?.trim()) {
+            setStateDuplicates([])
+            return
+        }
+        const timer = setTimeout(async () => {
+            const result = await getCardsByQuestionHash(questionValue, card_ext.uuid)
+            if (result.status === 'success') setStateDuplicates(result.data)
+        }, 400)
+        return () => clearTimeout(timer)
+    }, [questionValue, card_ext.uuid])
 
     const getColor = (familiarity: number) => {
         return FamiliarityList.map((v) => v.color)[familiarity]
@@ -284,6 +298,18 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             placeholder='question'
                             {...register('question')}
                         />
+                        {stateDuplicates.length > 0 && (
+                            <div className='text-xs text-amber-700 flex flex-wrap gap-x-2 gap-y-1 items-center'>
+                                <span>⚠ Same question in:</span>
+                                {stateDuplicates.map((c) => (
+                                    <Link key={c.uuid} href={`/card/${c.uuid}`} target='_blank'
+                                        className='text-xs underline text-amber-700 truncate max-w-[480px]'
+                                    >
+                                        [{c.user_id}] {c.question.slice(0, 80)}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                         {!simple && (
                             <Controller
                                 name="familiarity"
@@ -333,6 +359,18 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                         <div className='text-xl bg-sand-300 rounded-md p-2'>
                             <Markdown2Html content={watch('question', getDefault('question') as string)} />
                         </div>
+                        {stateDuplicates.length > 0 && (
+                            <div className='text-xs text-amber-700 flex flex-wrap gap-x-2 gap-y-1 items-center'>
+                                <span>⚠ Same question in:</span>
+                                {stateDuplicates.map((c) => (
+                                    <Link key={c.uuid} href={`/card/${c.uuid}`} target='_blank'
+                                        className='text-xs underline text-amber-700 truncate max-w-[480px]'
+                                    >
+                                        [{c.user_id}] {c.question.slice(0, 80)}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                         <Separator />
                         <Select aria-label='select familiarity'
                             selectedKey={String(watch('familiarity') ?? 0)}
