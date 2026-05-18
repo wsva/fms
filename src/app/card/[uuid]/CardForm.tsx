@@ -57,6 +57,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
             answer: String(stateBackupData.answer || ''),
             familiarity: parseInt(String(stateBackupData.familiarity || '0'), 10),
             note: String(stateBackupData.note || ''),
+            question_hash: null,
             created_at: stateBackupData.created_at ? new Date(String(stateBackupData.created_at)) : stateCard.created_at,
             updated_at: new Date(),
         }
@@ -95,6 +96,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                 answer: getDefault("answer") as string || "",
                 familiarity: (card_ext.user_id === email) ? getDefault('familiarity') as number || 0 : 0,
                 note: getDefault("note") as string || "",
+                question_hash: card_ext.question_hash ?? null,
                 created_at: card_ext.created_at || new Date(),
                 updated_at: card_ext.updated_at || new Date(),
             }
