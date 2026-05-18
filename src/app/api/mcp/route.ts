@@ -375,7 +375,7 @@ async function callTool(name: string, args: Args, email: string, scope: string):
         if (book.status === 'error') return err('Book not found');
         if (book.data.user_id !== email) return err('Forbidden');
         const now = new Date();
-        const r = await saveBookChapter({ uuid: getUUID(), book_uuid: args.book_uuid as string, title: args.title as string, order_num: (args.order_num as number) || 0, parent_uuid: (args.parent_uuid as string) ?? null, created_at: now, updated_at: now });
+        const r = await saveBookChapter({ uuid: getUUID(), book_uuid: args.book_uuid as string, title: args.title as string, order_num: (args.order_num as number) || 0, parent_uuid: (args.parent_uuid as string) ?? null, status: null, created_at: now, updated_at: now });
         return r.status === 'error' ? err(r.error as string) : ok(r.data);
     }
     if (name === 'delete_chapter') {

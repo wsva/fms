@@ -69,6 +69,7 @@ type NodeHandlers = {
     onCancelAdd: () => void
     onAddFormChange: (f: ChapterForm) => void
     onDelete: (item: book_chapter) => void
+    onToggleStatus: (item: book_chapter) => void
 }
 
 function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: NodeHandlers }) {
@@ -76,11 +77,12 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
     const isEditing = h.editUUID === node.uuid
     const isAddingChild = h.addingUnder === node.uuid
     const indent = depth * 20
+    const isCompleted = node.status === 'completed'
 
     return (
         <div>
             <div
-                className="flex flex-row items-start justify-start gap-1 rounded-lg px-2 bg-sand-200 group hover:bg-sand-300"
+                className={`flex flex-row items-start justify-start gap-1 rounded-lg px-2 group ${isCompleted ? 'bg-green-100 hover:bg-green-200' : 'bg-sand-200 hover:bg-sand-300'}`}
                 style={{ marginLeft: indent }}
             >
                 <div className="flex-1 min-w-0">
@@ -108,6 +110,21 @@ function ChapterItem({ node, depth, h }: { node: ChapterNode; depth: number; h: 
                                 <div className="font-medium">{node.title}</div>
                             </div>
                             <div className="flex flex-row gap-1 flex-shrink-0">
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button isIconOnly size="sm"
+                                            variant={isCompleted ? 'primary' : 'ghost'}
+                                            className={isCompleted ? '' : 'opacity-0 group-hover:opacity-100 transition-opacity'}
+                                            isDisabled={h.saving}
+                                            onPress={() => h.onToggleStatus(node)}
+                                        >
+                                            ✓
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        {isCompleted ? 'Mark as incomplete' : 'Mark as completed'}
+                                    </Tooltip.Content>
+                                </Tooltip>
                                 <Tooltip>
                                     <Tooltip.Trigger>
                                         <Button isIconOnly size="sm" variant="ghost"
@@ -318,6 +335,7 @@ export default function Client({ email }: Props) {
             parent_uuid: parentUuid,
             order_num: siblings.length + 1,
             title: stateChapterAddForm.title,
+            status: null,
             created_at: new Date(),
             updated_at: new Date(),
         }
@@ -343,6 +361,20 @@ export default function Client({ email }: Props) {
         if (result.status === 'success') {
             setStateEditChapterUUID(null)
             setStateChaptersReload(n => n + 1)
+        } else {
+            toast.danger('save error')
+        }
+        setStateSavingChapter(false)
+    }
+
+    const handleToggleStatus = async (item: book_chapter) => {
+        const { children: _children, ...base } = item as ChapterNode
+        const newStatus = base.status === 'completed' ? null : 'completed'
+        setStateSavingChapter(true)
+        const updated = { ...base, status: newStatus, updated_at: new Date() }
+        const result = await saveBookChapter(updated)
+        if (result.status === 'success') {
+            setStateFlat(prev => prev.map(c => c.uuid === item.uuid ? { ...c, status: newStatus } : c))
         } else {
             toast.danger('save error')
         }
@@ -390,6 +422,7 @@ export default function Client({ email }: Props) {
         onCancelAdd: () => setStateAddingUnder(undefined),
         onAddFormChange: setStateChapterAddForm,
         onDelete: handleDeleteChapter,
+        onToggleStatus: handleToggleStatus,
     }
 
     const selectedBook = stateBooks.find(b => b.uuid === stateBookUUID)

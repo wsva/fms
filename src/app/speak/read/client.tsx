@@ -7,7 +7,7 @@ import { MdViewHeadline, MdViewStream } from 'react-icons/md'
 import { book_chapter, book_meta } from "@/generated/prisma/client"
 import {
     getBookMetaAll, getBookChapterAll,
-    getBookSentenceAll, saveBookSentence, saveBookSentenceMany, removeBookSentence,
+    getBookSentenceAll, saveBookSentence, saveBookSentenceMany, removeBookSentence, saveBookChapter,
 } from "@/app/actions/book"
 import { toggleRecording } from '@/lib/recording'
 import { ActionResult } from '@/lib/types'
@@ -561,11 +561,26 @@ export default function Client({ email }: Props) {
             : stateDrawerHasLocalAudio
         : false
 
+    // ── Toggle chapter completed status ─────────────────────────────────────
+    const handleToggleChapterStatus = async () => {
+        const chapter = stateChaptersFlat.find(c => c.uuid === stateChapterUUID)
+        if (!chapter) return
+        setStateSaving(true)
+        const newStatus = chapter.status === 'completed' ? null : 'completed'
+        const r = await saveBookChapter({ ...chapter, status: newStatus, updated_at: new Date() })
+        if (r.status === 'success') {
+            setStateChaptersFlat(prev => prev.map(c => c.uuid === stateChapterUUID ? { ...c, status: newStatus } : c))
+        } else {
+            toast.danger('save error')
+        }
+        setStateSaving(false)
+    }
+
     const bookBtnClass = (active: boolean) =>
         `w-full text-left px-2 py-1.5 rounded-lg text-xs sm:text-xl font-medium transition-colors ${active ? 'bg-sand-300 text-foreground font-semibold' : 'hover:bg-sand-200 text-foreground-700'}`
 
-    const chapterBtnClass = (active: boolean) =>
-        `w-full text-left px-2 py-1 rounded text-xs sm:text-lg transition-colors ${active ? 'bg-sand-300 font-semibold text-foreground' : 'hover:bg-sand-200 text-foreground-600'}`
+    const chapterBtnClass = (active: boolean, completed: boolean) =>
+        `w-full text-left px-2 py-1 rounded text-xs sm:text-lg transition-colors ${active ? 'bg-sand-300 font-semibold text-foreground' : completed ? 'bg-green-100 hover:bg-green-200 text-foreground-600' : 'hover:bg-sand-200 text-foreground-600'}`
 
     // ── Render ──────────────────────────────────────────────────────────────
     return (
@@ -598,7 +613,7 @@ export default function Client({ email }: Props) {
                                     {flatChapters.map(c => (
                                         <button
                                             key={c.uuid}
-                                            className={chapterBtnClass(stateChapterUUID === c.uuid)}
+                                            className={chapterBtnClass(stateChapterUUID === c.uuid, c.status === 'completed')}
                                             onClick={() => setStateChapterUUID(c.uuid)}
                                             style={{ paddingLeft: `${c.depth * 20}px` }}
                                         >
@@ -627,6 +642,13 @@ export default function Client({ email }: Props) {
                             Save Order
                         </Button>
                     )}
+                    <Button size="sm"
+                        variant={stateChaptersFlat.find(c => c.uuid === stateChapterUUID)?.status === 'completed' ? 'primary' : 'ghost'}
+                        isDisabled={stateSaving}
+                        onPress={handleToggleChapterStatus}
+                    >
+                        {stateChaptersFlat.find(c => c.uuid === stateChapterUUID)?.status === 'completed' ? '✓ Completed' : 'Mark Completed'}
+                    </Button>
                     <Button size="sm" variant="ghost" onPress={() => window.open(`/blog/${stateChapterUUID}?description=${encodeURIComponent(chapterPath)}`, '_blank')}>
                         note
                     </Button>

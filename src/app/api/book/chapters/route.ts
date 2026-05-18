@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         title: parsed.data.title,
         order_num: parsed.data.order_num,
         parent_uuid: parsed.data.parent_uuid ?? null,
+        status: null,
         created_at: now,
         updated_at: now,
     });
