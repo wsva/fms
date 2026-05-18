@@ -103,7 +103,7 @@ async function callTool(name: string, args: Args, email: string, scope: string):
     if (name === 'create_card') {
         if (readonly) return err('This API key is read-only');
         const now = new Date();
-        const r = await saveCard({ uuid: getUUID(), user_id: email, question: args.question as string, answer: args.answer as string, suggestion: (args.suggestion as string) || '', note: (args.note as string) || '', familiarity: 0, created_at: now, updated_at: now });
+        const r = await saveCard({ uuid: getUUID(), user_id: email, question: args.question as string, answer: args.answer as string, suggestion: (args.suggestion as string) || '', note: (args.note as string) || '', familiarity: 0, question_hash: null, created_at: now, updated_at: now });
         return r.status === 'error' ? err(r.error as string) : ok(r.data);
     }
     if (name === 'update_card') {
