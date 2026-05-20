@@ -148,6 +148,13 @@ model word_trash {
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
+model word_mapping {
+  uuid       String   @id @db.VarChar(100)
+  word       String
+  base_form  String
+  language   String   @db.VarChar(10)
+}
+
 // ---------- blog
 
 model blog {

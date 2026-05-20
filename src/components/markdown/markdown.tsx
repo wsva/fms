@@ -18,6 +18,10 @@ export default function Page({ src, content, withTOC = false }: Props) {
     const [stateBody, setStateBody] = useState<string>("");
 
     useEffect(() => {
+        if (content !== undefined) setStateContent(content);
+    }, [content]);
+
+    useEffect(() => {
         if (!!src) {
             fetch(src)
                 .then(res => res.text())

@@ -137,11 +137,11 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
     }, [initialSuccess])
 
     const timeEditorEl = (
-        <InputGroup className="w-sm shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
+        <InputGroup className="w-xs shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
             <InputGroup.Prefix className="p-0 bg-sand-100">
                 <Tooltip>
                     <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" onPress={onExpandStart}>
+                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" onPress={onExpandStart}>
                             <ArrowLeftToLine />
                         </Button>
                     </Tooltip.Trigger>
@@ -151,7 +151,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 </Tooltip>
                 <Tooltip>
                     <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm"
+                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2"
                             onPress={() => {
                                 if (media) {
                                     const startMs = Math.round(media.currentTime * 1000)
@@ -169,7 +169,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 </Tooltip>
             </InputGroup.Prefix>
             <InputGroup.Input data-no-voice aria-label="start time" autoComplete="one-time-code"
-                className={`text-center font-normal bg-sand-100 ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
+                className={`text-center font-normal bg-sand-100 w-min ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
                 value={`${stateStart} ➔ ${stateEnd}`}
                 onChange={(e) => {
                     const parts = e.target.value.split(" ➔ ")
@@ -186,7 +186,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
             <InputGroup.Suffix className="p-0 bg-sand-100">
                 <Tooltip>
                     <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm"
+                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2"
                             onPress={() => {
                                 if (media) {
                                     const endMs = Math.round(media.currentTime * 1000)
@@ -204,7 +204,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                 </Tooltip>
                 <Tooltip>
                     <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" onPress={onExpandEnd}>
+                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" onPress={onExpandEnd}>
                             <ArrowRightToLine />
                         </Button>
                     </Tooltip.Trigger>

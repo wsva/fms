@@ -30,13 +30,32 @@ export default function CardContextMenu() {
         const onMouseUp = (e: MouseEvent) => {
             if (menuRef.current?.contains(e.target as Node)) return
             if (drawerRef.current?.contains(e.target as Node)) return
+
             const sel = window.getSelection()
-            const text = sel?.toString().trim()
-            if (!text || !sel?.rangeCount) return
-            const rect = sel.getRangeAt(0).getBoundingClientRect()
-            if (!rect.width && !rect.height) return
-            setSelectedText(text)
-            setMenuPos({ x: rect.left + rect.width / 2, y: rect.top })
+            const selText = sel?.toString().trim()
+            if (selText && sel?.rangeCount) {
+                const rect = sel.getRangeAt(0).getBoundingClientRect()
+                if (rect.width || rect.height) {
+                    setSelectedText(selText)
+                    setMenuPos({ x: rect.left + rect.width / 2, y: rect.top })
+                    return
+                }
+            }
+
+            // window.getSelection() is always empty inside <input>/<textarea>; read element selection instead
+            const active = document.activeElement as HTMLInputElement | null
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+                const start = active.selectionStart ?? 0
+                const end = active.selectionEnd ?? 0
+                if (start < end) {
+                    const text = active.value.slice(start, end).trim()
+                    if (text) {
+                        const rect = active.getBoundingClientRect()
+                        setSelectedText(text)
+                        setMenuPos({ x: rect.left + rect.width / 2, y: rect.top })
+                    }
+                }
+            }
         }
         const onPointerDown = (e: MouseEvent) => {
             if (drawerRef.current?.contains(e.target as Node)) return
