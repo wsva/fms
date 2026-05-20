@@ -56,10 +56,6 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
                                 setStateSuccess(true)
                                 onSuccess?.(cue.index, true)
                             }
-                            if (stateSuccess && !isSuccess(content)) {
-                                setStateSuccess(false)
-                                onSuccess?.(cue.index, false)
-                            }
                         }
                     }}
                     onKeyDown={(e) => {
