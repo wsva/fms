@@ -1,13 +1,13 @@
 'use client'
 
 import { Button, Dropdown, Label, TextArea, Tooltip } from "@heroui/react"
-import { MdClose, MdDelete, MdMic, MdMicOff, MdMoreVert, MdPlayCircle, MdUnfoldMore, MdUnfoldLess } from 'react-icons/md'
 import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
 import { useState, useRef, useEffect } from 'react'
 import { getLocalServiceUrl } from '@/lib/local-stt'
 import { getBookSentenceWords } from '@/app/actions/book'
 import type { book_sentence_word } from '@/generated/prisma/client'
+import { ChevronsCollapseVertical, ChevronsExpandVertical, EllipsisVertical, Microphone, MicrophoneSlash, PlayFill, TrashBin, Xmark } from "@gravity-ui/icons"
 
 const LS_KEY = 'read_auto_replace_rules'
 const DEFAULT_RULES_TEXT = `\
@@ -178,7 +178,7 @@ export default function SentenceDrawer({
                         {drawer.mode === 'edit' && (
                             <Dropdown>
                                 <Button isIconOnly size="sm" variant="ghost" isDisabled={saving}>
-                                    <MdMoreVert size={20} />
+                                    <EllipsisVertical />
                                 </Button>
                                 <Dropdown.Popover>
                                     <Dropdown.Menu aria-label="Sentence actions">
@@ -206,19 +206,19 @@ export default function SentenceDrawer({
                                             <Label>Insert Paragraph After</Label>
                                         </Dropdown.Item>
                                         <Dropdown.Item id="delete" textValue="Delete" variant="danger" onPress={onDelete}>
-                                            <MdDelete size={16} />
+                                            <TrashBin color="red" />
                                             <Label>Delete</Label>
                                         </Dropdown.Item>
                                     </Dropdown.Menu>
                                 </Dropdown.Popover>
                             </Dropdown>
                         )}
-                        <button onClick={() => setExpanded(e => !e)} className="text-foreground-400 hover:text-foreground-600 p-1" title={expanded ? 'Restore size' : 'Expand'}>
-                            {expanded ? <MdUnfoldLess size={22} /> : <MdUnfoldMore size={22} />}
-                        </button>
-                        <button onClick={onClose} className="text-foreground-400 hover:text-foreground-600 p-1">
-                            <MdClose size={22} />
-                        </button>
+                        <Button isIconOnly size="sm" variant="ghost" onClick={() => setExpanded(e => !e)}  >
+                            {expanded ? <ChevronsCollapseVertical /> : <ChevronsExpandVertical />}
+                        </Button>
+                        <Button isIconOnly size="sm" variant="ghost" onClick={onClose}  >
+                            <Xmark />
+                        </Button>
                     </div>
                 </div>
 
@@ -226,26 +226,24 @@ export default function SentenceDrawer({
                 <div className="flex flex-col gap-3 p-4">
 
                     {/* Audio + Recording */}
-                    <div className="flex flex-row flex-wrap items-center justify-start gap-2">
+                    <div className="flex flex-row flex-wrap items-center justify-end gap-2">
+                        <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="tertiary" onPress={onPlay}>
+                            <PlayFill />
+                        </Button>
                         {hasLocalService && (
-                            <Button size={expanded ? 'md' : 'sm'} variant="tertiary"
+                            <Button size={expanded ? 'md' : 'sm'} variant="secondary"
                                 isDisabled={!recording && processing}
                                 onPress={onToggleRecording}
                             >
-                                {recording ? <MdMicOff size={expanded ? 20 : 16} /> : <MdMic size={expanded ? 20 : 16} />}
+                                {recording ? <MicrophoneSlash /> : <Microphone />}
                                 {recording ? 'Stop' : processing ? 'Processing…' : 'Record'}
-                            </Button>
-                        )}
-                        {hasAudio && (
-                            <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="ghost" onPress={onPlay}>
-                                <MdPlayCircle size={expanded ? 24 : 20} />
                             </Button>
                         )}
                     </div>
 
                     {/* STT diff */}
                     {hasAudio && (
-                        <div className={`bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
+                        <div className={`items-center bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
                             {highlightDifferences(content, recognized)}
                         </div>
                     )}
