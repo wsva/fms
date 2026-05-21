@@ -227,9 +227,11 @@ export default function SentenceDrawer({
 
                     {/* Audio + Recording */}
                     <div className="flex flex-row flex-wrap items-center justify-end gap-2">
-                        <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="tertiary" onPress={onPlay}>
-                            <PlayFill />
-                        </Button>
+                        {hasAudio && (
+                            <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="tertiary" onPress={onPlay}>
+                                <PlayFill />
+                            </Button>
+                        )}
                         {hasLocalService && (
                             <Button size={expanded ? 'md' : 'sm'} variant="secondary"
                                 isDisabled={!recording && processing}
