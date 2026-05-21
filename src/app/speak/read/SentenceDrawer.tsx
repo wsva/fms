@@ -226,7 +226,7 @@ export default function SentenceDrawer({
                 <div className="flex flex-col gap-3 p-4">
 
                     {/* Audio + Recording */}
-                    <div className="flex flex-row flex-wrap items-center justify-end gap-2">
+                    <div className="flex flex-row flex-wrap items-center justify-center gap-2">
                         {hasAudio && (
                             <Button isIconOnly size={expanded ? 'md' : 'sm'} variant="tertiary" onPress={onPlay}>
                                 <PlayFill />
