@@ -208,84 +208,89 @@ export default function Client({ email }: Props) {
         if (stateDrawer?.mode !== 'add') return
         setStateSaving(true)
 
-        let audioPath: string | null = null
-        if (stateDrawerHasLocalAudio) {
-            let blob = getBlobFromWeakCache(stateDrawerUUID)
-            if (!blob) blob = await getBlobFromIndexedDB(stateDrawerUUID)
-            if (blob) {
-                const r = await saveAudio(blob, 'reading', `${stateDrawerUUID}.wav`)
-                if (r.status === 'success') {
-                    audioPath = `/api/data/reading/${stateDrawerUUID}.wav`
-                    await deleteBlobFromIndexedDB(stateDrawerUUID)
-                    dropWeakCache(stateDrawerUUID)
+        try {
+            let audioPath: string | null = null
+            if (stateDrawerHasLocalAudio) {
+                let blob = getBlobFromWeakCache(stateDrawerUUID)
+                if (!blob) blob = await getBlobFromIndexedDB(stateDrawerUUID)
+                if (blob) {
+                    const r = await saveAudio(blob, 'reading', `${stateDrawerUUID}.wav`)
+                    if (r.status === 'success') {
+                        audioPath = `/api/data/reading/${stateDrawerUUID}.wav`
+                        await deleteBlobFromIndexedDB(stateDrawerUUID)
+                        dropWeakCache(stateDrawerUUID)
+                    }
                 }
             }
-        }
 
-        const insertIndex = stateDrawer.insertBeforeUUID === null
-            ? stateData.length
-            : stateData.findIndex(s => s.uuid === stateDrawer.insertBeforeUUID)
+            const insertIndex = stateDrawer.insertBeforeUUID === null
+                ? stateData.length
+                : stateData.findIndex(s => s.uuid === stateDrawer.insertBeforeUUID)
 
-        const newSentence: SentenceClient = {
-            uuid: stateDrawerUUID,
-            chapter_uuid: stateChapterUUID,
-            user_id: email,
-            order_num: insertIndex + 1,
-            content: stateDrawerContent,
-            sentence_type: 'text',
-            audio_path: audioPath,
-            recognized: stateDrawerRecognized || null,
-            bg_color: null,
-            created_at: new Date(),
-            updated_at: new Date(),
-            modified: false,
-            hasLocalAudio: false,
-        }
+            const newSentence: SentenceClient = {
+                uuid: stateDrawerUUID,
+                chapter_uuid: stateChapterUUID,
+                user_id: email,
+                order_num: insertIndex + 1,
+                content: stateDrawerContent,
+                sentence_type: 'text',
+                audio_path: audioPath,
+                recognized: stateDrawerRecognized || null,
+                bg_color: null,
+                created_at: new Date(),
+                updated_at: new Date(),
+                modified: false,
+                hasLocalAudio: false,
+            }
 
-        const r = await saveBookSentence(toDbSentence(newSentence))
-        if (r.status !== 'success') {
-            toast.danger('save error')
-            setStateSaving(false)
-            return
-        }
-
-        // Auto-save reordering of existing sentences shifted by the insert
-        if (insertIndex < stateData.length) {
-            const shifted = stateData.slice(insertIndex).map((s, i) => toDbSentence({ ...s, order_num: insertIndex + 2 + i }))
-            const r2 = await saveBookSentenceMany(shifted)
-            if (r2.status !== 'success') {
-                toast.danger('save order error')
+            const r = await saveBookSentence(toDbSentence(newSentence))
+            if (r.status !== 'success') {
+                toast.danger('save error')
                 setStateSaving(false)
                 return
             }
+
+            // Auto-save reordering of existing sentences shifted by the insert
+            if (insertIndex < stateData.length) {
+                const shifted = stateData.slice(insertIndex).map((s, i) => toDbSentence({ ...s, order_num: insertIndex + 2 + i }))
+                const r2 = await saveBookSentenceMany(shifted)
+                if (r2.status !== 'success') {
+                    toast.danger('save order error')
+                    setStateSaving(false)
+                    return
+                }
+            }
+
+            updateStateData(d => {
+                d.splice(insertIndex, 0, newSentence)
+                /**
+                 * Cannot assign to read only property 'order_num' of object '#<Object>'
+                 *
+                 * Root cause:
+                 * Immer's array get trap only wraps an element in a draft proxy when copy_[i] === base_[i] — i.e., it hasn't moved.
+                 * After splice inserts or removes an element, every element at a higher index is shifted:
+                 * copy_[i] becomes a different object than base_[i], so Immer returns those elements as the raw frozen state objects.
+                 * Writing .order_num on a frozen object throws the "read only property" error.
+                 *
+                 * Fix: Replace s.order_num = ... (which mutates the element directly)
+                 * with d[i] = { ...d[i], order_num: ..., modified: ... } (which replaces the element via the array draft's set trap).
+                 * Reading d[i] — whether it returns a draft proxy or a frozen object — is always safe;
+                 * only writing to the returned value is unsafe.
+                 */
+                // d.forEach((s, i) => { s.order_num = i + 1; s.modified = false })
+                for (let i = 0; i < d.length; i++) { const s = d[i]; d[i] = { ...s, order_num: i + 1, modified: false } }
+            })
+
+            setStateSaving(false)
+            setStateDrawer(null)
+            setStateDrawerContent('')
+            setStateDrawerRecognized('')
+            setStateDrawerHasLocalAudio(false)
+            setStateDrawerBgColor(null)
+        } catch (e) {
+            toast.danger('unexpected error')
+            setStateSaving(false)
         }
-
-        updateStateData(d => {
-            d.splice(insertIndex, 0, newSentence)
-            /**
-             * Cannot assign to read only property 'order_num' of object '#<Object>'
-             * 
-             * Root cause: 
-             * Immer's array get trap only wraps an element in a draft proxy when copy_[i] === base_[i] — i.e., it hasn't moved. 
-             * After splice inserts or removes an element, every element at a higher index is shifted: 
-             * copy_[i] becomes a different object than base_[i], so Immer returns those elements as the raw frozen state objects. 
-             * Writing .order_num on a frozen object throws the "read only property" error.
-             * 
-             * Fix: Replace s.order_num = ... (which mutates the element directly) 
-             * with d[i] = { ...d[i], order_num: ..., modified: ... } (which replaces the element via the array draft's set trap). 
-             * Reading d[i] — whether it returns a draft proxy or a frozen object — is always safe; 
-             * only writing to the returned value is unsafe.
-             */
-            // d.forEach((s, i) => { s.order_num = i + 1; s.modified = false })
-            for (let i = 0; i < d.length; i++) { const s = d[i]; d[i] = { ...s, order_num: i + 1, modified: false } }
-        })
-
-        setStateSaving(false)
-        setStateDrawer(null)
-        setStateDrawerContent('')
-        setStateDrawerRecognized('')
-        setStateDrawerHasLocalAudio(false)
-        setStateDrawerBgColor(null)
     }
 
     // ── Save edit ───────────────────────────────────────────────────────────
@@ -294,49 +299,54 @@ export default function Client({ email }: Props) {
         setStateSaving(true)
         const sentence = stateDrawer.sentence
 
-        let audioPath = sentence.audio_path
-        if (stateDrawerHasLocalAudio) {
-            let blob = getBlobFromWeakCache(stateDrawerUUID)
-            if (!blob) blob = await getBlobFromIndexedDB(stateDrawerUUID)
-            if (blob) {
-                const r = await saveAudio(blob, 'reading', `${stateDrawerUUID}.wav`)
-                if (r.status === 'success') {
-                    audioPath = `/api/data/reading/${stateDrawerUUID}.wav`
-                    await deleteBlobFromIndexedDB(stateDrawerUUID)
-                    dropWeakCache(stateDrawerUUID)
+        try {
+            let audioPath = sentence.audio_path
+            if (stateDrawerHasLocalAudio) {
+                let blob = getBlobFromWeakCache(stateDrawerUUID)
+                if (!blob) blob = await getBlobFromIndexedDB(stateDrawerUUID)
+                if (blob) {
+                    const r = await saveAudio(blob, 'reading', `${stateDrawerUUID}.wav`)
+                    if (r.status === 'success') {
+                        audioPath = `/api/data/reading/${stateDrawerUUID}.wav`
+                        await deleteBlobFromIndexedDB(stateDrawerUUID)
+                        dropWeakCache(stateDrawerUUID)
+                    }
                 }
             }
-        }
 
-        const updated: SentenceClient = {
-            ...sentence,
-            content: stateDrawerContent,
-            recognized: stateDrawerRecognized || null,
-            audio_path: audioPath,
-            bg_color: stateDrawerBgColor,
-            updated_at: new Date(),
-            hasLocalAudio: false,
-            modified: sentence.modified,
-        }
+            const updated: SentenceClient = {
+                ...sentence,
+                content: stateDrawerContent,
+                recognized: stateDrawerRecognized || null,
+                audio_path: audioPath,
+                bg_color: stateDrawerBgColor,
+                updated_at: new Date(),
+                hasLocalAudio: false,
+                modified: sentence.modified,
+            }
 
-        const r = await saveBookSentence(toDbSentence(updated))
-        if (r.status !== 'success') {
-            toast.danger('save error')
+            const r = await saveBookSentence(toDbSentence(updated))
+            if (r.status !== 'success') {
+                toast.danger('save error')
+                setStateSaving(false)
+                return
+            }
+
+            updateStateData(d => {
+                const idx = d.findIndex(s => s.uuid === sentence.uuid)
+                if (idx !== -1) d[idx] = updated
+            })
+
             setStateSaving(false)
-            return
+            setStateDrawer(null)
+            setStateDrawerContent('')
+            setStateDrawerRecognized('')
+            setStateDrawerHasLocalAudio(false)
+            setStateDrawerBgColor(null)
+        } catch (e) {
+            toast.danger('unexpected error')
+            setStateSaving(false)
         }
-
-        updateStateData(d => {
-            const idx = d.findIndex(s => s.uuid === sentence.uuid)
-            if (idx !== -1) d[idx] = updated
-        })
-
-        setStateSaving(false)
-        setStateDrawer(null)
-        setStateDrawerContent('')
-        setStateDrawerRecognized('')
-        setStateDrawerHasLocalAudio(false)
-        setStateDrawerBgColor(null)
     }
 
     // ── Delete sentence ─────────────────────────────────────────────────────
