@@ -138,7 +138,7 @@ async function callTool(name: string, args: Args, email: string, scope: string):
     if (name === 'create_question') {
         if (readonly) return err('This API key is read-only');
         const now = new Date();
-        const r = await saveQuestion({ uuid: getUUID(), user_id: email, title: (args.title as string) ?? null, content: (args.content as string) ?? null, audio_path: null, video_path: null, created_at: now, updated_at: now });
+        const r = await saveQuestion({ uuid: getUUID(), user_id: email, title: (args.title as string) ?? null, language: (args.language as string) ?? "en", content: (args.content as string) ?? null, audio_path: null, video_path: null, created_at: now, updated_at: now });
         return r.status === 'error' ? err(r.error as string) : ok(r.data);
     }
     if (name === 'update_question') {
@@ -164,7 +164,7 @@ async function callTool(name: string, args: Args, email: string, scope: string):
     if (name === 'create_answer') {
         if (readonly) return err('This API key is read-only');
         const now = new Date();
-        const r = await saveAnswer({ uuid: getUUID(), user_id: email, question_uuid: args.question_uuid as string, content: (args.content as string) ?? null, audio_path: null, video_path: null, created_at: now, updated_at: now });
+        const r = await saveAnswer({ uuid: getUUID(), user_id: email, question_uuid: args.question_uuid as string, content: (args.content as string) ?? null, audio_path: null, video_path: null, is_example: false, created_at: now, updated_at: now });
         return r.status === 'error' ? err(r.error as string) : ok(r.data);
     }
     if (name === 'delete_answer') {

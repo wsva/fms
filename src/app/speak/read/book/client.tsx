@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { toast, Button, Input, Spinner, TextField, Label, Tooltip } from "@heroui/react"
 import { book_chapter, book_meta } from "@/generated/prisma/client"
 import { getBookMetaAll, saveBookMeta, removeBookMeta, getBookChapterAll, saveBookChapter, removeBookChapter } from "@/app/actions/book"
-import { saveTag } from "@/app/actions/dataset"
+import { saveTag, setTagScopes } from "@/app/actions/dataset"
 import { getUUID } from "@/lib/utils"
 import { ChevronDownWide, ChevronRight, Copy, PencilToSquare, Plus, TrashBin } from '@gravity-ui/icons'
 
@@ -273,12 +273,12 @@ export default function Client({ email }: Props) {
                 user_id: email,
                 tag: stateAddForm.title,
                 description: '',
-                scope: 'card',
                 parent_uuid: null,
                 shared: "N",
                 created_at: now,
                 updated_at: now,
             })
+            await setTagScopes(uuid, ["card"])
             setStateAddForm(emptyBookForm())
             setStateShowAdd(false)
             setStateBooks(prev => [...prev, newBook])

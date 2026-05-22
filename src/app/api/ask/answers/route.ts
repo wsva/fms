@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         content: parsed.data.content ?? null,
         audio_path: null,
         video_path: null,
+        is_example: false,
         created_at: now,
         updated_at: now,
     });

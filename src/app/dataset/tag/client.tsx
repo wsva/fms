@@ -2,44 +2,41 @@
 
 import { toast, Button, Chip, Input, Select, TextArea, TextField, ListBox, Label } from "@heroui/react";
 import { useEffect, useState } from 'react'
-import { getTagAllOwned, removeTag, saveTag } from '@/app/actions/dataset';
+import {
+    getTagAllOwned, removeTag, saveTag,
+    getAllScopes, getTagScopeMap, setTagScopes,
+} from '@/app/actions/dataset';
 import { getUUID } from "@/lib/utils";
-import { dataset_tag } from "@/generated/prisma/client";
+import { dataset_tag, dataset_scope } from "@/generated/prisma/client";
 import { FloppyDisk, PencilToSquare, TrashBin, Xmark } from "@gravity-ui/icons";
 import TagSelector from "./selector";
 
-const SCOPE_OPTIONS = ['card', 'listen'] as const;
-
-function scopeToArray(scope: string): string[] {
-    return scope.split(',').map(s => s.trim()).filter(Boolean);
-}
-
-function arrayToScope(arr: string[]): string {
-    return arr.join(',');
-}
-
-function ScopeChips({ scope, onChange, disabled }: { scope: string; onChange: (s: string) => void; disabled?: boolean }) {
-    const selected = scopeToArray(scope);
+function ScopeChips({ allScopes, selectedUuids, onChange, disabled }: {
+    allScopes: dataset_scope[];
+    selectedUuids: string[];
+    onChange: (uuids: string[]) => void;
+    disabled?: boolean;
+}) {
+    if (allScopes.length === 0) return <span className="text-xs text-sand-400 italic">No scopes defined</span>;
     return (
-        <div className="flex gap-1.5">
-            {SCOPE_OPTIONS.map(s => {
-                const checked = selected.includes(s);
+        <div className="flex gap-1.5 flex-wrap">
+            {allScopes.map(s => {
+                const checked = selectedUuids.includes(s.uuid);
                 return (
                     <Chip
-                        key={s}
+                        key={s.uuid}
                         variant={checked ? "primary" : "secondary"}
                         color={checked ? "success" : "default"}
                         className={`select-none ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
                         onClick={() => {
                             if (disabled) return;
                             const next = checked
-                                ? selected.filter(x => x !== s)
-                                : [...selected, s];
-                            if (next.length === 0) return;
-                            onChange(arrayToScope(next));
+                                ? selectedUuids.filter(id => id !== s.uuid)
+                                : [...selectedUuids, s.uuid];
+                            onChange(next);
                         }}
                     >
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                        {s.uuid}
                     </Chip>
                 );
             })}
@@ -47,29 +44,42 @@ function ScopeChips({ scope, onChange, disabled }: { scope: string; onChange: (s
     );
 }
 
+
 type PropsItem = {
     item: dataset_tag;
     allTags: dataset_tag[];
+    allScopes: dataset_scope[];
+    scopeMap: Record<string, string[]>;
     childrenOf: (uuid: string) => dataset_tag[];
     getDescendantUuids: (uuid: string) => string[];
-    handleUpdate: (item: dataset_tag) => Promise<boolean>;
+    handleUpdate: (item: dataset_tag, scopeUuids: string[]) => Promise<boolean>;
     handleDelete: (uuid: string) => Promise<void>;
     onAddChild: (parentUuid: string) => void;
     index: number;
     depth: number;
 }
 
-function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, handleDelete, onAddChild, index, depth }: PropsItem) {
+function Item({ item, allTags, allScopes, scopeMap, childrenOf, getDescendantUuids, handleUpdate, handleDelete, onAddChild, index, depth }: PropsItem) {
     const [stateData, setStateData] = useState<dataset_tag>(item);
+    const [stateScopeUuids, setStateScopeUuids] = useState<string[]>(scopeMap[item.uuid] ?? []);
     const [stateEdit, setStateEdit] = useState<boolean>(false);
-    const isPublic = stateData.user_id === "public";
 
-    // Exclude self and own descendants from parent selector
+    useEffect(() => {
+        if (!stateEdit) {
+            setStateScopeUuids(scopeMap[item.uuid] ?? []);
+        }
+    }, [scopeMap, item.uuid, stateEdit]);
+
     const excluded = new Set([item.uuid, ...getDescendantUuids(item.uuid)]);
     const parentOptions = allTags.filter(t => !excluded.has(t.uuid));
-
     const children = childrenOf(item.uuid);
     const textSize = depth === 0 ? 'text-lg' : depth === 1 ? 'text-base' : 'text-sm';
+
+    const cancelEdit = () => {
+        setStateData(item);
+        setStateScopeUuids(scopeMap[item.uuid] ?? []);
+        setStateEdit(false);
+    };
 
     return (
         <div className="flex flex-col gap-1.5">
@@ -78,7 +88,7 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                 style={{ animationDelay: `${index * 45}ms` }}
             >
                 {/* Main row */}
-                <div className='flex flex-row w-full items-start justify-start gap-3'>
+                <div className='flex flex-row w-full items-center justify-start gap-3'>
                     {stateEdit ? (
                         <TextField className='flex-1'>
                             <Label>Tag Name</Label>
@@ -89,57 +99,51 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                             />
                         </TextField>
                     ) : (
-                        <h3 className={`flex-1 text-sand-900 leading-tight tag-name-font truncate ${textSize}`}>
-                            {stateData.tag}
-                        </h3>
+                        <div className="flex flex-row text-center justify-start gap-2 flex-1">
+                            <h3 className={`text-sand-900 leading-tight tag-name-font truncate ${textSize}`}>
+                                {stateData.tag}
+                            </h3>
+                            {stateData.shared === "Y" && (
+                                <Chip variant="primary" color="accent" className="select-none cursor-default"                                >
+                                    Shared
+                                </Chip>
+                            )}
+                        </div>
                     )}
 
                     <div className="flex items-center gap-2 shrink-0">
-                        {!stateEdit && (
-                            <Button variant="ghost" size="sm" className="font-medium text-sand-500"
-                                onPress={() => onAddChild(item.uuid)}
+                        <Button isIconOnly variant="ghost" size="sm"
+                            onPress={async () => { await handleDelete(stateData.uuid) }}
+                        >
+                            <TrashBin color="red" />
+                        </Button>
+                        {stateEdit && (
+                            <Button isIconOnly variant="ghost" size="sm"
+                                onPress={async () => {
+                                    const success = await handleUpdate(stateData, stateScopeUuids);
+                                    if (success) setStateEdit(false);
+                                }}
                             >
-                                + Child
+                                <FloppyDisk />
                             </Button>
                         )}
-                        {isPublic ? (
-                            <Chip size="sm" variant="tertiary" className="bg-sand-200 border border-sand-300">
-                                <span className="text-sand-500 text-xs font-medium tracking-wide">Public</span>
-                            </Chip>
-                        ) : (
-                            <>
-                                <Button isIconOnly variant="ghost" size="sm"
-                                    onPress={async () => { await handleDelete(stateData.uuid) }}
-                                >
-                                    <TrashBin color="red" />
-                                </Button>
-                                {stateEdit && (
-                                    <Button isIconOnly variant="ghost" size="sm"
-                                        onPress={async () => {
-                                            const success = await handleUpdate(stateData);
-                                            if (success) setStateEdit(false);
-                                        }}
-                                    >
-                                        <FloppyDisk />
-                                    </Button>
-                                )}
-                                <Button isIconOnly variant="ghost" size="sm"
-                                    onPress={() => setStateEdit(!stateEdit)}
-                                >
-                                    {stateEdit ? <Xmark /> : <PencilToSquare />}
-                                </Button>
-                            </>
-                        )}
+                        <Button isIconOnly variant="ghost" size="sm"
+                            onPress={() => stateEdit ? cancelEdit() : setStateEdit(true)}
+                        >
+                            {stateEdit ? <Xmark /> : <PencilToSquare />}
+                        </Button>
                     </div>
                 </div>
 
-                <div className="flex flex-row items-center justify-start gap-2 flex-1 min-w-0">
-                    <ScopeChips
-                        scope={stateData.scope}
-                        onChange={(s) => setStateData({ ...stateData, scope: s })}
-                        disabled={isPublic || !stateEdit}
-                    />
-                    {!isPublic && (
+                {/* Scopes + Shared row */}
+                {stateEdit && (
+                    <div className="flex flex-row items-center justify-start gap-2 flex-1 min-w-0">
+                        <ScopeChips
+                            allScopes={allScopes}
+                            selectedUuids={stateScopeUuids}
+                            onChange={setStateScopeUuids}
+                            disabled={!stateEdit}
+                        />
                         <Chip
                             variant={stateData.shared === "Y" ? "primary" : "secondary"}
                             color={stateData.shared === "Y" ? "accent" : "default"}
@@ -151,10 +155,10 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                         >
                             Shared
                         </Chip>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {/* Parent selector — only in edit mode */}
+                {/* Parent selector — edit mode only */}
                 {stateEdit && (
                     <Select
                         placeholder="None (root tag)"
@@ -200,7 +204,7 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                 </div>
             </div>
 
-            {/* Children — indented with a connecting line */}
+            {/* Children */}
             {children.length > 0 && (
                 <div className="ml-5 pl-4 border-l-2 border-sand-400 flex flex-col gap-1.5">
                     {children.map((child, i) => (
@@ -208,6 +212,8 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
                             key={child.uuid}
                             item={child}
                             allTags={allTags}
+                            allScopes={allScopes}
+                            scopeMap={scopeMap}
                             childrenOf={childrenOf}
                             getDescendantUuids={getDescendantUuids}
                             handleUpdate={handleUpdate}
@@ -223,18 +229,22 @@ function Item({ item, allTags, childrenOf, getDescendantUuids, handleUpdate, han
     );
 }
 
+type NewTagState = Partial<dataset_tag> & { scopeUuids?: string[] };
+
 type Props = { user_id: string }
 
 export default function Page({ user_id }: Props) {
     const [stateData, setStateData] = useState<dataset_tag[]>([]);
+    const [stateScopes, setStateScopes] = useState<dataset_scope[]>([]);
+    const [stateScopeMap, setStateScopeMap] = useState<Record<string, string[]>>({});
+    const [stateScopeFilter, setStateScopeFilter] = useState<string | null>(null);
     const [stateReload, setStateReload] = useState<number>(1);
-    const [stateNew, setStateNew] = useState<Partial<dataset_tag>>({ scope: 'card' });
+    const [stateNew, setStateNew] = useState<NewTagState>({ scopeUuids: [] });
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateShowForm, setStateShowForm] = useState<boolean>(false);
 
     const openNewForm = (parentUuid?: string) => {
-        console.log(parentUuid)
-        setStateNew({ scope: 'card', parent_uuid: parentUuid ?? null });
+        setStateNew({ scopeUuids: [], parent_uuid: parentUuid ?? null });
         setStateShowForm(true);
     };
 
@@ -243,44 +253,44 @@ export default function Page({ user_id }: Props) {
             toast.warning("Tag name is required");
             return;
         }
-        if (!stateNew.parent_uuid) {
-
-        }
         setStateSaving(true);
-        const result = await saveTag({
-            uuid: getUUID(),
+        const newUuid = getUUID();
+        const tagResult = await saveTag({
+            uuid: newUuid,
             tag: stateNew.tag,
             description: stateNew.description || "",
-            scope: stateNew.scope || 'card',
             parent_uuid: stateNew.parent_uuid ?? null,
             shared: "N",
             user_id: user_id,
             created_at: new Date(),
             updated_at: new Date(),
         });
-        if (result.status === 'success') {
-            setStateNew({ scope: 'card' });
+        if (tagResult.status === 'success') {
+            await setTagScopes(newUuid, stateNew.scopeUuids ?? []);
+            setStateNew({ scopeUuids: [] });
             setStateShowForm(false);
             setStateReload(c => c + 1);
         } else {
-            console.log(result.error);
+            console.log(tagResult.error);
             toast.danger("Failed to save tag");
         }
         setStateSaving(false);
     };
 
-    const handleUpdate = async (new_item: dataset_tag): Promise<boolean> => {
+    const handleUpdate = async (new_item: dataset_tag, scopeUuids: string[]): Promise<boolean> => {
         setStateSaving(true);
-        const result = await saveTag({ ...new_item, updated_at: new Date() });
-        if (result.status === "success") {
+        const [tagResult, scopeResult] = await Promise.all([
+            saveTag({ ...new_item, updated_at: new Date() }),
+            setTagScopes(new_item.uuid, scopeUuids),
+        ]);
+        if (tagResult.status === "success" && scopeResult.status === "success") {
             toast.success("Tag updated");
             setStateReload(c => c + 1);
         } else {
-            console.log(result.error);
             toast.danger("Failed to update tag");
         }
         setStateSaving(false);
-        return result.status === "success";
+        return tagResult.status === "success" && scopeResult.status === "success";
     };
 
     const handleDelete = async (uuid: string) => {
@@ -295,11 +305,25 @@ export default function Page({ user_id }: Props) {
         setStateSaving(false);
     };
 
+    // Load scopes
+    useEffect(() => {
+        const load = async () => {
+            const result = await getAllScopes();
+            console.log(result)
+            if (result.status === 'success') setStateScopes(result.data);
+        };
+        load();
+    }, []);
+
+    // Load tags + scope map
     useEffect(() => {
         const loadData = async () => {
             const result = await getTagAllOwned(user_id, "");
             if (result.status === "success") {
                 setStateData(result.data);
+                const tagUuids = result.data.map(t => t.uuid);
+                const mapResult = await getTagScopeMap(tagUuids);
+                if (mapResult.status === 'success') setStateScopeMap(mapResult.data);
             } else {
                 console.log(result.error);
                 toast.danger("Failed to load tags");
@@ -308,15 +332,19 @@ export default function Page({ user_id }: Props) {
         loadData();
     }, [user_id, stateReload]);
 
-    // Build tree helpers
-    const allRootTags = stateData.filter(t => !t.parent_uuid).sort((a, b) => a.tag.localeCompare(b.tag));
-    const childrenOf = (parentUuid: string) => stateData.filter(t => t.parent_uuid === parentUuid);
+    const scopeTagSet = stateScopeFilter
+        ? new Set(Object.entries(stateScopeMap).filter(([, scopes]) => scopes.includes(stateScopeFilter)).map(([uuid]) => uuid))
+        : null;
+    const filteredData = scopeTagSet ? stateData.filter(t => scopeTagSet.has(t.uuid)) : stateData;
+
+    const allRootTags = filteredData.filter(t => !t.parent_uuid).sort((a, b) => a.tag.localeCompare(b.tag));
+    const childrenOf = (parentUuid: string) => filteredData.filter(t => t.parent_uuid === parentUuid);
+    const allChildrenOf = (parentUuid: string) => stateData.filter(t => t.parent_uuid === parentUuid);
     const getDescendantUuids = (uuid: string): string[] => {
-        const kids = childrenOf(uuid);
+        const kids = allChildrenOf(uuid);
         return kids.flatMap(k => [k.uuid, ...getDescendantUuids(k.uuid)]);
     };
 
-    // Parent selector for new form: all tags except descendants of pre-filled parent
     const newFormParentOptions = stateNew.uuid
         ? stateData.filter(t => t.uuid !== stateNew.uuid && !getDescendantUuids(stateNew.uuid!).includes(t.uuid))
         : stateData;
@@ -343,19 +371,53 @@ export default function Page({ user_id }: Props) {
                 <Button
                     variant={stateShowForm ? 'ghost' : 'primary'}
                     className="font-medium"
-                    onPress={() => { setStateShowForm(!stateShowForm); setStateNew({ scope: 'card' }); }}
+                    onPress={() => { setStateShowForm(!stateShowForm); setStateNew({ scopeUuids: [] }); }}
                 >
                     {stateShowForm ? "Cancel" : "+ New Tag"}
                 </Button>
             </div>
 
-            <TagSelector user_id={user_id} scope="" selectionMode="multiple" hideSelector={false} readOnly={true} stateSelected={new Map()} setStateSelected={() => { }} />
+            {/* Scope filter */}
+            {stateScopes.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-sand-500 uppercase tracking-widest shrink-0">Scope:</span>
+                    <Chip
+                        variant={stateScopeFilter === null ? "primary" : "secondary"}
+                        color={stateScopeFilter === null ? "success" : "default"}
+                        className="cursor-pointer select-none"
+                        onClick={() => setStateScopeFilter(null)}
+                    >
+                        All
+                    </Chip>
+                    {stateScopes.map(s => (
+                        <Chip
+                            key={s.uuid}
+                            variant={stateScopeFilter === s.uuid ? "primary" : "secondary"}
+                            color={stateScopeFilter === s.uuid ? "success" : "default"}
+                            className="cursor-pointer select-none"
+                            onClick={() => setStateScopeFilter(stateScopeFilter === s.uuid ? null : s.uuid)}
+                        >
+                            {s.uuid}
+                        </Chip>
+                    ))}
+                </div>
+            )}
+
+            <TagSelector
+                user_id={user_id}
+                scope={stateScopeFilter ?? ""}
+                selectionMode="multiple"
+                hideSelector={false}
+                readOnly={true}
+                stateSelected={new Map()}
+                setStateSelected={() => { }}
+            />
 
             {/* New tag form */}
             {stateShowForm && (
                 <div className='form-expand flex flex-col w-full gap-4 p-5 rounded-xl bg-sand-200 border border-sand-300'>
                     <p className="text-xs font-semibold text-sand-500 uppercase tracking-widest">New Tag</p>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-end gap-4">
                         <TextField className='flex-1'>
                             <Label>Tag Name</Label>
                             <Input
@@ -368,8 +430,9 @@ export default function Page({ user_id }: Props) {
                         <div className="flex flex-col gap-1">
                             <span className="text-xs text-sand-500 font-medium">Scope</span>
                             <ScopeChips
-                                scope={stateNew.scope ?? 'card'}
-                                onChange={(s) => setStateNew({ ...stateNew, scope: s })}
+                                allScopes={stateScopes}
+                                selectedUuids={stateNew.scopeUuids ?? []}
+                                onChange={(uuids) => setStateNew({ ...stateNew, scopeUuids: uuids })}
                             />
                         </div>
                     </div>
@@ -407,13 +470,15 @@ export default function Page({ user_id }: Props) {
                 </div>
             )}
 
-            {/* Mixed tag list */}
+            {/* Tag list */}
             <div className="flex flex-col gap-3">
                 {allRootTags.map((v, i) => (
                     <Item
                         key={v.uuid}
                         item={v}
                         allTags={stateData}
+                        allScopes={stateScopes}
+                        scopeMap={stateScopeMap}
                         childrenOf={childrenOf}
                         getDescendantUuids={getDescendantUuids}
                         handleUpdate={handleUpdate}

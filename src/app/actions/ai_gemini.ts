@@ -33,6 +33,22 @@ export async function callSTT(audioBlob: Blob, model?: string): Promise<ActionRe
     }
 }
 
+export async function generateInterviewAnswer(question: string): Promise<ActionResult<string>> {
+    try {
+        const ai = await getAI();
+        const result = await ai.models.generateContent({
+            model: "gemini-2.0-flash-001",
+            contents: createUserContent([
+                `You are an experienced interview coach. Write a strong, structured example answer for the following interview question. Use the STAR method (Situation, Task, Action, Result) where appropriate. Be clear and concise.\n\nQuestion: ${question}`,
+            ]),
+        });
+        return { status: "success", data: result.text as string }
+    } catch (e) {
+        console.error('exception: ', e);
+        return { status: "error", error: "exception" }
+    }
+}
+
 export async function callTTS(uuid: string, text: string): Promise<ActionResult<string>> {
     try {
         const ai = await getAI();

@@ -1,157 +1,107 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { toast, Button, Input, Select, Spinner, TextArea, TextField, Label, ListBox } from "@heroui/react";
-import { getUUID } from '@/lib/utils';
-import { ask_question } from "@/generated/prisma/client";
-import { getQuestionAll, removeQuestion, saveQuestion } from '@/app/actions/ask';
-import { toggleRecording } from '@/lib/recording';
-import { ActionResult } from '@/lib/types';
-import { removeAudio, saveAudio } from '@/app/actions/audio';
-import Question from './question';
+import { toast, Button, Input, Select, Spinner, TextArea, TextField, Label, ListBox, Link } from "@heroui/react"
+import { getUUID } from '@/lib/utils'
+import { ask_question, dataset_tag } from "@/generated/prisma/client"
+import { getQuestionAll, getTagUuidsForQuestions, removeQuestion, saveQuestion } from '@/app/actions/ask'
+import { toggleRecording } from '@/lib/recording'
+import { ActionResult } from '@/lib/types'
+import { removeAudio, saveAudio } from '@/app/actions/audio'
+import QuestionCard from './question'
+import { LANGUAGES } from './languages'
+import TagSelector from '@/app/dataset/tag/selector'
 
 type Props = {
-    user_id: string;
+    user_id: string
 }
 
 export default function Page({ user_id }: Props) {
-    const [stateMode, setStateMode] = useState<"video" | "audio">("video");
-    const [stateStream, setStateStream] = useState<MediaStream>();
-    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([]);
-    const [stateRecording, setStateRecording] = useState<boolean>(false);
-    const [stateProcessing, setStateProcessing] = useState<boolean>(false);
-    const [stateNewTitle, setStateNewTitle] = useState<string>("");
-    const [stateNewVideo, setStateNewVideo] = useState<{ data: Blob, url: string }>();
-    const [stateNewAudio, setStateNewAudio] = useState<{ data: Blob, url: string }>();
-    const [stateNewContent, setStateNewContent] = useState<string>();
-    const [stateData, setStateData] = useState<ask_question[]>([]);
-    const [stateReload, setStateReload] = useState<number>(1);
-    const [stateOnlyMy, setStateOnlyMy] = useState<boolean>(false);
-    const [stateLoading, setStateLoading] = useState<boolean>(false);
-    const [stateSaving, setStateSaving] = useState<boolean>(false);
+    const [stateMode, setStateMode] = useState<"video" | "audio">("audio")
+    const [stateStream, setStateStream] = useState<MediaStream | undefined>()
+    const [stateRecorder, setStateRecorder] = useState<MediaRecorder[]>([])
+    const [stateRecording, setStateRecording] = useState(false)
+    const [stateProcessing, setStateProcessing] = useState(false)
+    const [stateNewTitle, setStateNewTitle] = useState("")
+    const [stateNewNotes, setStateNewNotes] = useState("")
+    const [stateNewVideo, setStateNewVideo] = useState<{ data: Blob, url: string } | undefined>()
+    const [stateNewAudio, setStateNewAudio] = useState<{ data: Blob, url: string } | undefined>()
+    const [stateData, setStateData] = useState<ask_question[]>([])
+    const [stateReload, setStateReload] = useState(1)
+    const [stateOnlyMy, setStateOnlyMy] = useState(false)
+    const [stateLoading, setStateLoading] = useState(false)
+    const [stateSaving, setStateSaving] = useState(false)
+    const [stateShowAdd, setStateShowAdd] = useState(false)
+    const [stateNewLanguage, setStateNewLanguage] = useState("en")
+    const [stateFilterLanguage, setStateFilterLanguage] = useState("en")
+    const [stateTagFilter, setStateTagFilter] = useState<Map<string, dataset_tag | null>>(new Map())
+    const [stateQuestionTagMap, setStateQuestionTagMap] = useState<Record<string, string[]>>({})
 
-    const previewRef = useRef<HTMLVideoElement>(null);
+    const previewRef = useRef<HTMLVideoElement>(null)
+
+    const clearForm = () => {
+        if (stateNewVideo) { URL.revokeObjectURL(stateNewVideo.url); setStateNewVideo(undefined) }
+        if (stateNewAudio) { URL.revokeObjectURL(stateNewAudio.url); setStateNewAudio(undefined) }
+        setStateNewTitle("")
+        setStateNewNotes("")
+    }
 
     const handleDelete = async (item: ask_question) => {
-        if (!!item.audio_path) {
-            const result = await removeAudio("ask", `${item.uuid}.wav`)
-            if (result.status === "error") {
-                console.log(result.error);
-                toast.danger("remove data error");
-                return
-            }
+        if (item.audio_path) {
+            const r = await removeAudio("ask", `${item.uuid}.wav`)
+            if (r.status === "error") { toast.danger("remove data error"); return }
         }
-        if (!!item.video_path) {
-            const result = await removeAudio("ask", `${item.uuid}.mp4`)
-            if (result.status === "error") {
-                console.log(result.error);
-                toast.danger("remove data error");
-                return
-            }
+        if (item.video_path) {
+            const r = await removeAudio("ask", `${item.uuid}.mp4`)
+            if (r.status === "error") { toast.danger("remove data error"); return }
         }
-        const result = await removeQuestion(item.uuid);
+        const result = await removeQuestion(item.uuid)
         if (result.status === 'success') {
-            setStateReload(current => current + 1)
+            setStateReload(n => n + 1)
         } else {
-            console.log(result.error);
-            toast.danger("remove data error");
+            toast.danger("remove data error")
         }
     }
 
     const handleAdd = async () => {
-        if (!stateNewTitle) {
-            alert("title is empty")
+        if (!stateNewTitle.trim()) {
+            toast.danger("Question title is required")
             return
         }
-        if (!stateNewContent) {
-            alert("content is empty")
-            return
+        const uuid = getUUID()
+        setStateSaving(true)
+        if (stateNewVideo) {
+            const r = await saveAudio(stateNewVideo.data, "ask", `${uuid}.mp4`)
+            if (r.status === "error") { toast.danger("save data error"); setStateSaving(false); return }
         }
-        if (!stateNewAudio) {
-            alert("audio is empty")
-            return
+        if (stateNewAudio) {
+            const r = await saveAudio(stateNewAudio.data, "ask", `${uuid}.wav`)
+            if (r.status === "error") { toast.danger("save data error"); setStateSaving(false); return }
         }
-
-        const uuid = getUUID();
-        setStateSaving(true);
-
-        if (!!stateNewVideo) {
-            const result = await saveAudio(stateNewVideo.data, "ask", `${uuid}.mp4`);
-            if (result.status === "error") {
-                console.log(result.error);
-                toast.danger("save data error");
-                setStateSaving(false)
-                return
-            }
-        }
-
-        if (!!stateNewAudio) {
-            const result = await saveAudio(stateNewAudio.data, "ask", `${uuid}.wav`);
-            if (result.status === "error") {
-                console.log(result.error);
-                toast.danger("save data error");
-                setStateSaving(false)
-                return
-            }
-        }
-
         const result = await saveQuestion({
-            uuid: uuid,
-            user_id: user_id,
-            title: stateNewTitle,
-            audio_path: !!stateNewAudio ? `/api/data/ask/${uuid}.wav` : "",
-            video_path: !!stateNewVideo ? `/api/data/ask/${uuid}.mp4` : "",
-            content: stateNewContent,
+            uuid,
+            user_id,
+            title: stateNewTitle.trim(),
+            language: stateNewLanguage,
+            audio_path: stateNewAudio ? `/api/data/ask/${uuid}.wav` : "",
+            video_path: stateNewVideo ? `/api/data/ask/${uuid}.mp4` : "",
+            content: stateNewNotes,
             created_at: new Date(),
             updated_at: new Date(),
-        });
+        })
         if (result.status === 'success') {
-            setStateNewTitle("");
-            setStateNewContent("");
-            if (!!stateNewVideo) {
-                URL.revokeObjectURL(stateNewVideo.url)
-                setStateNewVideo(undefined)
-            }
-            if (!!stateNewAudio) {
-                URL.revokeObjectURL(stateNewAudio.url)
-                setStateNewAudio(undefined)
-            }
-            setStateReload(current => current + 1)
+            clearForm()
+            setStateShowAdd(false)
+            setStateReload(n => n + 1)
         } else {
-            console.log(result.error);
-            toast.danger("save data error");
+            toast.danger("save data error")
         }
         setStateSaving(false)
     }
 
     const toggleRecordingLocal = async () => {
-        if (!!stateNewVideo) {
-            URL.revokeObjectURL(stateNewVideo.url)
-            setStateNewVideo(undefined)
-        }
-        if (!!stateNewAudio) {
-            URL.revokeObjectURL(stateNewAudio.url)
-            setStateNewAudio(undefined)
-        }
-
-        const handleVideo = async (videoBlob: Blob) => {
-            setStateNewVideo({
-                data: videoBlob,
-                url: URL.createObjectURL(videoBlob),
-            });
-        }
-
-        const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
-            setStateNewAudio({
-                data: audioBlob,
-                url: URL.createObjectURL(audioBlob),
-            });
-            setStateNewContent(result.status === 'success' ? result.data : "")
-            if (result.status === 'error') {
-                toast.danger(result.error as string);
-            }
-        }
-
+        if (stateNewVideo) { URL.revokeObjectURL(stateNewVideo.url); setStateNewVideo(undefined) }
+        if (stateNewAudio) { URL.revokeObjectURL(stateNewAudio.url); setStateNewAudio(undefined) }
         await toggleRecording({
             mode: stateMode,
             setStateStream,
@@ -161,111 +111,204 @@ export default function Page({ user_id }: Props) {
             setStateRecording,
             recognize: true,
             setStateProcessing,
-            handleVideo,
-            handleAudio,
-        });
+            handleVideo: async (blob) => {
+                setStateNewVideo({ data: blob, url: URL.createObjectURL(blob) })
+            },
+            handleAudio: async (result: ActionResult<string>, blob) => {
+                setStateNewAudio({ data: blob, url: URL.createObjectURL(blob) })
+                if (result.status === 'success' && result.data) setStateNewNotes(result.data)
+                if (result.status === 'error') toast.danger(result.error as string)
+            },
+        })
     }
 
     useEffect(() => {
-        const loadData = async () => {
+        const load = async () => {
             setStateLoading(true)
             const result = await getQuestionAll()
             if (result.status === "success") {
                 setStateData(result.data)
+                const tagMapResult = await getTagUuidsForQuestions(result.data.map(q => q.uuid))
+                if (tagMapResult.status === "success") setStateQuestionTagMap(tagMapResult.data)
             } else {
-                console.log(result.error);
-                toast.danger("load data error");
+                toast.danger("load data error")
             }
             setStateLoading(false)
         }
+        load()
+    }, [stateReload])
 
-        loadData();
+    useEffect(() => {
+        if (previewRef.current && stateStream) previewRef.current.srcObject = stateStream
+    }, [stateStream])
 
-        if (!!previewRef.current && !!stateStream) {
-            previewRef.current.srcObject = stateStream;
-        }
-    }, [stateReload, previewRef, stateStream]);
+    const filtered = stateData
+        .filter(v => !stateOnlyMy || v.user_id === user_id)
+        .filter(v => !stateFilterLanguage || v.language === stateFilterLanguage)
+        .filter(v => {
+            if (stateTagFilter.size === 0) return true
+            const qTags = stateQuestionTagMap[v.uuid] ?? []
+            return [...stateTagFilter.keys()].some(tagUuid => qTags.includes(tagUuid))
+        })
 
     return (
-        <div>
-            <div className='flex flex-col sm:flex-row items-center justify-center gap-4 my-4'>
-                <Select aria-label='stt engine' className='w-full sm:max-w-sm'
-                    value={stateMode}
-                    onChange={(v) => setStateMode((v ?? 'video') as "video" | "audio")}
+        <div className="w-full max-w-2xl mx-auto space-y-6 py-4">
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold">Interview Practice</h1>
+                <div className="flex gap-2">
+                    <Link href={`/speak/ask/practice${stateFilterLanguage ? `?lang=${stateFilterLanguage}` : ''}`}>
+                        <Button variant="primary">Practice All</Button>
+                    </Link>
+                    <Button variant="ghost"
+                        isDisabled={stateRecording}
+                        onPress={() => {
+                            if (stateShowAdd) clearForm()
+                            setStateShowAdd(!stateShowAdd)
+                        }}
+                    >
+                        {stateShowAdd ? "Cancel" : "+ Add Question"}
+                    </Button>
+                </div>
+            </div>
+
+            {stateShowAdd && (
+                <div className="rounded-xl bg-sand-100 p-4 space-y-3">
+                    <div className="flex gap-3">
+                        <TextField className="flex-1">
+                            <Label>Question</Label>
+                            <Input
+                                value={stateNewTitle}
+                                onChange={e => setStateNewTitle(e.target.value)}
+                                placeholder="e.g. Tell me about yourself"
+                            />
+                        </TextField>
+                        <div className="flex flex-col gap-1">
+                            <Label>Language</Label>
+                            <Select aria-label="language" className="w-36"
+                                value={stateNewLanguage}
+                                onChange={v => setStateNewLanguage(v ? String(v) : "en")}
+                            >
+                                <Select.Trigger>
+                                    <Select.Value />
+                                    <Select.Indicator />
+                                </Select.Trigger>
+                                <Select.Popover>
+                                    <ListBox>
+                                        {LANGUAGES.map(l => (
+                                            <ListBox.Item id={l.id} key={l.id} textValue={l.label}>
+                                                {l.label}
+                                            </ListBox.Item>
+                                        ))}
+                                    </ListBox>
+                                </Select.Popover>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <Select aria-label="mode" className="w-32"
+                            value={stateMode}
+                            onChange={v => setStateMode((v ?? "audio") as "video" | "audio")}
+                        >
+                            <Select.Trigger>
+                                <Select.Value />
+                                <Select.Indicator />
+                            </Select.Trigger>
+                            <Select.Popover>
+                                <ListBox>
+                                    <ListBox.Item id="audio" key="audio" textValue="audio">audio</ListBox.Item>
+                                    <ListBox.Item id="video" key="video" textValue="video">video</ListBox.Item>
+                                </ListBox>
+                            </Select.Popover>
+                        </Select>
+                        <Button variant="ghost"
+                            isDisabled={!stateRecording && stateProcessing}
+                            onPress={toggleRecordingLocal}
+                        >
+                            {stateRecording ? "⏹ Stop" : stateProcessing ? "Processing..." : "🎤 Record (optional)"}
+                        </Button>
+                    </div>
+
+                    {stateRecording && (
+                        <video ref={previewRef} autoPlay muted playsInline className="w-full rounded-lg" />
+                    )}
+                    {stateNewAudio && !stateRecording && (
+                        <audio controls src={stateNewAudio.url} className="w-full" />
+                    )}
+                    {stateNewVideo && !stateRecording && (
+                        <video controls src={stateNewVideo.url} className="w-full max-h-[30vh] rounded-lg" />
+                    )}
+
+                    <TextField className="w-full">
+                        <Label>Notes (optional)</Label>
+                        <TextArea
+                            value={stateNewNotes}
+                            onChange={e => setStateNewNotes(e.target.value)}
+                            placeholder="Key points to cover, context, etc."
+                        />
+                    </TextField>
+
+                    <Button variant="primary" isDisabled={stateSaving} onPress={handleAdd}>
+                        {stateSaving ? "Saving..." : "Save Question"}
+                    </Button>
+                </div>
+            )}
+
+            <TagSelector
+                user_id={user_id}
+                scope="ask"
+                selectionMode="multiple"
+                hideSelector={true}
+                readOnly={false}
+                stateSelected={stateTagFilter}
+                setStateSelected={setStateTagFilter}
+            />
+
+            <div className="flex items-center justify-end gap-2">
+                <Select aria-label="filter by language" className="w-36"
+                    value={stateFilterLanguage}
+                    onChange={v => setStateFilterLanguage(v ? String(v) : "en")}
                 >
                     <Select.Trigger>
-                        <div className="whitespace-nowrap font-bold">Mode</div>
                         <Select.Value />
                         <Select.Indicator />
                     </Select.Trigger>
                     <Select.Popover>
                         <ListBox>
-                            <ListBox.Item id="video" key="video" textValue="video">video</ListBox.Item>
-                            <ListBox.Item id="audio" key="audio" textValue="audio">audio</ListBox.Item>
+                            <ListBox.Item id="" key="" textValue="All Languages">All Languages</ListBox.Item>
+                            {LANGUAGES.map(l => (
+                                <ListBox.Item id={l.id} key={l.id} textValue={l.label}>{l.label}</ListBox.Item>
+                            ))}
                         </ListBox>
                     </Select.Popover>
                 </Select>
-                <Button variant="primary" id='button-toggel-recording'
-                    isDisabled={!stateRecording && stateProcessing}
-                    onPress={async () => {
-                        await toggleRecordingLocal()
-                    }}
-                >
-                    {stateRecording
-                        ? '⏹ Stop Recording (Ctrl+A)'
-                        : stateProcessing ? "Processing" : '🎤 Read a Sentence (Ctrl+A)'}
-                </Button>
-            </div>
-
-            {stateRecording ? (
-                <video ref={previewRef} autoPlay muted playsInline className="w-full" />
-            ) : (
-                <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
-                    <TextField className='w-full'>
-                        <Label>title</Label>
-                        <Input value={stateNewTitle} onChange={(e) => setStateNewTitle(e.target.value)} />
-                    </TextField>
-                    {!!stateNewAudio && (<audio controls src={stateNewAudio.url} className="w-full" />)}
-                    {!!stateNewVideo && (<video controls src={stateNewVideo.url} className="w-full max-h-[40vh]" />)}
-                    <TextField className='w-full'>
-                        <Label>content</Label>
-                        <TextArea className="bg-sand-200 text-xl"
-                            value={stateNewContent}
-                            onChange={(e) => setStateNewContent(e.target.value)}
-                        />
-                    </TextField>
-                    <Button variant="primary" id="button-add-save"
-                        isDisabled={stateSaving} onPress={handleAdd}
-                    >
-                        Add & Save (Ctrl+S)
+                {!!user_id && (
+                    <Button variant="ghost" onPress={() => setStateOnlyMy(!stateOnlyMy)}>
+                        {stateOnlyMy ? "All Questions" : "My Questions"}
                     </Button>
-                </div>
-            )}
+                )}
+            </div>
 
             {stateLoading && (
-                <div className='flex flex-row w-full items-center justify-center gap-4 my-4'>
-                    <Spinner />
+                <div className="flex justify-center py-8"><Spinner /></div>
+            )}
+
+            {!stateLoading && filtered.length === 0 && (
+                <div className="text-center py-12 text-foreground-400">
+                    No questions yet. Add your first interview question!
                 </div>
             )}
 
-            <div className='flex flex-row items-center justify-end gap-4 my-4 mb-0'>
-                <Button variant="primary"
-                    isDisabled={!user_id} onPress={() => setStateOnlyMy(!stateOnlyMy)}
-                >
-                    {stateOnlyMy ? "All Texts" : "Only My Texts"}
-                </Button>
-            </div>
-
-            <div className="flex flex-col w-full gap-4 my-4">
-                {stateData.filter((v) => !stateOnlyMy || v.user_id === user_id).map((v, i) =>
-                    <Question
+            <div className="space-y-3">
+                {filtered.map((v, i) => (
+                    <QuestionCard
                         key={`${i}-${v.uuid}`}
                         user_id={user_id}
                         item={v}
                         handleDelete={handleDelete}
                     />
-                )}
+                ))}
             </div>
-        </div >
+        </div>
     )
 }

@@ -7,6 +7,7 @@ import { getUUID } from '@/lib/utils';
 const CreateQuestionSchema = z.object({
     title: z.string().nullable().optional(),
     content: z.string().nullable().optional(),
+    language: z.string().optional(),
 });
 
 const UpdateQuestionSchema = z.object({
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
         uuid: getUUID(),
         user_id: ctx.email,
         title: parsed.data.title ?? null,
+        language: parsed.data.language ?? "en",
         content: parsed.data.content ?? null,
         audio_path: null,
         video_path: null,

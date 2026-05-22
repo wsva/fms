@@ -99,7 +99,7 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
             setStateLoading(false)
         }
         loadData()
-    }, [user_id, stateReload])
+    }, [user_id, scope, stateReload])
 
     const tagHandlers: NodeHandlers = {
         stateSelected,

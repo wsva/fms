@@ -81,7 +81,6 @@ model dataset_tag {
   user_id     String   @db.VarChar(100)
   tag         String
   description String
-  scope       String   @default("card") @db.VarChar(100)
   parent_uuid String?  @db.VarChar(100)
   shared      String   @default("N") @db.VarChar(1)
   created_at  DateTime @default(now()) @db.Timestamptz(6)
@@ -96,6 +95,20 @@ model dataset_subscription {
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([user_id, tag_uuid])
+}
+
+model dataset_scope {
+  uuid String @id @db.VarChar(100)
+}
+
+model dataset_tag_scope {
+  uuid       String   @id @db.VarChar(100)
+  tag_uuid   String   @db.VarChar(100)
+  scope_uuid String   @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([tag_uuid, scope_uuid])
 }
 
 // ---------- word
@@ -254,6 +267,7 @@ model ask_question {
   uuid       String   @id @db.VarChar(100)
   user_id    String   @db.VarChar(100)
   title      String?
+  language   String   @db.VarChar(10) @default("en")
   audio_path String?
   video_path String?
   content    String?
@@ -268,6 +282,15 @@ model ask_answer {
   audio_path    String?
   video_path    String?
   content       String?
+  is_example    Boolean  @default(false)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model ask_question_tag {
+  uuid          String   @id @db.VarChar(100)
+  question_uuid String   @db.VarChar(100)
+  tag_uuid      String   @db.VarChar(100)
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   updated_at    DateTime @default(now()) @db.Timestamptz(6)
 }

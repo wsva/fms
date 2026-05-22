@@ -4,28 +4,25 @@ import { prisma } from "@/lib/prisma";
 import { ActionResult } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
-import { dataset_tag } from "@/generated/prisma/client";
+import { dataset_tag, dataset_scope } from "@/generated/prisma/client";
+
+async function resolveScopeUuids(scopeName: string): Promise<string[] | null> {
+    if (!scopeName) return null;
+    const rows = await prisma.dataset_tag_scope.findMany({
+        where: { scope_uuid: scopeName },
+        select: { tag_uuid: true },
+    });
+    return rows.map(r => r.tag_uuid);
+}
 
 // tags owned by user
 export async function getTagAllOwned(email: string, scope: string): Promise<ActionResult<dataset_tag[]>> {
     try {
-        if (!!scope) {
-            const result = await prisma.dataset_tag.findMany({
-                where: {
-                    AND: [
-                        { user_id: email },
-                        { scope: { contains: scope } },
-                    ],
-                },
-                orderBy: { tag: 'asc' },
-            });
-            return { status: "success", data: result };
-        }
+        const scopeUuids = await resolveScopeUuids(scope);
         const result = await prisma.dataset_tag.findMany({
             where: {
-                AND: [
-                    { user_id: email },
-                ],
+                user_id: email,
+                ...(scopeUuids !== null ? { uuid: { in: scopeUuids } } : {}),
             },
             orderBy: { tag: 'asc' },
         });
@@ -36,14 +33,14 @@ export async function getTagAllOwned(email: string, scope: string): Promise<Acti
     }
 }
 
-// tags used by user, include subscription 
+// tags used by user, include subscription
 export async function getTagAllUsed(email: string, scope: string): Promise<ActionResult<dataset_tag[]>> {
     try {
-        const subs = await prisma.dataset_subscription.findMany({
-            where: { user_id: email },
-            select: { tag_uuid: true },
-        })
-        const subUuids = subs.map(s => s.tag_uuid)
+        const [subs, scopeUuids] = await Promise.all([
+            prisma.dataset_subscription.findMany({ where: { user_id: email }, select: { tag_uuid: true } }),
+            resolveScopeUuids(scope),
+        ]);
+        const subUuids = subs.map(s => s.tag_uuid);
         const result = await prisma.dataset_tag.findMany({
             where: {
                 AND: [
@@ -53,42 +50,40 @@ export async function getTagAllUsed(email: string, scope: string): Promise<Actio
                             ...(subUuids.length > 0 ? [{ uuid: { in: subUuids } }] : []),
                         ]
                     },
-                    { scope: { contains: scope } },
+                    ...(scopeUuids !== null ? [{ uuid: { in: scopeUuids } }] : []),
                 ]
             },
             orderBy: { tag: 'asc' },
-        })
-        return { status: "success", data: result }
+        });
+        return { status: "success", data: result };
     } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
     }
 }
 
 // subscribed tags by user
 export async function getTagAllSubscribed(email: string, scope: string): Promise<ActionResult<dataset_tag[]>> {
     try {
-        const subs = await prisma.dataset_subscription.findMany({
-            where: { user_id: email },
-            select: { tag_uuid: true },
-        })
-        const subUuids = subs.map(s => s.tag_uuid)
-        if (subUuids.length === 0) {
-            return { status: "success", data: [] }
-        }
+        const [subs, scopeUuids] = await Promise.all([
+            prisma.dataset_subscription.findMany({ where: { user_id: email }, select: { tag_uuid: true } }),
+            resolveScopeUuids(scope),
+        ]);
+        const subUuids = subs.map(s => s.tag_uuid);
+        if (subUuids.length === 0) return { status: "success", data: [] };
         const result = await prisma.dataset_tag.findMany({
             where: {
                 AND: [
                     { uuid: { in: subUuids } },
-                    { scope: { contains: scope } },
+                    ...(scopeUuids !== null ? [{ uuid: { in: scopeUuids } }] : []),
                 ]
             },
             orderBy: { tag: 'asc' },
-        })
-        return { status: "success", data: result }
+        });
+        return { status: "success", data: result };
     } catch (error) {
-        console.error(error)
-        return { status: 'error', error: toErrorMessage(error) }
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
     }
 }
 
@@ -229,4 +224,50 @@ export async function unsubscribeTag(user_id: string, tag_uuid: string): Promise
     }
 }
 
+export async function getAllScopes(): Promise<ActionResult<dataset_scope[]>> {
+    try {
+        const result = await prisma.dataset_scope.findMany({ orderBy: { uuid: 'asc' } });
+        return { status: "success", data: result };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+export async function getTagScopeMap(tag_uuids: string[]): Promise<ActionResult<Record<string, string[]>>> {
+    try {
+        if (tag_uuids.length === 0) return { status: 'success', data: {} };
+        const rows = await prisma.dataset_tag_scope.findMany({ where: { tag_uuid: { in: tag_uuids } } });
+        const map: Record<string, string[]> = {};
+        for (const row of rows) {
+            if (!map[row.tag_uuid]) map[row.tag_uuid] = [];
+            map[row.tag_uuid].push(row.scope_uuid);
+        }
+        return { status: 'success', data: map };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+export async function setTagScopes(tag_uuid: string, scope_uuids: string[]): Promise<ActionResult<void>> {
+    try {
+        await prisma.dataset_tag_scope.deleteMany({ where: { tag_uuid } });
+        if (scope_uuids.length > 0) {
+            await prisma.dataset_tag_scope.createMany({
+                data: scope_uuids.map(scope_uuid => ({
+                    uuid: getUUID(),
+                    tag_uuid,
+                    scope_uuid,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                })),
+            });
+        }
+        return { status: 'success', data: undefined };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
 

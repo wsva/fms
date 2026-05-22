@@ -256,7 +256,7 @@ export default function Page({ user_id, uuid }: Props) {
             setStateLoading(true)
 
             try {
-                const result = await getTagAllUsed(user_id, 'listen')
+                const result = await getTagAllUsed(user_id, 'media')
 
                 if (result.status === 'success') {
                     const tags = result.data
