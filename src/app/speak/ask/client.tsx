@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { toast, Button, Input, Select, Spinner, TextArea, TextField, Label, ListBox, Link } from "@heroui/react"
 import { getUUID } from '@/lib/utils'
 import { ask_question, dataset_tag } from "@/generated/prisma/client"
-import { getQuestionAll, getTagUuidsForQuestions, removeQuestion, saveQuestion } from '@/app/actions/ask'
+import { getQuestionAll, getTagUuidsForQuestions, removeQuestion, saveQuestion, setQuestionTags } from '@/app/actions/ask'
 import { toggleRecording } from '@/lib/recording'
 import { ActionResult } from '@/lib/types'
 import { removeAudio, saveAudio } from '@/app/actions/audio'
@@ -36,6 +36,7 @@ export default function Page({ user_id }: Props) {
     const [stateFilterLanguage, setStateFilterLanguage] = useState("en")
     const [stateTagFilter, setStateTagFilter] = useState<Map<string, dataset_tag | null>>(new Map())
     const [stateQuestionTagMap, setStateQuestionTagMap] = useState<Record<string, string[]>>({})
+    const [stateNewTags, setStateNewTags] = useState<Map<string, dataset_tag | null>>(new Map())
 
     const previewRef = useRef<HTMLVideoElement>(null)
 
@@ -44,6 +45,7 @@ export default function Page({ user_id }: Props) {
         if (stateNewAudio) { URL.revokeObjectURL(stateNewAudio.url); setStateNewAudio(undefined) }
         setStateNewTitle("")
         setStateNewNotes("")
+        setStateNewTags(new Map())
     }
 
     const handleDelete = async (item: ask_question) => {
@@ -90,6 +92,9 @@ export default function Page({ user_id }: Props) {
             updated_at: new Date(),
         })
         if (result.status === 'success') {
+            if (stateNewTags.size > 0) {
+                await setQuestionTags(uuid, [...stateNewTags.keys()])
+            }
             clearForm()
             setStateShowAdd(false)
             setStateReload(n => n + 1)
@@ -247,6 +252,16 @@ export default function Page({ user_id }: Props) {
                             placeholder="Key points to cover, context, etc."
                         />
                     </TextField>
+
+                    <TagSelector
+                        user_id={user_id}
+                        scope="ask"
+                        selectionMode="multiple"
+                        hideSelector={false}
+                        readOnly={false}
+                        stateSelected={stateNewTags}
+                        setStateSelected={setStateNewTags}
+                    />
 
                     <Button variant="primary" isDisabled={stateSaving} onPress={handleAdd}>
                         {stateSaving ? "Saving..." : "Save Question"}
