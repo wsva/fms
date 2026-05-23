@@ -1,14 +1,14 @@
 'use client'
 
 import { getProperty, getUUID } from '@/lib/utils';
-import { toast, Button, Separator, Link, Select, TextArea, ListBox } from "@heroui/react";
+import { toast, Button, Separator, Link, TextArea } from "@heroui/react";
 import { useEffect, useRef, useState } from 'react'
 import MdEditor from '@/components/MdEditor'
 import { useSearchParams } from 'next/navigation'
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { qsa_card, dataset_tag } from "@/generated/prisma/client";
 import { getCardTag, getCardsByQuestionHash, removeCard, saveCard, saveCardTag } from '@/app/actions/card';
-import { FamiliarityList } from '@/lib/card';
+import FamiliaritySelector from '@/components/card/familiarity-selector';
 import { card_ext } from '@/lib/types';
 import Markdown2Html from '@/components/markdown/markdown';
 import AppModal from '@/components/AppModal';
@@ -32,7 +32,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
     const [stateTagAdded, setStateTagAdded] = useState<string[]>([]);
     const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag | null>>(new Map());
     const [stateDuplicates, setStateDuplicates] = useState<qsa_card[]>([]);
-    const { register, handleSubmit, formState, watch, reset, getValues, control } = useForm<qsa_card>({});
+    const { register, handleSubmit, formState, watch, reset, getValues, setValue } = useForm<qsa_card>({});
 
     const formRef = useRef<HTMLFormElement>(null);
     const { ref: refAnswer, ...restAnswer } = register('answer');
@@ -185,10 +185,6 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
         return () => clearTimeout(timer)
     }, [questionValue, card_ext.uuid])
 
-    const getColor = (familiarity: number) => {
-        return FamiliarityList.map((v) => v.color)[familiarity]
-    }
-
     const onSubmit = async (formData: qsa_card) => {
         if (!stateCard) {
             toast.danger("loading");
@@ -313,27 +309,12 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             </div>
                         )}
                         {!simple && (
-                            <Controller
-                                name="familiarity"
-                                control={control}
-                                render={({ field }) => (
-                                    <Select aria-label='select familiarity'
-                                        selectedKey={String(field.value ?? 0)}
-                                        onSelectionChange={(key) => field.onChange(key !== null ? Number(key) : 0)}
-                                    >
-                                        <Select.Trigger>
-                                            <Select.Value />
-                                            <Select.Indicator />
-                                        </Select.Trigger>
-                                        <Select.Popover>
-                                            <ListBox>
-                                                {FamiliarityList.map((v) =>
-                                                    <ListBox.Item id={String(v.value)} key={v.value} textValue={`${v.value} - ${v.label}`} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</ListBox.Item>
-                                                )}
-                                            </ListBox>
-                                        </Select.Popover>
-                                    </Select>
-                                )}
+                            <FamiliaritySelector
+                                stateSelected={watch('familiarity') ?? null}
+                                setStateSelected={(action) => {
+                                    const next = typeof action === 'function' ? action(watch('familiarity') ?? null) : action
+                                    setValue('familiarity', next ?? 0, { shouldDirty: true })
+                                }}
                             />
                         )}
                         <TagSelector user_id={email} scope="card" selectionMode="multiple" hideSelector={true} readOnly={false}
@@ -374,22 +355,11 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             </div>
                         )}
                         <Separator />
-                        <Select aria-label='select familiarity'
-                            selectedKey={String(watch('familiarity') ?? 0)}
-                            isDisabled
-                        >
-                            <Select.Trigger>
-                                <Select.Value />
-                                <Select.Indicator />
-                            </Select.Trigger>
-                            <Select.Popover>
-                                <ListBox>
-                                    {FamiliarityList.map((v) =>
-                                        <ListBox.Item id={String(v.value)} key={v.value} textValue={`${v.value} - ${v.label}`} className={`${getColor(v.value)}`}>{`${v.value} - ${v.label}`}</ListBox.Item>
-                                    )}
-                                </ListBox>
-                            </Select.Popover>
-                        </Select>
+                        <FamiliaritySelector
+                            readOnly
+                            stateSelected={watch('familiarity') ?? null}
+                            setStateSelected={() => {}}
+                        />
                         <TagSelector user_id={email} scope="card" selectionMode="multiple" hideSelector={true} readOnly={true}
                             stateSelected={stateTagSelected}
                             setStateSelected={setStateTagSelected}
