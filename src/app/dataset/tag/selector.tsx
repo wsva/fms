@@ -110,8 +110,8 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
 
     return (
         <div className="rounded-lg border border-sand-300 bg-sand-100 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 bg-sand-200 border-b border-sand-300">
-                <span className="text-xs font-semibold text-sand-500 tracking-wider shrink-0">
+            <div className="flex items-center gap-2 px-3 py-2 bg-sand-200 border-b border-sand-300 cursor-pointer" onClick={() => setStateHide(!stateHide)}>
+                <span className="text-xs font-semibold text-sand-500 tracking-wider shrink-0 select-none">
                     Dataset Tags:
                 </span>
                 <div className="flex-1 flex flex-wrap gap-1 min-w-0">
@@ -126,23 +126,21 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
                 {readOnly && (
                     <span className='select-none'>read only</span>
                 )}
-                {stateLoading ? (
-                    <Spinner size="sm" className="shrink-0" />
-                ) : (
-                    <Button isIconOnly size="sm" variant="ghost" className="shrink-0"
-                        onPress={() => setStateReload(v => v + 1)}
-                    >
-                        <ArrowsRotateLeft />
+                <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    {stateLoading ? (
+                        <Spinner size="sm" />
+                    ) : (
+                        <Button isIconOnly size="sm" variant="ghost" onPress={() => setStateReload(v => v + 1)}>
+                            <ArrowsRotateLeft />
+                        </Button>
+                    )}
+                    <Button isIconOnly size="sm" variant="ghost" onPress={() => setStateShowDescription(!stateShowDescription)}>
+                        <CircleInfo />
                     </Button>
-                )}
-                <Button isIconOnly size="sm" variant="ghost" className="shrink-0"
-                    onPress={() => setStateShowDescription(!stateShowDescription)}
-                >
-                    <CircleInfo />
-                </Button>
-                <Button isIconOnly size='sm' variant='ghost' className="shrink-0" onPress={() => setStateHide(!stateHide)}>
-                    {stateHide ? <ChevronsDownWide /> : <ChevronsUpWide />}
-                </Button>
+                    <Button isIconOnly size='sm' variant='ghost' onPress={() => setStateHide(!stateHide)}>
+                        {stateHide ? <ChevronsDownWide /> : <ChevronsUpWide />}
+                    </Button>
+                </div>
             </div>
 
             {stateHide || (

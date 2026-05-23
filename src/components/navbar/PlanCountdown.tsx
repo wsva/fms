@@ -5,7 +5,6 @@ import { toast, Button, Modal } from '@heroui/react'
 import { getPlanAll, saveRecord } from '@/app/actions/plan'
 import type { plan_plan, plan_record } from '@/generated/prisma/client'
 import { getUUID } from '@/lib/utils'
-import { PlayFill } from '@gravity-ui/icons'
 import { MdCheck, MdClose } from 'react-icons/md'
 
 type Phase = 'idle' | 'running' | 'done'
@@ -192,8 +191,7 @@ export default function PlanCountdown({ user_id }: { user_id: string }) {
             {/* Navbar widget */}
             {phase === 'idle' && (
                 <Button size="sm" className="text-lg bg-sand-400" onPress={handleOpenSelector}>
-                    <PlayFill />
-                    Start Plan
+                    start plan
                 </Button>
             )}
 
@@ -207,11 +205,11 @@ export default function PlanCountdown({ user_id }: { user_id: string }) {
                 <div className="flex items-center gap-1">
                     <Button size="sm" variant="primary" onPress={handleComplete}>
                         <MdCheck size={16} />
-                        Done
+                        done
                     </Button>
                     <Button size="sm" variant="danger-soft" onPress={handleFail}>
                         <MdClose size={16} />
-                        Failed
+                        failed
                     </Button>
                 </div>
             )}
