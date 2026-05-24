@@ -16,15 +16,14 @@ export const menuList: MenuGroup[] = [
         items: [
             { key: "word_top", name: "Top Words", description: "top words", href: "/word/top" },
             { key: "word_sentence", name: "Sentence", description: "search sentences", href: "/word/sentence" },
-            { key: "word_pdf_reader", name: "PDF Reader", description: "read a PDF file", href: "/tools/pdf_reader" },
         ],
     },
     {
         name: "Listen & Speak",
         items: [
             { key: "seperator_listen", name: "Listen", description: "", href: "" },
-            { key: "listen_dictation", name: "Dictation", description: "dictation", href: "/listen/dictation" },
             { key: "listen_media", name: "My Media", description: "my media", href: "/listen/media" },
+            { key: "listen_dictation", name: "Dictation", description: "dictation", href: "/listen/dictation" },
 
             { key: "seperator_speak", name: "Speak", description: "", href: "" },
             { key: "speak_just_speaking", name: "Just Speaking", description: "record and upload audio", href: "/speak/just-speaking" },

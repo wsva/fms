@@ -51,6 +51,7 @@ import { getUUID } from '@/lib/utils'
 import { MdPlayCircle, MdClosedCaption, MdDescription, MdNotes, MdCheckCircle, MdPeople } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
+import WaveformCanvas, { type WaveformData } from '@/components/WaveformCanvas'
 import { buildVTT, Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
 import { useImmer } from 'use-immer'
 import CueEditor from './cue_editor'
@@ -109,6 +110,9 @@ export default function Page({ user_id, uuid }: Props) {
 
     const [localServiceUrl, setLocalServiceUrl] = useState('')
     const [resolvedMediaSrc, setResolvedMediaSrc] = useState('')
+
+    const [stateActiveTab, setStateActiveTab] = useState<string>('dictation')
+    const [stateWaveformPeaks, setStateWaveformPeaks] = useState<WaveformData | null>(null)
 
     const [sidebarWidth, setSidebarWidth] = useState<number>(320)
 
@@ -471,6 +475,19 @@ export default function Page({ user_id, uuid }: Props) {
         return () => { cancelled = true }
     }, [stateMedia.media.source, stateMediaFile, localServiceUrl])
 
+    useEffect(() => {
+        if (stateMediaFile) { setStateWaveformPeaks(null); return }
+        const source = stateMedia.media.source
+        if (!source?.startsWith('/api/data/')) { setStateWaveformPeaks(null); return }
+        const src = source.replace(/(\.[^./]+)?$/, '.waveform.json')
+        let cancelled = false
+        fetch(src)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (!cancelled) setStateWaveformPeaks(data ?? null) })
+            .catch(() => { if (!cancelled) setStateWaveformPeaks(null) })
+        return () => { cancelled = true }
+    }, [stateMedia.media.source, stateMediaFile])
+
     const scheduleDictSave = (successSet: Set<number>, status: string) => {
         if (!stateMediaUUID || !stateSubtitle?.uuid) return
         if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
@@ -600,7 +617,8 @@ export default function Page({ user_id, uuid }: Props) {
     const hasVideo = !!resolvedMediaSrc
 
     return (
-        <div className="flex flex-col lg:flex-row w-full gap-3 py-3 px-3">
+        <>
+        <div className="flex flex-col lg:flex-row w-full gap-3 py-3 lg:pb-24 px-3">
 
             {/* LEFT SIDEBAR — player always visible; library desktop only */}
             <aside className="flex flex-col gap-3 shrink-0 w-full sticky top-16 z-10 lg:w-[var(--sidebar-width)] lg:self-start relative lg:max-h-[calc(100vh-1.5rem)] lg:overflow-hidden"
@@ -734,7 +752,10 @@ export default function Page({ user_id, uuid }: Props) {
                 {/* Tabs */}
                 <div className="bg-sand-300 rounded-xl p-1">
                     <Tabs className="font-bold w-full" variant="secondary"
-                        onSelectionChange={(v) => setStateDictation(v === "dictation")}
+                        onSelectionChange={(v) => {
+                            setStateDictation(v === "dictation")
+                            setStateActiveTab(String(v))
+                        }}
                     >
                         <Tabs.ListContainer>
                             <Tabs.List aria-label="Media tabs">
@@ -1042,5 +1063,13 @@ export default function Page({ user_id, uuid }: Props) {
             </div>
 
         </div>
+
+        {/* Waveform footer — desktop only, full width, dictation/subtitle tabs */}
+        {stateWaveformPeaks && (stateActiveTab === 'dictation' || stateActiveTab === 'subtitle') && (
+            <div className="hidden lg:block fixed bottom-0 left-0 right-0 z-20 bg-sand-100 border-t border-sand-200 px-6 py-2 shadow-lg">
+                <WaveformCanvas peaks={stateWaveformPeaks} videoRef={videoRef} />
+            </div>
+        )}
+        </>
     )
 }

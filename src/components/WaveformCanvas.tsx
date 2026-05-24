@@ -1,0 +1,287 @@
+'use client'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button } from '@heroui/react'
+import { Play, Pause } from '@gravity-ui/icons'
+import { MdContentCopy } from 'react-icons/md'
+
+export type WaveformData = {
+  version?: number
+  channels?: number
+  sample_rate?: number
+  samples_per_pixel?: number
+  bits?: number
+  length: number
+  data: number[]
+}
+
+type Props = {
+  peaks: WaveformData
+  videoRef: React.RefObject<HTMLVideoElement | null>
+}
+
+const UNPLAYED = '#b8a48e'
+const PLAYED = '#b45309'
+const SELECTION_FILL = 'rgba(251, 146, 60, 0.20)'
+const SELECTION_EDGE = '#ea580c'
+
+const fmtTime = (sec: number): string => {
+  if (!isFinite(sec) || sec < 0) return '00:00:00.000'
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const sFloor = Math.floor(sec % 60)
+  const ms = Math.min(999, Math.round((sec % 1) * 1000))
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sFloor).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
+}
+
+const parseTime = (str: string): number => {
+  const parts = str.trim().split(':')
+  const nums = parts.map(Number)
+  if (nums.some(isNaN)) return NaN
+  if (nums.length === 3) return nums[0] * 3600 + nums[1] * 60 + nums[2]
+  if (nums.length === 2) return nums[0] * 60 + nums[1]
+  return nums[0]
+}
+
+export default function WaveformCanvas({ peaks, videoRef }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const peaksRef = useRef(peaks)
+  peaksRef.current = peaks
+
+  // refs read inside draw() and event handlers — no stale closures
+  const startRef = useRef(0)
+  const stopRef = useRef(0)
+  const playingSelectionRef = useRef(false)
+  const timeDisplayRef = useRef<HTMLSpanElement>(null)
+
+  // React state for button/input rendering
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [startTime, setStartTime] = useState(0)
+  const [stopTime, setStopTime] = useState(0)
+  const [startText, setStartText] = useState('00:00:00.000')
+  const [stopText, setStopText] = useState('00:00:00.000')
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const w = canvas.width
+    const h = canvas.height
+    if (w === 0 || h === 0) return
+
+    ctx.clearRect(0, 0, w, h)
+
+    const { data, bits = 8, channels = 1, length: numSamples } = peaksRef.current
+    if (!data || numSamples === 0) return
+
+    const scale = bits === 8 ? 128 : 32768
+    const stride = channels * 2
+
+    const video = videoRef.current
+    const duration = video && isFinite(video.duration) && video.duration > 0 ? video.duration : 0
+    const progress = duration > 0 ? video!.currentTime / duration : 0
+    const playheadX = Math.round(progress * w)
+
+    // Draw bars
+    for (let px = 0; px < w; px++) {
+      const idx = Math.min(Math.floor((px / w) * numSamples), numSamples - 1)
+      const min = data[idx * stride] / scale
+      const max = data[idx * stride + 1] / scale
+      const yTop = Math.floor(h / 2 - max * (h / 2) * 0.9)
+      const yBot = Math.ceil(h / 2 - min * (h / 2) * 0.9)
+      ctx.fillStyle = px <= playheadX ? PLAYED : UNPLAYED
+      ctx.fillRect(px, yTop, 1, Math.max(1, yBot - yTop))
+    }
+
+    // Selection overlay
+    if (duration > 0 && stopRef.current > startRef.current) {
+      const x0 = Math.round((startRef.current / duration) * w)
+      const x1 = Math.round((stopRef.current / duration) * w)
+      ctx.fillStyle = SELECTION_FILL
+      ctx.fillRect(x0, 0, x1 - x0, h)
+      ctx.fillStyle = SELECTION_EDGE
+      ctx.fillRect(x0, 0, 2, h)
+      ctx.fillRect(x1 - 1, 0, 2, h)
+    }
+
+    // Playhead
+    ctx.fillStyle = PLAYED
+    ctx.fillRect(Math.max(0, playheadX - 1), 0, 2, h)
+
+    // Update time display via direct DOM — avoids React re-render on every tick
+    if (timeDisplayRef.current && video) {
+      timeDisplayRef.current.textContent = fmtTime(video.currentTime)
+    }
+  }, [videoRef])
+
+  // Resize → sync canvas pixel size and redraw
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const sync = () => {
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = canvas.clientWidth * dpr
+      canvas.height = canvas.clientHeight * dpr
+      draw()
+    }
+    sync()
+    const ro = new ResizeObserver(sync)
+    ro.observe(canvas)
+    return () => ro.disconnect()
+  }, [draw])
+
+  // Video events
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const onTimeUpdate = () => {
+      draw()
+      if (playingSelectionRef.current && video.currentTime >= stopRef.current) {
+        video.pause()
+        playingSelectionRef.current = false
+      }
+    }
+    const onPlay = () => setIsPlaying(true)
+    const onPause = () => { setIsPlaying(false); playingSelectionRef.current = false }
+    const onEnded = () => { setIsPlaying(false); playingSelectionRef.current = false }
+
+    video.addEventListener('timeupdate', onTimeUpdate)
+    video.addEventListener('loadedmetadata', draw)
+    video.addEventListener('play', onPlay)
+    video.addEventListener('pause', onPause)
+    video.addEventListener('ended', onEnded)
+
+    return () => {
+      video.removeEventListener('timeupdate', onTimeUpdate)
+      video.removeEventListener('loadedmetadata', draw)
+      video.removeEventListener('play', onPlay)
+      video.removeEventListener('pause', onPause)
+      video.removeEventListener('ended', onEnded)
+    }
+  }, [videoRef, draw])
+
+  useEffect(() => { draw() }, [peaks, draw])
+
+  // --- Seek on canvas click/drag ---
+  const seek = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const video = videoRef.current
+    if (!video || !isFinite(video.duration) || video.duration <= 0) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration
+  }
+
+  // --- Control handlers ---
+  const handlePlay = () => videoRef.current?.play().catch(() => { })
+  const handlePause = () => videoRef.current?.pause()
+
+  const handleSetStart = () => {
+    const t = videoRef.current?.currentTime ?? 0
+    startRef.current = t
+    setStartTime(t)
+    setStartText(fmtTime(t))
+    draw()
+  }
+
+  const handleSetStop = () => {
+    const t = videoRef.current?.currentTime ?? 0
+    stopRef.current = t
+    setStopTime(t)
+    setStopText(fmtTime(t))
+    draw()
+  }
+
+  const handlePlaySelection = () => {
+    const video = videoRef.current
+    if (!video || stopRef.current <= startRef.current) return
+    video.currentTime = startRef.current
+    playingSelectionRef.current = true
+    video.play().catch(() => { })
+  }
+
+  const handleStartTextChange = (v: string) => {
+    setStartText(v)
+    const t = parseTime(v)
+    if (isFinite(t) && t >= 0) {
+      startRef.current = t
+      setStartTime(t)
+      draw()
+    }
+  }
+
+  const handleStopTextChange = (v: string) => {
+    setStopText(v)
+    const t = parseTime(v)
+    if (isFinite(t) && t >= 0) {
+      stopRef.current = t
+      setStopTime(t)
+      draw()
+    }
+  }
+
+  const handleCopyTime = () => {
+    const t = videoRef.current?.currentTime ?? 0
+    navigator.clipboard.writeText(fmtTime(t)).catch(() => { })
+  }
+
+  const timeInput = 'w-28 text-xs font-mono bg-sand-200 rounded px-1.5 py-0.5 border border-sand-300 focus:outline-none focus:border-primary'
+
+  return (
+    <div className="flex flex-col gap-1 bg-gray-200 rounded-sm">
+      <canvas
+        ref={canvasRef}
+        className="w-full cursor-pointer rounded"
+        style={{ height: '44px', display: 'block' }}
+        onClick={seek}
+        onMouseMove={(e) => { if (e.buttons === 1) seek(e) }}
+      />
+
+      <div className="flex items-center justify-center gap-1.5 flex-wrap text-sm">
+        {/* Playback */}
+        <Button isIconOnly size="sm" variant="ghost" onPress={handlePlay} isDisabled={isPlaying} aria-label="Play">
+          <Play />
+        </Button>
+        <Button isIconOnly size="sm" variant="ghost" onPress={handlePause} isDisabled={!isPlaying} aria-label="Pause">
+          <Pause />
+        </Button>
+
+        <div className="w-px h-5 bg-sand-300 mx-0.5" />
+
+        {/* Selection */}
+        <Button size="sm" variant="ghost" onPress={handleSetStart}>Set Start</Button>
+        <input data-no-voice
+          className={timeInput}
+          value={startText}
+          onChange={(e) => handleStartTextChange(e.target.value)}
+          aria-label="Start time"
+          spellCheck={false}
+        />
+
+        <Button size="sm" variant="ghost" onPress={handleSetStop}>Set Stop</Button>
+        <input data-no-voice
+          className={timeInput}
+          value={stopText}
+          onChange={(e) => handleStopTextChange(e.target.value)}
+          aria-label="Stop time"
+          spellCheck={false}
+        />
+
+        <Button size="sm" variant="ghost" onPress={handlePlaySelection} isDisabled={stopTime <= startTime}>
+          Play Range
+        </Button>
+
+        <div className="w-px h-5 bg-sand-300 mx-0.5" />
+
+        {/* Current time + copy */}
+        <span ref={timeDisplayRef} className="text-xs font-mono text-foreground-500 tabular-nums min-w-[7rem]">
+          00:00:00.000
+        </span>
+        <Button size="sm" variant="ghost" onPress={handleCopyTime} aria-label="Copy current time">
+          <MdContentCopy size={14} />
+          <span className="text-xs">Copy</span>
+        </Button>
+      </div>
+    </div>
+  )
+}

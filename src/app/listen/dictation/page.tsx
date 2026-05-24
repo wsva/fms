@@ -176,20 +176,7 @@ export default function DictationPage() {
                 <div className='text-xl'>
                     <p>1, Practice dictation using videos (or audios) and their corresponding subtitles</p>
                     <p>2, Subtitle files should be in srt format</p>
-                    <p>3, Example: TED</p>
-                    <div className='ms-4 sm:ms-8 bg-sand-100'>
-                        <p>1, Download video from <StyledLink href="https://www.ted.com">www.ted.com</StyledLink>{`: click "Share" to download MP4`}</p>
-                        <p>2, Subtitles are already included in the video. You can extract them using an ffmpeg command:</p>
-                        <p className='ps-8'>{`ffprobe exampe.mp4 2>&1 | grep "Subtitle:"`}</p>
-                        <p className='ps-8'>find english subtitle, for example: #0:6[0x7](eng), to extract it:</p>
-                        <p className='ps-8'>ffmpeg -i exampe.mp4 -map 0:6 exampe.srt</p>
-                    </div>
-                    <p>4, Example: ARD Mediathek</p>
-                    <div className='ms-4 sm:ms-8 bg-sand-100'>
-                        <p>1, Download video and subtitle using <StyledLink href="https://mediathekview.de/download/">MediathekView</StyledLink></p>
-                        <p>2, Process and prepare subtitles <StyledLink href="/listening/subtitle/prepare">here</StyledLink></p>
-                    </div>
-                    <p>5, Example: logo</p>
+                    <p>3, Example: logo</p>
                     <div className='ms-4 sm:ms-8 bg-sand-100'>
                         <p>1, Download video/audio and html file from logo会员群</p>
                         <p>2, Use html file directly as subtitle file</p>
