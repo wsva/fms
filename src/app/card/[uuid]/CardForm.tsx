@@ -369,7 +369,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             {watch('suggestion', getDefault('suggestion') as string || '')}
                         </div>
                         <Separator />
-                        <div className='text-xl bg-sand-300 rounded-md p-2'>
+                        <div className='text-xl bg-sand-300 rounded-md px-2'>
                             <Markdown2Html content={watch('answer', getDefault('answer') as string)} withTOC />
                         </div>
                         <Separator />
