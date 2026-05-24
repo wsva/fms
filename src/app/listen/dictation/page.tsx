@@ -1,18 +1,10 @@
 'use client'
 
-import { ReactNode, useRef, useState } from 'react'
-import { Button, ButtonGroup, Dropdown, Label, Description, Input, TextArea, Link } from "@heroui/react";
+import { useRef, useState } from 'react'
+import { Button, ButtonGroup, Dropdown, Label, Description, Input, TextArea } from "@heroui/react";
 import { SRTItem, parse_srt_content } from './srt'
 import DictationSentence from './DictationSentence'
 import { BiCaretDown } from 'react-icons/bi';
-
-const StyledLink = ({ href, children }: { href: string; children: ReactNode; }) => {
-    return (
-        <Link href={href} className="text-blue-600 underline" target='_blank' >
-            {children}
-        </Link>
-    )
-}
 
 export default function DictationPage() {
     const [stateAudioURL, setStateAudioURL] = useState<string>()
