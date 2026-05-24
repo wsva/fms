@@ -1,3 +1,5 @@
+import { createElement, type ReactNode } from "react";
+
 export class TOCSectionNumber {
     n: number[];
 
@@ -51,6 +53,15 @@ export class TOCItem {
         if (this.virtual) return "";
         return `<a href="#sec-${this.section.toString()}">${this.section.toString()} ${this.title}</a>`;
     }
+
+    react(): ReactNode {
+        if (this.virtual) return null;
+        return createElement("a", { href: `#sec-${this.section.toString()}` },
+            createElement("span", { className: "toc-section-number" }, this.section.toString()),
+            " ",
+            createElement("span", { className: "toc-section-title" }, this.title),
+        );
+    }
 }
 
 class TOCTreeNode {
@@ -74,6 +85,15 @@ class TOCTreeNode {
         }
         out.push("</li>");
         return out;
+    }
+
+    react(key: number): ReactNode {
+        return createElement("li", { key },
+            this.self.react(),
+            this.children.length > 0
+                ? createElement("ul", null, ...this.children.map((c, i) => c.react(i)))
+                : null
+        );
     }
 }
 
@@ -105,6 +125,11 @@ class TOCTree {
         for (const c of this.children) out.push(...c.html());
         out.push("</ul>");
         return out;
+    }
+
+    react(): ReactNode {
+        if (this.children.length === 0) return null;
+        return createElement("ul", null, ...this.children.map((c, i) => c.react(i)));
     }
 }
 
@@ -151,7 +176,7 @@ export class TOC {
     html(): string {
         const tree = new TOCTree();
         if (this.list.length === 0) return "";
-        
+
         for (const item of this.list) tree.add(item);
 
         return `
@@ -161,5 +186,15 @@ export class TOC {
 ${tree.html().join("\n")}
 </div>
 </div>`;
+    }
+
+    react(): ReactNode {
+        if (this.list.length === 0) return null;
+        const tree = new TOCTree();
+        for (const item of this.list) tree.add(item);
+        return createElement("div", { id: "table-of-contents" },
+            createElement("h2", null, "Table of Contents"),
+            createElement("div", { id: "text-table-of-contents" }, tree.react())
+        );
     }
 }

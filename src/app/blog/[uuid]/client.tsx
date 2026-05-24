@@ -191,7 +191,7 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
                         <div className='text-xl font-roboto'>
                             {watch('description')}
                         </div>
-                        <div className='text-xl bg-sand-300 rounded-md p-2'>
+                        <div className='text-xl bg-sand-300 rounded-md px-2'>
                             <Markdown2Html content={watch('content')} withTOC />
                         </div>
                     </>

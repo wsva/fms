@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react";
-import DOMPurify from "isomorphic-dompurify";
+import { useEffect, useState, type ReactNode } from "react";
 import { toHTML } from "./html";
 import './markdown.css';
 import './katex.min.css';
@@ -14,8 +13,8 @@ type Props = {
 
 export default function Page({ src, content, withTOC = false }: Props) {
     const [stateContent, setStateContent] = useState<string>(content || "");
-    const [stateTOC, setStateTOC] = useState<string>("");
-    const [stateBody, setStateBody] = useState<string>("");
+    const [stateTOC, setStateTOC] = useState<ReactNode>(null);
+    const [stateBody, setStateBody] = useState<ReactNode[]>([]);
 
     useEffect(() => {
         if (content !== undefined) setStateContent(content);
@@ -31,32 +30,17 @@ export default function Page({ src, content, withTOC = false }: Props) {
     }, [src]);
 
     useEffect(() => {
-        const html = toHTML(stateContent);
-        setStateTOC(html.toc);
-        setStateBody(html.body);
+        const { toc, body } = toHTML(stateContent);
+        setStateTOC(toc);
+        setStateBody(body);
     }, [stateContent]);
 
     return (
-        <>
-            {(withTOC && !!stateTOC) ? (
-                <div className="md-container">
-                    <aside
-                        className="md-toc"
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateTOC) }}
-                    />
-                    <article
-                        className="md-body"
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateBody) }}
-                    />
-                </div>
-            ) : (
-                <div>
-                    <article
-                        className="md-body"
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(stateBody) }}
-                    />
-                </div>
-            )}
-        </>
+        <div className="md-container">
+            {(withTOC && !!stateTOC) && stateTOC}
+            <article className="md-body">
+                {stateBody}
+            </article>
+        </div>
     );
-};
+}
