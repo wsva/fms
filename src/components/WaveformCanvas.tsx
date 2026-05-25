@@ -17,12 +17,14 @@ export type WaveformData = {
 type Props = {
   peaks: WaveformData
   videoRef: React.RefObject<HTMLVideoElement | null>
+  selection?: { start: number; end: number }
+  onSelectionChange?: (start: number, end: number) => void
 }
 
 const UNPLAYED = '#b8a48e'
 const PLAYED = '#b45309'
-const SELECTION_FILL = 'rgba(251, 146, 60, 0.20)'
-const SELECTION_EDGE = '#ea580c'
+const SELECTION_FILL = 'rgba(34, 197, 94, 0.20)'
+const SELECTION_EDGE = '#16a34a'
 
 const fmtTime = (sec: number): string => {
   if (!isFinite(sec) || sec < 0) return '00:00:00.000'
@@ -42,7 +44,7 @@ const parseTime = (str: string): number => {
   return nums[0]
 }
 
-export default function WaveformCanvas({ peaks, videoRef }: Props) {
+export default function WaveformCanvas({ peaks, videoRef, selection, onSelectionChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const peaksRef = useRef(peaks)
   peaksRef.current = peaks
@@ -164,6 +166,20 @@ export default function WaveformCanvas({ peaks, videoRef }: Props) {
 
   useEffect(() => { draw() }, [peaks, draw])
 
+  // Sync external selection (e.g. focused cue) → internal start/stop
+  useEffect(() => {
+    if (!selection) return
+    if (selection.start === startRef.current && selection.end === stopRef.current) return
+    startRef.current = selection.start
+    stopRef.current = selection.end
+    setStartTime(selection.start)
+    setStopTime(selection.end)
+    setStartText(fmtTime(selection.start))
+    setStopText(fmtTime(selection.end))
+    draw()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection?.start, selection?.end])
+
   // --- Seek on canvas click/drag ---
   const seek = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const video = videoRef.current
@@ -181,6 +197,7 @@ export default function WaveformCanvas({ peaks, videoRef }: Props) {
     startRef.current = t
     setStartTime(t)
     setStartText(fmtTime(t))
+    onSelectionChange?.(t, stopRef.current)
     draw()
   }
 
@@ -189,6 +206,7 @@ export default function WaveformCanvas({ peaks, videoRef }: Props) {
     stopRef.current = t
     setStopTime(t)
     setStopText(fmtTime(t))
+    onSelectionChange?.(startRef.current, t)
     draw()
   }
 
@@ -206,6 +224,7 @@ export default function WaveformCanvas({ peaks, videoRef }: Props) {
     if (isFinite(t) && t >= 0) {
       startRef.current = t
       setStartTime(t)
+      onSelectionChange?.(t, stopRef.current)
       draw()
     }
   }
@@ -216,6 +235,7 @@ export default function WaveformCanvas({ peaks, videoRef }: Props) {
     if (isFinite(t) && t >= 0) {
       stopRef.current = t
       setStopTime(t)
+      onSelectionChange?.(startRef.current, t)
       draw()
     }
   }

@@ -15,9 +15,10 @@ type DictationProps = {
     stateSuccess: boolean
     setStateSuccess: React.Dispatch<React.SetStateAction<boolean>>
     onSuccess?: (index: number, success: boolean) => void
+    onFocusInput?: () => void
 }
 
-function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: DictationProps) {
+function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFocusInput }: DictationProps) {
     const [stateInput, setStateInput] = useState<string>('')
 
     const isSuccess = (answer: string) => {
@@ -43,6 +44,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess }: Dic
                     id={`d-s-i-${cue.index}`}
                     className='text-xl font-bold border-b-2 border-b-gray-400 bg-sand-100 rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
                     value={stateInput}
+                    onFocus={onFocusInput}
                     onChange={(e) => {
                         const content = e.target.value
                         if (content.endsWith('  ')) {
@@ -118,9 +120,10 @@ export type CueEditorProps = {
     // Dictation
     initialSuccess?: boolean
     onSuccess?: (index: number, success: boolean) => void
+    onFocusInput?: () => void
 }
 
-export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onSave, onEdit, onDone, initialSuccess, onSuccess }: CueEditorProps) {
+export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onSave, onEdit, onDone, initialSuccess, onSuccess, onFocusInput }: CueEditorProps) {
     const [stateStart, setStateStart] = useState(formatVttTime(cue.start_ms))
     const [stateEnd, setStateEnd] = useState(formatVttTime(cue.end_ms))
     const [stateSuccess, setStateSuccess] = useState<boolean>(initialSuccess ?? false)
@@ -347,6 +350,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                     stateSuccess={stateSuccess}
                     setStateSuccess={setStateSuccess}
                     onSuccess={onSuccess}
+                    onFocusInput={onFocusInput}
                 />
             ) : (
                 (mode === "edit" || mode === "dictation_edit") && (

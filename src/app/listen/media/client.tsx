@@ -113,6 +113,7 @@ export default function Page({ user_id, uuid }: Props) {
 
     const [stateActiveTab, setStateActiveTab] = useState<string>('dictation')
     const [stateWaveformPeaks, setStateWaveformPeaks] = useState<WaveformData | null>(null)
+    const [stateFocusedCueIndex, setStateFocusedCueIndex] = useState<number | null>(null)
 
     const [sidebarWidth, setSidebarWidth] = useState<number>(320)
 
@@ -886,6 +887,7 @@ export default function Page({ user_id, uuid }: Props) {
 
                                         initialSuccess={stateDictSuccessSet.has(cue.index)}
                                         onSuccess={handleDictSuccess}
+                                        onFocusInput={() => setStateFocusedCueIndex(cue.index)}
                                     />
                                 </div>
                             ))}
@@ -1067,7 +1069,22 @@ export default function Page({ user_id, uuid }: Props) {
         {/* Waveform footer — desktop only, full width, dictation/subtitle tabs */}
         {stateWaveformPeaks && (stateActiveTab === 'dictation' || stateActiveTab === 'subtitle') && (
             <div className="hidden lg:block fixed bottom-0 left-0 right-0 z-20 bg-sand-100 border-t border-sand-200 px-6 py-2 shadow-lg">
-                <WaveformCanvas peaks={stateWaveformPeaks} videoRef={videoRef} />
+                <WaveformCanvas peaks={stateWaveformPeaks} videoRef={videoRef}
+                    selection={(() => {
+                        const cue = stateFocusedCueIndex !== null ? stateCues.find(c => c.index === stateFocusedCueIndex) : undefined
+                        return cue ? { start: cue.start_ms / 1000, end: cue.end_ms / 1000 } : undefined
+                    })()}
+                    onSelectionChange={(start, end) => {
+                        if (stateFocusedCueIndex === null) return
+                        updateStateCues(draft => {
+                            const idx = draft.findIndex(c => c.index === stateFocusedCueIndex)
+                            if (idx !== -1) {
+                                draft[idx].start_ms = Math.round(start * 1000)
+                                draft[idx].end_ms = Math.round(end * 1000)
+                            }
+                        })
+                    }}
+                />
             </div>
         )}
         </>
