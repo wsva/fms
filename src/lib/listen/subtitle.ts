@@ -1,11 +1,5 @@
-export interface Cue {
-    index: number;
-    start_ms: number; // ms
-    end_ms: number; // ms
-    text: string[];
-    translation: string[];
-    active: boolean;
-}
+import { Cue } from "../types";
+import { getUUID } from "../utils";
 
 const pad = (num: number, size = 2): string => num.toString().padStart(size, "0");
 
@@ -54,13 +48,11 @@ export function parseVTT(vttText: string, contain_translation: boolean): Cue[] {
         const end = parseVttTime(timeMatch[2]);
 
         let textLines: string[] = [];
-        let translationLines: string[] = [];
 
         if (contain_translation) {
             // 第一行为 text，其余行为 translation
             if (lines.length > 1) {
                 textLines.push(lines[1]);
-                translationLines = lines.slice(2);
             }
         } else {
             // 全部都作为 text
@@ -68,11 +60,12 @@ export function parseVTT(vttText: string, contain_translation: boolean): Cue[] {
         }
 
         cues.push({
-            index: cues.length + 1,
+            uuid: getUUID(),
+            subtitle_uuid: "",
+            order_num: cues.length + 1,
             start_ms: start,
             end_ms: end,
-            text: textLines,
-            translation: translationLines,
+            content: textLines.join(" "),
             active: false
         });
     }
@@ -120,23 +113,22 @@ export function parseSRT(srtText: string, contain_translation: boolean = false):
         const end = parseTime(timeMatch[2]);
 
         let textLines: string[] = [];
-        let translationLines: string[] = [];
 
         if (contain_translation) {
             if (lines.length > 1) {
                 textLines.push(lines[1]);
-                translationLines = lines.slice(2);
             }
         } else {
             textLines = lines.slice(1);
         }
 
         cues.push({
-            index: cues.length + 1,
+            uuid: getUUID(),
+            subtitle_uuid: "",
+            order_num: cues.length + 1,
             start_ms: start,
             end_ms: end,
-            text: textLines,
-            translation: translationLines,
+            content: textLines.join(" "),
             active: false
         });
     }
@@ -151,12 +143,9 @@ export function buildVTT(cues: Cue[]): string {
             const start = formatVttTime(cue.start_ms);
             const end = formatVttTime(cue.end_ms);
 
-            // 拼接 text 和 translation
-            const lines = [cue.text.join(" "), ...cue.translation];
-
             return [
                 `${start} --> ${end}`,
-                ...lines,
+                cue.content,
                 "" // cue 块之间需要空行
             ].join("\n");
         })
@@ -168,14 +157,9 @@ export function buildVTT(cues: Cue[]): string {
 export const mergeCues = (item_list: Cue[]): Cue[] => {
     if (!item_list || item_list.length === 0) return [];
 
-    const firstLine = (lines: string[]): string => lines.length > 0 ? lines[0] : "";
-    const lastLine = (lines: string[]): string => lines.length > 0 ? lines[lines.length - 1] : "";
-
     // 默认合并规则：上一个 cue 末尾以字母/数字/特定符号结尾，当前 cue 开头为字母或数字
     const shouldMerge = (prev: Cue, current: Cue) => {
-        const prevLast = lastLine(prev.text);
-        const currFirst = firstLine(current.text);
-        return prevLast.match(/[a-zA-Z0-9äÄöÖüÜßé,:-]$/) && currFirst.match(/^[0-9a-zA-ZäÄöÖüÜßé]/);
+        return prev.content.match(/[a-zA-Z0-9äÄöÖüÜßé,:-]$/) && current.content.match(/^[0-9a-zA-ZäÄöÖüÜßé]/);
     }
 
     let mergedList = [...item_list];
@@ -191,8 +175,7 @@ export const mergeCues = (item_list: Cue[]): Cue[] => {
             if (lastItem && shouldMerge(lastItem, item)) {
                 // 合并 Cue
                 lastItem.end_ms = item.end_ms;
-                lastItem.text.push(...item.text);
-                lastItem.translation.push(...item.translation);
+                lastItem.content += " " + item.content;
                 changed = true;
             } else {
                 newList.push({ ...item }); // 拷贝一份，防止修改原对象
@@ -202,9 +185,8 @@ export const mergeCues = (item_list: Cue[]): Cue[] => {
         mergedList = newList;
     }
 
-    // 更新 index
     mergedList.forEach((cue, i) => {
-        cue.index = i + 1;
+        cue.order_num = i + 1;
     });
 
     return mergedList;

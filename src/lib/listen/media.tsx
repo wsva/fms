@@ -33,7 +33,6 @@ export default function Page({ src, className = "", controls = true, autoPlay = 
                             preload="auto"
                         />
                     </div>
-
                 )
             )}
         </>
