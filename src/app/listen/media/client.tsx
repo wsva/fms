@@ -43,19 +43,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast, Button, Chip, ProgressCircle, Input, InputGroup, Link, Select, Tabs, ListBox, Label, TextField, Separator } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag } from "@/generated/prisma/client";
-import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag, saveSubtitle } from '@/app/actions/listen'
+import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getSubtitleLineAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag } from '@/app/actions/listen'
 import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
-import { listen_media_ext } from '@/lib/types'
+import { Cue, listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
 import { MdCheckCircle, MdPeople } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
 import WaveformCanvas, { type WaveformData } from '@/components/WaveformCanvas'
-import { buildVTT, Cue, parseSRT, parseVTT } from '@/lib/listen/subtitle'
 import { useImmer } from 'use-immer'
 import CueEditor from './cue_editor'
-import Subtitle from './subtitle'
 import Note from './note'
 import Transcript from './transcript'
 import { ArrowShapeUpFromLine, Plus } from '@gravity-ui/icons';
@@ -94,12 +92,11 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateCues, updateStateCues] = useImmer<Cue[]>([])
     const [stateActiveCue, setStateActiveCue] = useState<string>("")
     const [stateDictation, setStateDictation] = useState<boolean>(true)
-    const [stateDictSuccessSet, setStateDictSuccessSet] = useState<Set<number>>(new Set())
+    const [stateDictSuccessSet, setStateDictSuccessSet] = useState<Set<string>>(new Set())
     const [stateDictStatus, setStateDictStatus] = useState<'in_progress' | 'complete'>('in_progress')
     const [stateDictMode, setStateDictMode] = useState<'full' | 'focus'>('full')
     const [stateDictCue, setStateDictCue] = useState<Cue>()
-    const [stateEditingCue, setStateEditingCue] = useState<number | null>(null)
-    const [stateDictSaving, setStateDictSaving] = useState(false)
+    const [stateEditingCue, setStateEditingCue] = useState<string | null>(null)
     const dictSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const [stateTranscriptList, setStateTranscriptList] = useState<listen_transcript[]>([])
@@ -115,7 +112,7 @@ export default function Page({ user_id, uuid }: Props) {
 
     const [stateActiveTab, setStateActiveTab] = useState<string>('library')
     const [stateWaveformPeaks, setStateWaveformPeaks] = useState<WaveformData | null>(null)
-    const [stateFocusedCueIndex, setStateFocusedCueIndex] = useState<number | null>(null)
+    const [stateFocusedCueUUID, setStateFocusedCueUUID] = useState<string | null>(null)
 
     useEffect(() => {
         // Load media data when the media UUID changes.
@@ -305,35 +302,36 @@ export default function Page({ user_id, uuid }: Props) {
     }, [user_id, stateTagUUID])
 
     useEffect(() => {
-        // Parse subtitle only when switching subtitle files.
-        updateStateCues(draft => {
-            draft.length = 0
+        // Load cues only when switching subtitle files.
+        const loadCueList = async (subtitle_uuid: string) => {
+            setStateLoading(true)
 
-            if (!stateSubtitle) return
+            try {
+                const result = await getSubtitleLineAll(subtitle_uuid)
 
-            let cueList: Cue[] = []
+                if (result.status === 'success') {
+                    updateStateCues(draft => {
+                        draft.length = 0
+                        result.data.forEach((item) => {
+                            draft.push({
+                                ...item,
+                                active: false,
+                            })
+                        })
+                    })
+                } else {
+                    console.log(result.error)
 
-            switch (stateSubtitle.format) {
-                case 'vtt':
-                    cueList = parseVTT(stateSubtitle.subtitle, false)
-                    break
-
-                case 'srt':
-                    cueList = parseSRT(stateSubtitle.subtitle, false)
-                    break
-
-                default:
-                    toast.danger('Invalid subtitle format')
-                    return
+                    toast.danger('Load data error')
+                }
+            } finally {
+                setStateLoading(false)
             }
+        }
 
-            cueList.forEach((item, index) => {
-                draft.push({
-                    ...item,
-                    index: index + 1,
-                })
-            })
-        })
+        if (!!stateSubtitle) {
+            loadCueList(stateSubtitle.uuid)
+        }
     }, [updateStateCues, stateSubtitle?.uuid])
 
     useEffect(() => {
@@ -358,18 +356,8 @@ export default function Page({ user_id, uuid }: Props) {
             )
 
             if (result.status === 'success' && result.data) {
-                setStateDictSuccessSet(
-                    new Set(
-                        result.data.completed
-                            .split(',')
-                            .filter(Boolean)
-                            .map(Number)
-                    )
-                )
-
-                setStateDictStatus(
-                    result.data.status as 'in_progress' | 'complete'
-                )
+                setStateDictSuccessSet(new Set(result.data.completed.split(',')))
+                setStateDictStatus(result.data.status as 'in_progress' | 'complete')
             } else {
                 setStateDictSuccessSet(new Set())
                 setStateDictStatus('in_progress')
@@ -395,7 +383,7 @@ export default function Page({ user_id, uuid }: Props) {
             )
 
             setStateActiveCue(
-                activeCue ? activeCue.text.join(' ') : ''
+                activeCue ? activeCue.content : ''
             )
 
             updateStateCues(draft => {
@@ -468,20 +456,20 @@ export default function Page({ user_id, uuid }: Props) {
         return () => { cancelled = true }
     }, [stateMedia.media.source, stateMediaFile])
 
-    const scheduleDictSave = (successSet: Set<number>, status: string) => {
+    const scheduleDictSave = (successSet: Set<string>, status: string) => {
         if (!stateMediaUUID || !stateSubtitle?.uuid) return
         if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
         const mediaUUID = stateMediaUUID
         const subtitleUUID = stateSubtitle.uuid
-        const completed = Array.from(successSet).sort((a, b) => a - b).join(',')
+        const completed = Array.from(successSet).join(',')
         dictSaveTimer.current = setTimeout(() => {
             saveDictation(user_id, mediaUUID, subtitleUUID, status, completed)
         }, 1000)
     }
 
-    const handleDictSuccess = (index: number, success: boolean) => {
+    const handleDictSuccess = (uuid: string, success: boolean) => {
         const newSet = new Set(stateDictSuccessSet)
-        if (success) newSet.add(index); else newSet.delete(index)
+        if (success) newSet.add(uuid); else newSet.delete(uuid)
         setStateDictSuccessSet(newSet)
         scheduleDictSave(newSet, stateDictStatus)
     }
@@ -491,13 +479,13 @@ export default function Page({ user_id, uuid }: Props) {
         if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
         const newStatus = stateDictStatus === 'complete' ? 'in_progress' : 'complete'
         setStateDictStatus(newStatus)
-        const completed = Array.from(stateDictSuccessSet).sort((a, b) => a - b).join(',')
+        const completed = Array.from(stateDictSuccessSet).join(',')
         await saveDictation(user_id, stateMediaUUID, stateSubtitle.uuid, newStatus, completed)
     }
 
     const handleExpandStart = (cue: Cue) => {
         updateStateCues(draft => {
-            const index = draft.findIndex(c => c.index === cue.index)
+            const index = draft.findIndex(c => c.uuid === cue.uuid)
             if (index === 0) draft[index] = { ...draft[index], start_ms: 1 }
             else if (index > 0) draft[index] = { ...draft[index], start_ms: draft[index - 1].end_ms + 1 }
         })
@@ -505,48 +493,10 @@ export default function Page({ user_id, uuid }: Props) {
 
     const handleExpandEnd = (cue: Cue) => {
         updateStateCues(draft => {
-            const index = draft.findIndex(c => c.index === cue.index)
+            const index = draft.findIndex(c => c.uuid === cue.uuid)
             if (index === draft.length - 1) draft[index] = { ...draft[index], end_ms: draft[index].start_ms + 3600000 }
             else if (index >= 0) draft[index] = { ...draft[index], end_ms: draft[index + 1].start_ms - 1 }
         })
-    }
-
-    const handleDictCueSave = async () => {
-        // Save edited cues back to the subtitle as VTT format.
-        if (!stateSubtitle) return
-
-        setStateDictSaving(true)
-
-        const updatedSubtitle = {
-            ...stateSubtitle,
-            subtitle: buildVTT(stateCues),
-            format: 'vtt',
-            updated_at: new Date(),
-        }
-
-        try {
-            const result = await saveSubtitle(updatedSubtitle)
-
-            if (result.status === 'success') {
-                setStateSubtitle(updatedSubtitle)
-
-                setStateSubtitleList(current =>
-                    current.map(v =>
-                        v.uuid === updatedSubtitle.uuid
-                            ? updatedSubtitle
-                            : v
-                    )
-                )
-
-                toast.success('save subtitle success')
-
-                setStateEditingCue(null)
-            } else {
-                toast.danger('save subtitle error')
-            }
-        } finally {
-            setStateDictSaving(false)
-        }
     }
 
     const handleSave = async () => {
@@ -625,16 +575,16 @@ export default function Page({ user_id, uuid }: Props) {
 
                     {/* Waveform */}
                     {stateWaveformPeaks && (stateActiveTab === 'dictation' || stateActiveTab === 'subtitle') && (
-                        <div className="hidden lg:block fixed bottom-0 left-0 right-0 z-20 bg-sand-100 border-t border-sand-200 px-6 py-2 shadow-lg">
+                        <div className="hidden lg:block bg-sand-100 border-t border-sand-200 p-1 shadow-lg rounded-lg">
                             <WaveformCanvas peaks={stateWaveformPeaks} videoRef={videoRef}
                                 selection={(() => {
-                                    const cue = stateFocusedCueIndex !== null ? stateCues.find(c => c.index === stateFocusedCueIndex) : undefined
+                                    const cue = stateFocusedCueUUID !== null ? stateCues.find(c => c.uuid === stateFocusedCueUUID) : undefined
                                     return cue ? { start: cue.start_ms / 1000, end: cue.end_ms / 1000 } : undefined
                                 })()}
                                 onSelectionChange={(start, end) => {
-                                    if (stateFocusedCueIndex === null) return
+                                    if (stateFocusedCueUUID === null) return
                                     updateStateCues(draft => {
-                                        const idx = draft.findIndex(c => c.index === stateFocusedCueIndex)
+                                        const idx = draft.findIndex(c => c.uuid === stateFocusedCueUUID)
                                         if (idx !== -1) {
                                             draft[idx].start_ms = Math.round(start * 1000)
                                             draft[idx].end_ms = Math.round(end * 1000)
@@ -677,10 +627,6 @@ export default function Page({ user_id, uuid }: Props) {
                             </Tabs.Tab>
                             <Tabs.Tab id="dictation">
                                 Dictation
-                                <Tabs.Indicator className="bg-blue-200" />
-                            </Tabs.Tab>
-                            <Tabs.Tab id="subtitle">
-                                Subtitle
                                 <Tabs.Indicator className="bg-blue-200" />
                             </Tabs.Tab>
                         </Tabs.List>
@@ -823,6 +769,47 @@ export default function Page({ user_id, uuid }: Props) {
 
                         <div>
                             <div className='flex flex-row items-center justify-start gap-2'>
+                                <span className='flex-1 text-xl font-bold text-blue-500'>Subtitle</span>
+                                <Button isIconOnly variant="tertiary" size="sm"
+                                    onPress={() => {
+                                        const s: listen_subtitle = {
+                                            uuid: getUUID(), user_id, media_uuid: "",
+                                            language: "en", subtitle: "", format: "vtt",
+                                            created_at: new Date(), updated_at: new Date(),
+                                        }
+                                        setStateSubtitle(s)
+                                        setStateSubtitleList(cur => [s, ...cur])
+                                    }}
+                                >
+                                    <Plus />
+                                </Button>
+                            </div>
+                            <Separator className="my-4" />
+
+                            {stateSubtitleList.length > 1 && (
+                                <Select aria-label="Select subtitle"
+                                    value={stateSubtitle?.uuid ?? null}
+                                    onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
+                                >
+                                    <Select.Trigger>
+                                        <Select.Value />
+                                        <Select.Indicator />
+                                    </Select.Trigger>
+                                    <Select.Popover>
+                                        <ListBox>
+                                            {stateSubtitleList.map(v => (
+                                                <ListBox.Item id={v.uuid} key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
+                                                    {`${v.language} (${v.user_id})`}
+                                                </ListBox.Item>
+                                            ))}
+                                        </ListBox>
+                                    </Select.Popover>
+                                </Select>
+                            )}
+                        </div>
+
+                        <div>
+                            <div className='flex flex-row items-center justify-start gap-2'>
                                 <span className='flex-1 text-xl font-bold text-blue-500'>Transcript</span>
                                 <Button isIconOnly variant="tertiary" size="sm"
                                     onPress={() => {
@@ -901,7 +888,7 @@ export default function Page({ user_id, uuid }: Props) {
                                             if (stateDictMode === "focus") {
                                                 setStateDictMode("full")
                                             } else {
-                                                const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.index))
+                                                const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.uuid))
                                                 setStateDictCue(cueList.length > 0 ? cueList[0] : undefined)
                                                 setStateDictMode("focus")
                                             }
@@ -930,43 +917,39 @@ export default function Page({ user_id, uuid }: Props) {
                                         media={videoRef.current}
 
                                         allowEdit={stateSubtitle?.user_id === user_id}
-                                        mode={stateEditingCue !== cue.index ? "dictation" : "dictation_edit"}
+                                        mode={stateEditingCue !== cue.uuid ? "dictation" : "dictation_edit"}
 
-                                        saving={stateDictSaving}
                                         onUpdate={(updated) => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === updated.index)
+                                            const idx = draft.findIndex(c => c.uuid === updated.uuid)
                                             if (idx !== -1) draft[idx] = updated
                                         })}
                                         onExpandStart={() => handleExpandStart(cue)}
                                         onExpandEnd={() => handleExpandEnd(cue)}
                                         onDelete={() => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === cue.index)
+                                            const idx = draft.findIndex(c => c.uuid === cue.uuid)
                                             if (idx !== -1) draft.splice(idx, 1)
-                                            draft.forEach((item, i) => item.index = i + 1)
+                                            draft.forEach((item, i) => item.order_num = i + 1)
                                         })}
                                         onMergeNext={() => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === cue.index)
+                                            const idx = draft.findIndex(c => c.uuid === cue.uuid)
                                             if (idx >= 0 && idx < draft.length - 1) {
-                                                if (draft[idx].text.length === 1 && draft[idx + 1].text.length === 1) {
-                                                    draft[idx].text = [draft[idx].text[0] + " " + draft[idx + 1].text[0]];
-                                                } else {
-                                                    draft[idx].text.push(...draft[idx + 1].text);
-                                                }
+                                                draft[idx].content = draft[idx].content + " " + draft[idx + 1].content;
                                                 draft[idx].end_ms = draft[idx + 1].end_ms;
                                                 draft.splice(idx + 1, 1);
 
                                                 draft.forEach((item, i) => {
-                                                    item.index = i + 1;
+                                                    item.order_num = i + 1;
                                                 });
                                             }
                                         })}
                                         onInsert={(pos: number) => updateStateCues(draft => {
                                             const newItem = {
-                                                index: 0,
+                                                uuid: getUUID(),
+                                                subtitle_uuid: stateSubtitle!.uuid,
+                                                order_num: 0,
                                                 start_ms: 0,
                                                 end_ms: 0,
-                                                text: [],
-                                                translation: [],
+                                                content: "",
                                                 active: false,
                                             };
 
@@ -979,16 +962,15 @@ export default function Page({ user_id, uuid }: Props) {
                                             }
 
                                             draft.forEach((item, i) => {
-                                                item.index = i + 1;
+                                                item.order_num = i + 1;
                                             });
                                         })}
-                                        onSave={handleDictCueSave}
-                                        onEdit={() => setStateEditingCue(cue.index)}
+                                        onEdit={() => setStateEditingCue(cue.uuid)}
                                         onDone={() => setStateEditingCue(null)}
 
-                                        initialSuccess={stateDictSuccessSet.has(cue.index)}
+                                        initialSuccess={stateDictSuccessSet.has(cue.uuid)}
                                         onSuccess={handleDictSuccess}
-                                        onFocusInput={() => setStateFocusedCueIndex(cue.index)}
+                                        onFocusInput={() => setStateFocusedCueUUID(cue.uuid)}
                                     />
                                 </div>
                             ))
@@ -1004,41 +986,37 @@ export default function Page({ user_id, uuid }: Props) {
                                         allowEdit={stateSubtitle?.user_id === user_id}
                                         mode="dictation_focus"
 
-                                        saving={stateDictSaving}
                                         onUpdate={(updated) => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === updated.index)
+                                            const idx = draft.findIndex(c => c.uuid === updated.uuid)
                                             if (idx !== -1) draft[idx] = updated
                                         })}
                                         onExpandStart={() => handleExpandStart(stateDictCue)}
                                         onExpandEnd={() => handleExpandEnd(stateDictCue)}
                                         onDelete={() => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === stateDictCue.index)
+                                            const idx = draft.findIndex(c => c.uuid === stateDictCue.uuid)
                                             if (idx !== -1) draft.splice(idx, 1)
-                                            draft.forEach((item, i) => item.index = i + 1)
+                                            draft.forEach((item, i) => item.order_num = i + 1)
                                         })}
                                         onMergeNext={() => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === stateDictCue.index)
+                                            const idx = draft.findIndex(c => c.uuid === stateDictCue.uuid)
                                             if (idx >= 0 && idx < draft.length - 1) {
-                                                if (draft[idx].text.length === 1 && draft[idx + 1].text.length === 1) {
-                                                    draft[idx].text = [draft[idx].text[0] + " " + draft[idx + 1].text[0]];
-                                                } else {
-                                                    draft[idx].text.push(...draft[idx + 1].text);
-                                                }
+                                                draft[idx].content = draft[idx].content + " " + draft[idx + 1].content;
                                                 draft[idx].end_ms = draft[idx + 1].end_ms;
                                                 draft.splice(idx + 1, 1);
 
                                                 draft.forEach((item, i) => {
-                                                    item.index = i + 1;
+                                                    item.order_num = i + 1;
                                                 });
                                             }
                                         })}
                                         onInsert={(pos: number) => updateStateCues(draft => {
                                             const newItem = {
-                                                index: 0,
+                                                uuid: getUUID(),
+                                                subtitle_uuid: stateSubtitle!.uuid,
+                                                order_num: 0,
                                                 start_ms: 0,
                                                 end_ms: 0,
-                                                text: [],
-                                                translation: [],
+                                                content: "",
                                                 active: false,
                                             };
 
@@ -1051,22 +1029,21 @@ export default function Page({ user_id, uuid }: Props) {
                                             }
 
                                             draft.forEach((item, i) => {
-                                                item.index = i + 1;
+                                                item.order_num = i + 1;
                                             });
                                         })}
-                                        onSave={handleDictCueSave}
-                                        onEdit={() => setStateEditingCue(stateDictCue.index)}
+                                        onEdit={() => setStateEditingCue(stateDictCue.uuid)}
                                         onDone={() => setStateEditingCue(null)}
 
-                                        initialSuccess={stateDictSuccessSet.has(stateDictCue.index)}
+                                        initialSuccess={stateDictSuccessSet.has(stateDictCue.uuid)}
                                         onSuccess={handleDictSuccess}
-                                        onFocusInput={() => setStateFocusedCueIndex(stateDictCue.index)}
+                                        onFocusInput={() => setStateFocusedCueUUID(stateDictCue.uuid)}
                                     />
                                 )}
                                 <div className='flex flex-row items-center justify-center gap-1 w-full'>
                                     <Button
                                         onPress={() => {
-                                            const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.index))
+                                            const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.uuid))
                                             setStateDictCue(cueList.length > 0 ? cueList[0] : undefined)
                                         }}
                                     >
@@ -1074,51 +1051,6 @@ export default function Page({ user_id, uuid }: Props) {
                                     </Button>
                                 </div>
                             </div>
-                        )}
-                    </Tabs.Panel>
-
-                    <Tabs.Panel id="subtitle" className="flex flex-col w-full gap-3">
-                        <div className="flex flex-row items-center justify-end gap-4">
-                            {stateSubtitleList.length > 1 && (
-                                <Select aria-label="Select subtitle"
-                                    value={stateSubtitle?.uuid ?? null}
-                                    onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
-                                >
-                                    <Select.Trigger>
-                                        <Select.Value />
-                                        <Select.Indicator />
-                                    </Select.Trigger>
-                                    <Select.Popover>
-                                        <ListBox>
-                                            {stateSubtitleList.map(v => (
-                                                <ListBox.Item id={v.uuid} key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
-                                                    {`${v.language} (${v.user_id})`}
-                                                </ListBox.Item>
-                                            ))}
-                                        </ListBox>
-                                    </Select.Popover>
-                                </Select>
-                            )}
-
-                            <Button variant="primary" size="sm"
-                                onPress={() => {
-                                    const s: listen_subtitle = {
-                                        uuid: getUUID(), user_id, media_uuid: "",
-                                        language: "en", subtitle: "", format: "vtt",
-                                        created_at: new Date(), updated_at: new Date(),
-                                    }
-                                    setStateSubtitle(s)
-                                    setStateSubtitleList(cur => [s, ...cur])
-                                }}
-                            >
-                                New
-                            </Button>
-                        </div>
-                        {!!stateSubtitle && (
-                            <Subtitle item={stateSubtitle} user_id={user_id} media={videoRef.current}
-                                setStateSubtitle={setStateSubtitle}
-                                setStateSubtitleList={setStateSubtitleList}
-                            />
                         )}
                     </Tabs.Panel>
                 </Tabs>

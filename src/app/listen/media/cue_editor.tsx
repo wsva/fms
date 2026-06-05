@@ -1,11 +1,14 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Button, Chip, Input, InputGroup, Link, TextArea, Tooltip } from '@heroui/react'
-import { Cue, formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
+import { Button, Chip, Input, InputGroup, Link, TextArea, toast, Tooltip } from '@heroui/react'
+import { formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
-import { MdOutlineLightbulbCircle } from 'react-icons/md'
 import { ArrowLeftToLine, ArrowRightToLine, FloppyDisk, MapPin, PencilToSquare, Play, PlayFill, SquarePlus, TrashBin, Xmark } from '@gravity-ui/icons'
+import { Cue } from '@/lib/types'
+import { saveSubtitleLine } from '@/app/actions/listen'
+import { toExactType } from '@/lib/utils'
+import { listen_subtitle_line } from '@/generated/prisma/client'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
@@ -14,7 +17,7 @@ type DictationProps = {
     media: HTMLMediaElement | null
     stateSuccess: boolean
     setStateSuccess: React.Dispatch<React.SetStateAction<boolean>>
-    onSuccess?: (index: number, success: boolean) => void
+    onSuccess?: (uuid: string, success: boolean) => void
     onFocusInput?: () => void
     mode: "compact" | "large"
 }
@@ -23,13 +26,12 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
     const [stateInput, setStateInput] = useState<string>('')
 
     const isSuccess = (answer: string) => {
-        return answer === cue.text.join(" ")
-            || pureContent(answer) === pureContent(cue.text.join(" "))
+        return answer === cue.content || pureContent(answer) === pureContent(cue.content)
     }
 
     const getTip = (answer: string) => {
         const answerParts = splitContent(answer, true).map((v) => v.content)
-        const tipParts = splitContent(cue.text.join(" "), false)
+        const tipParts = splitContent(cue.content, false)
         for (let i = 0; i < tipParts.length; i++) {
             if (tipParts[i].isWord && !answerParts.includes(tipParts[i].content)) {
                 tipParts[i].content = hideWord(tipParts[i].content)
@@ -44,7 +46,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                 <div className='flex flex-col items-start justify-center w-full gap-1'>
                     <div className='flex flex-row items-center justify-start w-full gap-1'>
                         <Input aria-label='input answer' autoComplete="one-time-code"
-                            id={`d-s-i-${cue.index}`}
+                            id={`d-s-i-${cue.uuid}`}
                             className='text-xl font-bold border-b-2 border-b-gray-400 bg-sand-100 rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
                             value={stateInput}
                             onFocus={onFocusInput}
@@ -59,7 +61,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                                     setStateInput(content)
                                     if (!stateSuccess && isSuccess(content)) {
                                         setStateSuccess(true)
-                                        onSuccess?.(cue.index, true)
+                                        onSuccess?.(cue.uuid, true)
                                     }
                                 }
                             }}
@@ -77,20 +79,6 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                                 }
                             }}
                         />
-                        {!!cue.translation && cue.translation.length > 0 && (
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <Button isIconOnly variant='ghost'>
-                                        <MdOutlineLightbulbCircle size={30} />
-                                    </Button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content placement='top end' className='bg-slate-300'>
-                                    <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
-                                        {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
-                                    </div>
-                                </Tooltip.Content>
-                            </Tooltip>
-                        )}
                     </div>
                     <div className='bg-slate-200 rounded-sm px-1 text-gray-400 font-normal'>
                         {getTip(stateInput)}
@@ -100,7 +88,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                 <div className='flex flex-col items-start justify-center w-full gap-1'>
                     <div className='flex flex-row items-center justify-start w-full gap-1'>
                         <TextArea aria-label='input answer' autoComplete="one-time-code"
-                            id={`d-s-i-${cue.index}`}
+                            id={`d-s-i-${cue.uuid}`}
                             className='text-4xl font-bold border-b-2 border-b-gray-400 bg-sand-300 rounded-lg p-2 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
                             value={stateInput}
                             rows={5}
@@ -116,7 +104,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                                     setStateInput(content)
                                     if (!stateSuccess && isSuccess(content)) {
                                         setStateSuccess(true)
-                                        onSuccess?.(cue.index, true)
+                                        onSuccess?.(cue.uuid, true)
                                     }
                                 }
                             }}
@@ -134,20 +122,6 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                                 }
                             }}
                         />
-                        {!!cue.translation && cue.translation.length > 0 && (
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <Button isIconOnly variant='ghost'>
-                                        <MdOutlineLightbulbCircle size={30} />
-                                    </Button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content placement='top end' className='bg-slate-300'>
-                                    <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
-                                        {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
-                                    </div>
-                                </Tooltip.Content>
-                            </Tooltip>
-                        )}
                     </div>
                     <div className='bg-slate-200 rounded-sm px-1 text-gray-400 text-2xl'>
                         {getTip(stateInput)}
@@ -176,27 +150,26 @@ export type CueEditorProps = {
     mode: "dictation" | "edit" | "dictation_edit" | "dictation_focus"
 
     // Editor
-    saving: boolean
     onUpdate: (updated: Cue) => void
     onExpandStart: () => void
     onExpandEnd: () => void
     onDelete: () => void
     onInsert: (index: number) => void
     onMergeNext: () => void
-    onSave: () => Promise<void>
     onEdit: () => void
     onDone: () => void
 
     // Dictation
     initialSuccess?: boolean
-    onSuccess?: (index: number, success: boolean) => void
+    onSuccess?: (uuid: string, success: boolean) => void
     onFocusInput?: () => void
 }
 
-export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onSave, onEdit, onDone, initialSuccess, onSuccess, onFocusInput }: CueEditorProps) {
+export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onEdit, onDone, initialSuccess, onSuccess, onFocusInput }: CueEditorProps) {
     const [stateStart, setStateStart] = useState(formatVttTime(cue.start_ms))
     const [stateEnd, setStateEnd] = useState(formatVttTime(cue.end_ms))
     const [stateSuccess, setStateSuccess] = useState<boolean>(initialSuccess ?? false)
+    const [stateSaving, setStateSaving] = useState<boolean>(false)
 
     useEffect(() => setStateStart(formatVttTime(cue.start_ms)), [cue.start_ms])
     useEffect(() => setStateEnd(formatVttTime(cue.end_ms)), [cue.end_ms])
@@ -204,6 +177,19 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
     useEffect(() => {
         setStateSuccess(initialSuccess ?? false)
     }, [initialSuccess])
+
+    const saveCue = async () => {
+        setStateSaving(true)
+        try {
+            const result = await saveSubtitleLine(toExactType<listen_subtitle_line>(cue))
+            if (result.status === 'error') {
+                console.log(result.error)
+                toast.danger('Load data error')
+            }
+        } finally {
+            setStateSaving(false)
+        }
+    }
 
     const timeEditorEl = (
         <InputGroup className="w-xs shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
@@ -290,7 +276,9 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
             <div className="flex flex-row items-center justify-start w-full gap-1">
                 <Tooltip isDisabled={mode !== "dictation"}>
                     <Tooltip.Trigger>
-                        <Chip size='lg' variant='primary' color={stateSuccess ? 'success' : undefined}><span className="text-sm font-medium">{cue.index}</span></Chip>
+                        <Chip size='lg' variant='primary' color={stateSuccess ? 'success' : undefined}>
+                            <span className="text-sm font-medium">{cue.order_num}</span>
+                        </Chip>
                     </Tooltip.Trigger>
                     <Tooltip.Content>
                         'turn green on success: punctuation does not matter'
@@ -336,7 +324,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                         <Tooltip>
                             <Tooltip.Trigger>
                                 <Button isIconOnly variant='ghost' size="sm"
-                                    onPress={() => onInsert(cue.index)}
+                                    onPress={() => onInsert(cue.order_num)}
                                 >
                                     <div className="text-lg">#1</div>
                                 </Button>
@@ -348,7 +336,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                         <Tooltip>
                             <Tooltip.Trigger>
                                 <Button isIconOnly variant='ghost' size="sm"
-                                    onPress={() => onInsert(cue.index + 1)}
+                                    onPress={() => onInsert(cue.order_num + 1)}
                                 >
                                     <div className="text-lg">#2</div>
                                 </Button>
@@ -381,7 +369,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                         <div>
                             <Tooltip>
                                 <Tooltip.Trigger>
-                                    <Link href={`/card/add?edit=y&question=${encodeURIComponent(cue.text.join(" "))}`} target='_blank'>
+                                    <Link href={`/card/add?edit=y&question=${encodeURIComponent(cue.content)}`} target='_blank'>
                                         <Button isIconOnly variant='ghost' size="sm">
                                             <SquarePlus />
                                         </Button>
@@ -407,8 +395,8 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                         <div>
                             <Tooltip>
                                 <Tooltip.Trigger>
-                                    <Button isIconOnly variant='ghost' size="sm" isDisabled={saving}
-                                        onPress={onSave}
+                                    <Button isIconOnly variant='ghost' size="sm" isDisabled={stateSaving}
+                                        onPress={saveCue}
                                     >
                                         <FloppyDisk />
                                     </Button>
@@ -442,8 +430,8 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
             ) : (
                 <TextArea aria-label='text' autoComplete="one-time-code"
                     className='text-xl font-bold border-2 border-gray-400'
-                    value={cue.text.join('\n')}
-                    onChange={(e) => onUpdate({ ...cue, text: e.target.value.split('\n') })}
+                    value={cue.content}
+                    onChange={(e) => onUpdate({ ...cue, content: e.target.value })}
                 />
             )}
         </div>

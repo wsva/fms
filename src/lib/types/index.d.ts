@@ -1,4 +1,4 @@
-import { qsa_card, qsa_card_review, listen_media } from "@/generated/prisma/client";
+import { qsa_card, qsa_card_review, listen_media, listen_subtitle_line } from "@/generated/prisma/client";
 import { ZodIssue } from "zod";
 
 type ActionResult<T> = {
@@ -61,9 +61,6 @@ type audio = {
     updated_at: Date;
 }
 
-type Action =
-    | { action_type: "router", href: string } // open new page
-    | { action_type: "click", elementId: string } // click a button on the page
-    | { action_type: "function", name: string } // call a function
-    | { action_type: "keydown", event: KeyboardEventInit } // press key
-    | { action_type: "invalid", info: string };
+type Cue = listen_subtitle_line & {
+    active: boolean;
+}

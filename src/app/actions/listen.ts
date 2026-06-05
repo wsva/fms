@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils"
-import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_transcript, Prisma } from "@/generated/prisma/client";
+import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_subtitle_line, listen_transcript, Prisma } from "@/generated/prisma/client";
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {
@@ -294,6 +294,80 @@ export async function removeSubtitle(uuid: string): Promise<ActionResult<listen_
     }
 }
 
+export async function getSubtitleLine(uuid: string): Promise<ActionResult<listen_subtitle_line>> {
+    try {
+        const result = await prisma.listen_subtitle_line.findUnique({
+            where: { uuid }
+        })
+        if (!result) {
+            return { status: 'error', error: 'no data found' }
+        }
+        return { status: "success", data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function getSubtitleLineAll(subtitle_uuid: string): Promise<ActionResult<listen_subtitle_line[]>> {
+    try {
+        const result = await prisma.listen_subtitle_line.findMany({
+            where: { subtitle_uuid },
+            orderBy: { order_num: "asc" },
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function saveSubtitleLine(item: listen_subtitle_line): Promise<ActionResult<listen_subtitle_line>> {
+    try {
+        if (!item.uuid || item.uuid === '') {
+            item.uuid = getUUID()
+        }
+
+        const result = await prisma.listen_subtitle_line.upsert({
+            where: { uuid: item.uuid },
+            create: item,
+            update: item,
+        })
+
+        return { status: "success", data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function createSubtitleLine(item: listen_subtitle_line): Promise<ActionResult<listen_subtitle_line>> {
+    try {
+        const result = await prisma.listen_subtitle_line.create({
+            data: item,
+        })
+
+        return { status: "success", data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
+
+export async function removeSubtitleLine(uuid: string): Promise<ActionResult<listen_subtitle_line>> {
+    try {
+        const result = await prisma.listen_subtitle_line.delete({
+            where: { uuid }
+        })
+        await prisma.qsa_card_tag.deleteMany({
+            where: { tag_uuid: uuid }
+        })
+        return { status: "success", data: result }
+    } catch (error) {
+        console.error(error)
+        return { status: 'error', error: toErrorMessage(error) }
+    }
+}
 
 export async function getNote(uuid: string): Promise<ActionResult<listen_note>> {
     try {

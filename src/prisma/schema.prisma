@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
+  previewFeatures = ["views"]
 }
 
 datasource db {
@@ -218,6 +219,22 @@ model listen_subtitle {
   format     String   @db.VarChar(10)
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model listen_subtitle_line {
+  uuid          String   @id @db.VarChar(100)
+  subtitle_uuid String   @db.VarChar(100)
+  order_num     Int
+  start_ms      Int
+  end_ms        Int
+  content       String
+}
+
+view listen_subtitle_vtt {
+  uuid String
+  content       String?
+
+  @@map("listen_subtitle_vtt")
 }
 
 model listen_transcript {

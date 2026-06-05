@@ -1,4 +1,4 @@
-import { Cue } from "./subtitle";
+import { Cue } from "../types"
 
 /**
  * replace word with underline, with the length of word
