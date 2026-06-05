@@ -227,10 +227,10 @@ export default function Page({ item, user_id, media, setStateSubtitle, setStateS
                 </div>
             ) : (
                 <div className='flex flex-col items-start justify-start w-full gap-0.5'>
-                    <div className='text-lg whitespace-pre-wrap'>
+                    <div className='text-lg whitespace-pre-wrap bg-sand-300 rounded-sm p-2 w-full'>
                         {item.subtitle}
                     </div>
-                    <div className='text-sm text-foreground-400'>by {item.user_id}</div>
+                    <div className='text-sm'>by {item.user_id}</div>
                 </div>
             )}
         </div >

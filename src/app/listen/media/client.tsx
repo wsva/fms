@@ -40,15 +40,15 @@
  */
 
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast, Button, Chip, ProgressCircle, Input, InputGroup, Link, Select, Tabs, ListBox, Label, TextField } from "@heroui/react"
+import { useEffect, useRef, useState } from 'react'
+import { toast, Button, Chip, ProgressCircle, Input, InputGroup, Link, Select, Tabs, ListBox, Label, TextField, Separator } from "@heroui/react"
 import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag } from "@/generated/prisma/client";
 import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getTranscriptAll, removeMedia, saveDictation, saveMedia, saveMediaTag, saveSubtitle } from '@/app/actions/listen'
 import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
 import { listen_media_ext } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
-import { MdPlayCircle, MdClosedCaption, MdDescription, MdNotes, MdCheckCircle, MdPeople } from 'react-icons/md'
+import { MdCheckCircle, MdPeople } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
 import WaveformCanvas, { type WaveformData } from '@/components/WaveformCanvas'
@@ -58,7 +58,7 @@ import CueEditor from './cue_editor'
 import Subtitle from './subtitle'
 import Note from './note'
 import Transcript from './transcript'
-import { ArrowShapeUpFromLine, Headphones } from '@gravity-ui/icons';
+import { ArrowShapeUpFromLine, Plus } from '@gravity-ui/icons';
 
 const newMedia = (user_id: string): listen_media_ext => ({
     media: {
@@ -96,6 +96,8 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateDictation, setStateDictation] = useState<boolean>(true)
     const [stateDictSuccessSet, setStateDictSuccessSet] = useState<Set<number>>(new Set())
     const [stateDictStatus, setStateDictStatus] = useState<'in_progress' | 'complete'>('in_progress')
+    const [stateDictMode, setStateDictMode] = useState<'full' | 'focus'>('full')
+    const [stateDictCue, setStateDictCue] = useState<Cue>()
     const [stateEditingCue, setStateEditingCue] = useState<number | null>(null)
     const [stateDictSaving, setStateDictSaving] = useState(false)
     const dictSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -111,32 +113,9 @@ export default function Page({ user_id, uuid }: Props) {
     const [localServiceUrl, setLocalServiceUrl] = useState('')
     const [resolvedMediaSrc, setResolvedMediaSrc] = useState('')
 
-    const [stateActiveTab, setStateActiveTab] = useState<string>('dictation')
+    const [stateActiveTab, setStateActiveTab] = useState<string>('library')
     const [stateWaveformPeaks, setStateWaveformPeaks] = useState<WaveformData | null>(null)
     const [stateFocusedCueIndex, setStateFocusedCueIndex] = useState<number | null>(null)
-
-    const [sidebarWidth, setSidebarWidth] = useState<number>(320)
-
-    const handleSidebarDrag = useCallback((e: React.MouseEvent) => {
-        e.preventDefault()
-        const startX = e.clientX
-        const startWidth = sidebarWidth
-
-        const onMove = (ev: MouseEvent) => {
-            const next = Math.min(480, Math.max(120, startWidth + ev.clientX - startX))
-            setSidebarWidth(next)
-        }
-        const onUp = () => {
-            document.removeEventListener('mousemove', onMove)
-            document.removeEventListener('mouseup', onUp)
-            document.body.style.cursor = ''
-            document.body.style.userSelect = ''
-        }
-        document.body.style.cursor = 'col-resize'
-        document.body.style.userSelect = 'none'
-        document.addEventListener('mousemove', onMove)
-        document.addEventListener('mouseup', onUp)
-    }, [sidebarWidth])
 
     useEffect(() => {
         // Load media data when the media UUID changes.
@@ -611,136 +590,14 @@ export default function Page({ user_id, uuid }: Props) {
     }
 
     const sidebarBtnClass = (active: boolean) =>
-        `w-full text-left px-2 py-1.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-sand-300 text-foreground font-semibold' : 'hover:bg-sand-200 text-foreground-700'
-        }`
+        `w-full text-left px-2 py-1.5 rounded-lg text-lg font-medium transition-colors ${active ? 'bg-sand-300 text-foreground font-semibold' : 'hover:bg-sand-500 text-foreground-700'}`
 
     const audioMode = stateMediaFile ? isAudio(stateMediaFile.name) : isAudio(stateMedia.media.source)
     const hasVideo = !!resolvedMediaSrc
 
     return (
-        <>
-        <div className="flex flex-col lg:flex-row w-full gap-3 py-3 lg:pb-24 px-3">
-
-            {/* LEFT SIDEBAR — player always visible; library desktop only */}
-            <aside className="flex flex-col gap-3 shrink-0 w-full sticky top-16 z-10 lg:w-[var(--sidebar-width)] lg:self-start relative lg:max-h-[calc(100vh-1.5rem)] lg:overflow-hidden"
-                style={{ "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}
-            >
-                {/* Player */}
-                {hasVideo && (
-                    audioMode ? (
-                        <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
-                            subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
-                        />
-                    ) : (
-                        <div className="rounded-xl overflow-hidden shadow-lg bg-black">
-                            <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc}
-                                subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
-                            />
-                        </div>
-                    )
-                )}
-
-                {/* Active cue */}
-                {stateCues.length > 0 && !stateDictation && (
-                    <div className={`rounded-xl px-4 py-3 border-l-4 border-r-4 border-primary bg-sand-200 transition-all duration-300 ${(!stateActiveCue || stateDictation) ? 'opacity-50' : ''}`}>
-                        <p className="text-lg font-semibold leading-snug">
-                            {stateActiveCue || ' '}
-                        </p>
-                    </div>
-                )}
-
-                {/* Library — desktop only */}
-                <div className="hidden lg:flex flex-col bg-sand-100 rounded-xl p-3 gap-0.5 overflow-y-auto flex-1 min-h-0">
-                    <div className="flex items-center justify-between px-1 mb-2">
-                        <span className="text-xs font-semibold text-foreground-400 uppercase tracking-wider">Library</span>
-                        {stateLoading && <ProgressCircle size="sm" aria-label="Loading" />}
-                    </div>
-
-                    <button className={sidebarBtnClass(stateTagUUID === 'invalid-subtitle')}
-                        onClick={() => { setStateTagUUID('invalid-subtitle'); setStateMediaUUID('') }}
-                    >
-                        Invalid Subtitle
-                    </button>
-
-                    {stateTagList.map(tag => {
-                        const isSubscribed = tag.user_id !== user_id && tag.user_id !== 'public'
-                        return (
-                            <div key={tag.uuid}>
-                                <button className={sidebarBtnClass(stateTagUUID === tag.uuid)}
-                                    onClick={() => { setStateTagUUID(stateTagUUID === tag.uuid ? '' : tag.uuid); setStateMediaUUID('') }}
-                                >
-                                    <span className="flex items-center gap-1.5">
-                                        {isSubscribed && <MdPeople size={13} className="shrink-0 opacity-60" />}
-                                        <span className="truncate">{tag.tag}</span>
-                                    </span>
-                                </button>
-                                {stateTagUUID === tag.uuid && stateMediaList.length > 0 && (
-                                    <div className="ml-2 mt-0.5 mb-1 flex flex-col gap-0.5 border-l-2 border-sand-300 pl-2">
-                                        {stateMediaList.map(m => (
-                                            <button key={m.uuid}
-                                                className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${stateMediaUUID === m.uuid
-                                                    ? 'bg-sand-300 font-semibold text-foreground'
-                                                    : 'hover:bg-sand-200 text-foreground-600'
-                                                    }`}
-                                                onClick={() => setStateMediaUUID(m.uuid)}
-                                            >
-                                                <span className="line-clamp-2">{m.title}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })}
-                </div>
-
-                {/* Drag handle — desktop only */}
-                <div
-                    className="hidden lg:flex absolute top-0 right-0 w-1.5 h-full cursor-col-resize group items-center justify-center"
-                    onMouseDown={handleSidebarDrag}
-                >
-                    <div className="w-0.5 h-8 rounded-full bg-sand-300 group-hover:bg-primary transition-colors" />
-                </div>
-            </aside>
-
-            {/* CENTER — main content */}
+        <div className="flex flex-col lg:flex-row w-full gap-3 lg:pb-24">
             <div className="flex-1 flex flex-col gap-3 min-w-0 order-2">
-
-                {/* Mobile nav (hidden lg+) */}
-                <div className="flex flex-col sm:flex-row items-center gap-2 lg:hidden">
-                    <Select onChange={(v) => { setStateTagUUID(String(v ?? '')); setStateMediaUUID('') }}>
-                        <Label>Tag</Label>
-                        <Select.Trigger>
-                            <Select.Value />
-                            <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover>
-                            <ListBox>
-                                {[
-                                    ...stateTagList.map(v => (
-                                        <ListBox.Item id={v.uuid} key={v.uuid} textValue={v.tag}>{v.tag}</ListBox.Item>
-                                    )),
-                                    <ListBox.Item id="invalid-subtitle" key="invalid-subtitle" textValue="Invalid Subtitle">Invalid Subtitle</ListBox.Item>
-                                ]}
-                            </ListBox>
-                        </Select.Popover>
-                    </Select>
-                    <Select onChange={(v) => setStateMediaUUID(String(v ?? ''))}>
-                        <Label>Media</Label>
-                        <Select.Trigger>
-                            <Select.Value />
-                            <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover>
-                            <ListBox>
-                                {stateMediaList.map(v => (
-                                    <ListBox.Item id={v.uuid} key={v.uuid} textValue={v.title}>{v.title}</ListBox.Item>
-                                ))}
-                            </ListBox>
-                        </Select.Popover>
-                    </Select>
-                </div>
-
                 {/* Other-user link */}
                 {stateMediaUUID && stateMedia.media.user_id !== user_id && (
                     <Link className="text-blue-500 underline text-sm" target="_blank"
@@ -750,150 +607,136 @@ export default function Page({ user_id, uuid }: Props) {
                     </Link>
                 )}
 
+                <div className="flex flex-col gap-1 shrink-0 w-full sticky top-16 z-10 relative bg-sand-200">
+                    {/* Player */}
+                    {hasVideo && (
+                        audioMode ? (
+                            <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
+                                subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
+                            />
+                        ) : (
+                            <div className="rounded-xl overflow-hidden shadow-lg bg-black">
+                                <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc}
+                                    subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
+                                />
+                            </div>
+                        )
+                    )}
+
+                    {/* Waveform */}
+                    {stateWaveformPeaks && (stateActiveTab === 'dictation' || stateActiveTab === 'subtitle') && (
+                        <div className="hidden lg:block fixed bottom-0 left-0 right-0 z-20 bg-sand-100 border-t border-sand-200 px-6 py-2 shadow-lg">
+                            <WaveformCanvas peaks={stateWaveformPeaks} videoRef={videoRef}
+                                selection={(() => {
+                                    const cue = stateFocusedCueIndex !== null ? stateCues.find(c => c.index === stateFocusedCueIndex) : undefined
+                                    return cue ? { start: cue.start_ms / 1000, end: cue.end_ms / 1000 } : undefined
+                                })()}
+                                onSelectionChange={(start, end) => {
+                                    if (stateFocusedCueIndex === null) return
+                                    updateStateCues(draft => {
+                                        const idx = draft.findIndex(c => c.index === stateFocusedCueIndex)
+                                        if (idx !== -1) {
+                                            draft[idx].start_ms = Math.round(start * 1000)
+                                            draft[idx].end_ms = Math.round(end * 1000)
+                                        }
+                                    })
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {/* Active cue */}
+                    {stateCues.length > 0 && !stateDictation && (
+                        <div className='flex flex-row items-center justify-center w-full py-3'>
+                            <div className=" transition-all duration-300 text-xl font-semibold leading-snug">
+                                {stateActiveCue || '...'}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Tabs */}
-                <div className="bg-sand-300 rounded-xl p-1">
-                    <Tabs className="font-bold w-full" variant="secondary"
-                        onSelectionChange={(v) => {
-                            setStateDictation(v === "dictation")
-                            setStateActiveTab(String(v))
-                        }}
-                    >
-                        <Tabs.ListContainer>
-                            <Tabs.List aria-label="Media tabs">
-                                <Tabs.Tab id="dictation">
-                                    <Tabs.Separator /><Headphones className='pr-1' /><span className='hidden lg:block'>Dictation</span>
-                                    <Tabs.Indicator />
-                                </Tabs.Tab>
-                                <Tabs.Tab id="media">
-                                    <MdPlayCircle size={16} /><span className='hidden lg:block'>Media</span>
-                                    <Tabs.Indicator />
-                                </Tabs.Tab>
-                                <Tabs.Tab id="subtitle">
-                                    <Tabs.Separator /><MdClosedCaption size={16} /><span className='hidden lg:block'>Subtitle</span>
-                                    <Tabs.Indicator />
-                                </Tabs.Tab>
-                                <Tabs.Tab id="transcript">
-                                    <Tabs.Separator /><MdDescription size={16} /><span className='hidden lg:block'>Transcript</span>
-                                    <Tabs.Indicator />
-                                </Tabs.Tab>
-                                <Tabs.Tab id="note">
-                                    <Tabs.Separator /><MdNotes size={16} /><span className='hidden lg:block'>Note</span>
-                                    <Tabs.Indicator />
-                                </Tabs.Tab>
-                            </Tabs.List>
-                        </Tabs.ListContainer>
+                <Tabs className="font-bold w-full" selectedKey={stateActiveTab}
+                    onSelectionChange={(v) => {
+                        setStateDictation(v === "dictation")
+                        setStateActiveTab(String(v))
+                    }}
+                >
+                    <Tabs.ListContainer>
+                        <Tabs.List aria-label="Media tabs"
+                            className="w-fit *:h-6 *:w-fit *:px-3 *:text-sm *:font-normal *:data-[selected=true]:font-bold"
+                        >
+                            <Tabs.Tab id="library">
+                                Library
+                                {stateLoading && <ProgressCircle size="sm" aria-label="Loading" />}
+                                <Tabs.Indicator className="bg-blue-200" />
+                            </Tabs.Tab>
+                            <Tabs.Tab id="media">
+                                Media
+                                <Tabs.Indicator className="bg-blue-200" />
+                            </Tabs.Tab>
+                            <Tabs.Tab id="dictation">
+                                Dictation
+                                <Tabs.Indicator className="bg-blue-200" />
+                            </Tabs.Tab>
+                            <Tabs.Tab id="subtitle">
+                                Subtitle
+                                <Tabs.Indicator className="bg-blue-200" />
+                            </Tabs.Tab>
+                        </Tabs.List>
+                    </Tabs.ListContainer>
 
-                        <Tabs.Panel id="dictation" className="flex flex-col w-full gap-3">
-                            <Select
-                                value={stateSubtitle?.uuid ?? null}
-                                onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
+                    <Tabs.Panel id="library" className="flex flex-col w-full gap-3">
+                        <div className="flex flex-col bg-sand-100 rounded-xl p-3 gap-0.5 overflow-y-auto flex-1 min-h-0">
+                            <button className={sidebarBtnClass(stateTagUUID === 'invalid-subtitle')}
+                                onClick={() => { setStateTagUUID('invalid-subtitle'); setStateMediaUUID('') }}
                             >
-                                <Label>Select subtitle</Label>
-                                <Select.Trigger>
-                                    <Select.Value />
-                                    <Select.Indicator />
-                                </Select.Trigger>
-                                <Select.Popover>
-                                    <ListBox>
-                                        {stateSubtitleList.map(v => (
-                                            <ListBox.Item id={v.uuid} key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
-                                                {`${v.language} (${v.user_id})`}
-                                            </ListBox.Item>
-                                        ))}
-                                    </ListBox>
-                                </Select.Popover>
-                            </Select>
+                                <span className='text-red-700'>Invalid Subtitle</span>
+                            </button>
 
-                            {stateCues.length > 0 && (
-                                <div className="flex items-center justify-between px-1">
-                                    <span className="text-sm text-foreground-500">
-                                        {stateDictSuccessSet.size} / {stateCues.length} ✓
-                                    </span>
-                                    <Button size="sm"
-                                        variant={stateDictStatus === 'complete' ? 'primary' : 'secondary'}
-                                        onPress={handleDictStatusToggle}
-                                    >
-                                        {stateDictStatus === 'complete' && <MdCheckCircle size={16} />}
-                                        {stateDictStatus === 'complete' ? 'Complete' : 'Mark Complete'}
-                                    </Button>
-                                </div>
-                            )}
+                            {stateTagList.map(tag => {
+                                const isSubscribed = tag.user_id !== user_id && tag.user_id !== 'public'
+                                return (
+                                    <div key={tag.uuid}>
+                                        <button className={sidebarBtnClass(stateTagUUID === tag.uuid)}
+                                            onClick={() => { setStateTagUUID(stateTagUUID === tag.uuid ? '' : tag.uuid); setStateMediaUUID('') }}
+                                        >
+                                            <span className="flex items-center gap-1.5">
+                                                {isSubscribed && <MdPeople size={13} className="shrink-0 opacity-60" />}
+                                                <span className="truncate">{tag.tag}</span>
+                                            </span>
+                                        </button>
+                                        {stateTagUUID === tag.uuid && stateMediaList.length > 0 && (
+                                            <div className="ml-2 mt-0.5 mb-1 flex flex-col gap-0.5 border-l-2 border-sand-300 pl-2">
+                                                {stateMediaList.map(m => (
+                                                    <button key={m.uuid}
+                                                        className={`w-full text-left px-2 py-1 rounded text-sm transition-colors ${stateMediaUUID === m.uuid
+                                                            ? 'bg-sand-300 font-semibold text-foreground'
+                                                            : 'hover:bg-sand-500 text-foreground-600'
+                                                            }`}
+                                                        onClick={() => {
+                                                            setStateMediaUUID(m.uuid)
+                                                            setStateActiveTab("dictation")
+                                                        }}
+                                                    >
+                                                        <span className="line-clamp-2">{m.title}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </Tabs.Panel>
 
-                            {stateCues.map((cue, i) => (
-                                <div key={i}
-                                    className={`rounded-xl border-2 py-1.5 px-2 transition-colors ${cue.active ? 'border-primary bg-sand-200' : 'border-sand-300 bg-sand-100'
-                                        }`}
-                                >
-                                    <CueEditor
-                                        cue={cue}
-                                        media={videoRef.current}
+                    <Tabs.Panel id="media" className="flex flex-col w-full gap-3">
+                        <div>
+                            <div className='flex flex-row items-center justify-start gap-2'>
+                                <span className='flex-1 text-xl font-bold text-blue-500'>Media</span>
+                            </div>
+                            <Separator className="my-4" />
 
-                                        allowEdit={stateSubtitle?.user_id === user_id}
-                                        mode={stateEditingCue !== cue.index ? "dictation" : "dictation_edit"}
-
-                                        saving={stateDictSaving}
-                                        onUpdate={(updated) => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === updated.index)
-                                            if (idx !== -1) draft[idx] = updated
-                                        })}
-                                        onExpandStart={() => handleExpandStart(cue)}
-                                        onExpandEnd={() => handleExpandEnd(cue)}
-                                        onDelete={() => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === cue.index)
-                                            if (idx !== -1) draft.splice(idx, 1)
-                                            draft.forEach((item, i) => item.index = i + 1)
-                                        })}
-                                        onMergeNext={() => updateStateCues(draft => {
-                                            const idx = draft.findIndex(c => c.index === cue.index)
-                                            if (idx >= 0 && idx < draft.length - 1) {
-                                                if (draft[idx].text.length === 1 && draft[idx + 1].text.length === 1) {
-                                                    draft[idx].text = [draft[idx].text[0] + " " + draft[idx + 1].text[0]];
-                                                } else {
-                                                    draft[idx].text.push(...draft[idx + 1].text);
-                                                }
-                                                draft[idx].end_ms = draft[idx + 1].end_ms;
-                                                draft.splice(idx + 1, 1);
-
-                                                draft.forEach((item, i) => {
-                                                    item.index = i + 1;
-                                                });
-                                            }
-                                        })}
-                                        onInsert={(pos: number) => updateStateCues(draft => {
-                                            const newItem = {
-                                                index: 0,
-                                                start_ms: 0,
-                                                end_ms: 0,
-                                                text: [],
-                                                translation: [],
-                                                active: false,
-                                            };
-
-                                            if (pos < 1) {
-                                                draft.unshift(newItem);
-                                            } else if (pos > draft.length) {
-                                                draft.push(newItem);
-                                            } else {
-                                                draft.splice(pos - 1, 0, newItem);
-                                            }
-
-                                            draft.forEach((item, i) => {
-                                                item.index = i + 1;
-                                            });
-                                        })}
-                                        onSave={handleDictCueSave}
-                                        onEdit={() => setStateEditingCue(cue.index)}
-                                        onDone={() => setStateEditingCue(null)}
-
-                                        initialSuccess={stateDictSuccessSet.has(cue.index)}
-                                        onSuccess={handleDictSuccess}
-                                        onFocusInput={() => setStateFocusedCueIndex(cue.index)}
-                                    />
-                                </div>
-                            ))}
-                        </Tabs.Panel>
-
-                        <Tabs.Panel id="media" className="flex flex-col w-full gap-3">
                             <TextField className="w-full">
                                 <Label>Title</Label>
                                 <Input
@@ -976,10 +819,267 @@ export default function Page({ user_id, uuid }: Props) {
                                     </Button>
                                 </div>
                             )}
-                        </Tabs.Panel>
+                        </div>
 
-                        <Tabs.Panel id="subtitle" className="flex flex-col w-full gap-3">
-                            <div className="flex flex-row items-center justify-end gap-4">
+                        <div>
+                            <div className='flex flex-row items-center justify-start gap-2'>
+                                <span className='flex-1 text-xl font-bold text-blue-500'>Transcript</span>
+                                <Button isIconOnly variant="tertiary" size="sm"
+                                    onPress={() => {
+                                        const t: listen_transcript = {
+                                            uuid: getUUID(), user_id, media_uuid: stateMedia.media.uuid,
+                                            language: "en", transcript: "",
+                                            created_at: new Date(), updated_at: new Date(),
+                                        }
+                                        setStateTranscriptList(cur => [t, ...cur])
+                                    }}
+                                >
+                                    <Plus />
+                                </Button>
+                            </div>
+                            <Separator className="my-4" />
+                            {stateTranscriptList.map(v => (
+                                <Transcript key={v.uuid} item={v} user_id={user_id}
+                                    setStateReloadTranscript={setStateReloadTranscript}
+                                />
+                            ))}
+                        </div>
+
+                        <div>
+                            <div className='flex flex-row items-center justify-start gap-2'>
+                                <span className='flex-1 text-xl font-bold text-blue-500'>Note</span>
+                                <Button isIconOnly variant="tertiary" size="sm"
+                                    onPress={() => {
+                                        const n: listen_note = {
+                                            uuid: getUUID(), user_id, media_uuid: stateMedia.media.uuid,
+                                            note: "", created_at: new Date(), updated_at: new Date(),
+                                        }
+                                        setStateNoteList(cur => [n, ...cur])
+                                    }}
+                                >
+                                    <Plus />
+                                </Button>
+                            </div>
+                            <Separator className="my-4" />
+                            {stateNoteList.map((v, i) => (
+                                <Note key={i} item={v} user_id={user_id} setStateReloadNote={setStateReloadNote} />
+                            ))}
+                        </div>
+                    </Tabs.Panel>
+
+                    <Tabs.Panel id="dictation" className="flex flex-col w-full gap-3">
+                        {stateSubtitleList.length > 1 && (
+                            <Select
+                                value={stateSubtitle?.uuid ?? null}
+                                onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
+                            >
+                                <Label>Select subtitle</Label>
+                                <Select.Trigger>
+                                    <Select.Value />
+                                    <Select.Indicator />
+                                </Select.Trigger>
+                                <Select.Popover>
+                                    <ListBox>
+                                        {stateSubtitleList.map(v => (
+                                            <ListBox.Item id={v.uuid} key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
+                                                {`${v.language} (${v.user_id})`}
+                                            </ListBox.Item>
+                                        ))}
+                                    </ListBox>
+                                </Select.Popover>
+                            </Select>
+                        )}
+
+                        {stateCues.length > 0 && (
+                            <div className="flex items-center justify-between px-1">
+                                <span className="flex-1 text-sm text-foreground-500">
+                                    {stateDictSuccessSet.size} / {stateCues.length} ✓
+                                </span>
+                                <div className="flex flex-row items-center justify-between px-1">
+                                    <Button size="sm" variant="secondary"
+                                        onPress={() => {
+                                            if (stateDictMode === "focus") {
+                                                setStateDictMode("full")
+                                            } else {
+                                                const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.index))
+                                                setStateDictCue(cueList.length > 0 ? cueList[0] : undefined)
+                                                setStateDictMode("focus")
+                                            }
+                                        }}
+                                    >
+                                        {stateDictMode === 'full' ? 'Focus Mode' : 'Full View'}
+                                    </Button>
+                                    <Button size="sm"
+                                        variant={stateDictStatus === 'complete' ? 'primary' : 'secondary'}
+                                        onPress={handleDictStatusToggle}
+                                    >
+                                        {stateDictStatus === 'complete' && <MdCheckCircle size={16} />}
+                                        {stateDictStatus === 'complete' ? 'Complete' : 'Mark Complete'}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {stateDictMode === "full" ? (
+                            stateCues.map((cue, i) => (
+                                <div key={i}
+                                    className={`rounded-xl border-2 py-1.5 px-2 transition-colors ${cue.active ? 'border-primary bg-sand-200' : 'border-sand-300 bg-sand-100'}`}
+                                >
+                                    <CueEditor
+                                        cue={cue}
+                                        media={videoRef.current}
+
+                                        allowEdit={stateSubtitle?.user_id === user_id}
+                                        mode={stateEditingCue !== cue.index ? "dictation" : "dictation_edit"}
+
+                                        saving={stateDictSaving}
+                                        onUpdate={(updated) => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === updated.index)
+                                            if (idx !== -1) draft[idx] = updated
+                                        })}
+                                        onExpandStart={() => handleExpandStart(cue)}
+                                        onExpandEnd={() => handleExpandEnd(cue)}
+                                        onDelete={() => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === cue.index)
+                                            if (idx !== -1) draft.splice(idx, 1)
+                                            draft.forEach((item, i) => item.index = i + 1)
+                                        })}
+                                        onMergeNext={() => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === cue.index)
+                                            if (idx >= 0 && idx < draft.length - 1) {
+                                                if (draft[idx].text.length === 1 && draft[idx + 1].text.length === 1) {
+                                                    draft[idx].text = [draft[idx].text[0] + " " + draft[idx + 1].text[0]];
+                                                } else {
+                                                    draft[idx].text.push(...draft[idx + 1].text);
+                                                }
+                                                draft[idx].end_ms = draft[idx + 1].end_ms;
+                                                draft.splice(idx + 1, 1);
+
+                                                draft.forEach((item, i) => {
+                                                    item.index = i + 1;
+                                                });
+                                            }
+                                        })}
+                                        onInsert={(pos: number) => updateStateCues(draft => {
+                                            const newItem = {
+                                                index: 0,
+                                                start_ms: 0,
+                                                end_ms: 0,
+                                                text: [],
+                                                translation: [],
+                                                active: false,
+                                            };
+
+                                            if (pos < 1) {
+                                                draft.unshift(newItem);
+                                            } else if (pos > draft.length) {
+                                                draft.push(newItem);
+                                            } else {
+                                                draft.splice(pos - 1, 0, newItem);
+                                            }
+
+                                            draft.forEach((item, i) => {
+                                                item.index = i + 1;
+                                            });
+                                        })}
+                                        onSave={handleDictCueSave}
+                                        onEdit={() => setStateEditingCue(cue.index)}
+                                        onDone={() => setStateEditingCue(null)}
+
+                                        initialSuccess={stateDictSuccessSet.has(cue.index)}
+                                        onSuccess={handleDictSuccess}
+                                        onFocusInput={() => setStateFocusedCueIndex(cue.index)}
+                                    />
+                                </div>
+                            ))
+                        ) : (
+                            <div className='flex flex-col items-center justify-center gap-1 w-full'>
+                                {!stateDictCue ? (
+                                    <div>cue not found</div>
+                                ) : (
+                                    <CueEditor
+                                        cue={stateDictCue}
+                                        media={videoRef.current}
+
+                                        allowEdit={stateSubtitle?.user_id === user_id}
+                                        mode="dictation_focus"
+
+                                        saving={stateDictSaving}
+                                        onUpdate={(updated) => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === updated.index)
+                                            if (idx !== -1) draft[idx] = updated
+                                        })}
+                                        onExpandStart={() => handleExpandStart(stateDictCue)}
+                                        onExpandEnd={() => handleExpandEnd(stateDictCue)}
+                                        onDelete={() => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === stateDictCue.index)
+                                            if (idx !== -1) draft.splice(idx, 1)
+                                            draft.forEach((item, i) => item.index = i + 1)
+                                        })}
+                                        onMergeNext={() => updateStateCues(draft => {
+                                            const idx = draft.findIndex(c => c.index === stateDictCue.index)
+                                            if (idx >= 0 && idx < draft.length - 1) {
+                                                if (draft[idx].text.length === 1 && draft[idx + 1].text.length === 1) {
+                                                    draft[idx].text = [draft[idx].text[0] + " " + draft[idx + 1].text[0]];
+                                                } else {
+                                                    draft[idx].text.push(...draft[idx + 1].text);
+                                                }
+                                                draft[idx].end_ms = draft[idx + 1].end_ms;
+                                                draft.splice(idx + 1, 1);
+
+                                                draft.forEach((item, i) => {
+                                                    item.index = i + 1;
+                                                });
+                                            }
+                                        })}
+                                        onInsert={(pos: number) => updateStateCues(draft => {
+                                            const newItem = {
+                                                index: 0,
+                                                start_ms: 0,
+                                                end_ms: 0,
+                                                text: [],
+                                                translation: [],
+                                                active: false,
+                                            };
+
+                                            if (pos < 1) {
+                                                draft.unshift(newItem);
+                                            } else if (pos > draft.length) {
+                                                draft.push(newItem);
+                                            } else {
+                                                draft.splice(pos - 1, 0, newItem);
+                                            }
+
+                                            draft.forEach((item, i) => {
+                                                item.index = i + 1;
+                                            });
+                                        })}
+                                        onSave={handleDictCueSave}
+                                        onEdit={() => setStateEditingCue(stateDictCue.index)}
+                                        onDone={() => setStateEditingCue(null)}
+
+                                        initialSuccess={stateDictSuccessSet.has(stateDictCue.index)}
+                                        onSuccess={handleDictSuccess}
+                                        onFocusInput={() => setStateFocusedCueIndex(stateDictCue.index)}
+                                    />
+                                )}
+                                <div className='flex flex-row items-center justify-center gap-1 w-full'>
+                                    <Button
+                                        onPress={() => {
+                                            const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.index))
+                                            setStateDictCue(cueList.length > 0 ? cueList[0] : undefined)
+                                        }}
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </Tabs.Panel>
+
+                    <Tabs.Panel id="subtitle" className="flex flex-col w-full gap-3">
+                        <div className="flex flex-row items-center justify-end gap-4">
+                            {stateSubtitleList.length > 1 && (
                                 <Select aria-label="Select subtitle"
                                     value={stateSubtitle?.uuid ?? null}
                                     onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
@@ -998,95 +1098,31 @@ export default function Page({ user_id, uuid }: Props) {
                                         </ListBox>
                                     </Select.Popover>
                                 </Select>
-                                <Button variant="primary" size="sm"
-                                    onPress={() => {
-                                        const s: listen_subtitle = {
-                                            uuid: getUUID(), user_id, media_uuid: "",
-                                            language: "en", subtitle: "", format: "vtt",
-                                            created_at: new Date(), updated_at: new Date(),
-                                        }
-                                        setStateSubtitle(s)
-                                        setStateSubtitleList(cur => [s, ...cur])
-                                    }}
-                                >
-                                    New
-                                </Button>
-                            </div>
-                            {!!stateSubtitle && (
-                                <Subtitle item={stateSubtitle} user_id={user_id} media={videoRef.current}
-                                    setStateSubtitle={setStateSubtitle}
-                                    setStateSubtitleList={setStateSubtitleList}
-                                />
                             )}
-                        </Tabs.Panel>
 
-                        <Tabs.Panel id="transcript" className="flex flex-col w-full gap-3">
-                            <div className="flex flex-row items-center justify-end w-full gap-2">
-                                <Button variant="primary" size="sm"
-                                    onPress={() => {
-                                        const t: listen_transcript = {
-                                            uuid: getUUID(), user_id, media_uuid: stateMedia.media.uuid,
-                                            language: "en", transcript: "",
-                                            created_at: new Date(), updated_at: new Date(),
-                                        }
-                                        setStateTranscriptList(cur => [t, ...cur])
-                                    }}
-                                >
-                                    New
-                                </Button>
-                            </div>
-                            {stateTranscriptList.map(v => (
-                                <Transcript key={v.uuid} item={v} user_id={user_id}
-                                    setStateReloadTranscript={setStateReloadTranscript}
-                                />
-                            ))}
-                        </Tabs.Panel>
-
-                        <Tabs.Panel id="note" className="w-full bg-sand-300 rounded-lg p-2">
-                            <div className="flex flex-row items-center justify-end w-full gap-2">
-                                <Button variant="primary" size="sm"
-                                    onPress={() => {
-                                        const n: listen_note = {
-                                            uuid: getUUID(), user_id, media_uuid: stateMedia.media.uuid,
-                                            note: "", created_at: new Date(), updated_at: new Date(),
-                                        }
-                                        setStateNoteList(cur => [n, ...cur])
-                                    }}
-                                >
-                                    New
-                                </Button>
-                            </div>
-                            {stateNoteList.map((v, i) => (
-                                <Note key={i} item={v} user_id={user_id} setStateReloadNote={setStateReloadNote} />
-                            ))}
-                        </Tabs.Panel>
-                    </Tabs>
-                </div>
+                            <Button variant="primary" size="sm"
+                                onPress={() => {
+                                    const s: listen_subtitle = {
+                                        uuid: getUUID(), user_id, media_uuid: "",
+                                        language: "en", subtitle: "", format: "vtt",
+                                        created_at: new Date(), updated_at: new Date(),
+                                    }
+                                    setStateSubtitle(s)
+                                    setStateSubtitleList(cur => [s, ...cur])
+                                }}
+                            >
+                                New
+                            </Button>
+                        </div>
+                        {!!stateSubtitle && (
+                            <Subtitle item={stateSubtitle} user_id={user_id} media={videoRef.current}
+                                setStateSubtitle={setStateSubtitle}
+                                setStateSubtitleList={setStateSubtitleList}
+                            />
+                        )}
+                    </Tabs.Panel>
+                </Tabs>
             </div>
-
         </div>
-
-        {/* Waveform footer — desktop only, full width, dictation/subtitle tabs */}
-        {stateWaveformPeaks && (stateActiveTab === 'dictation' || stateActiveTab === 'subtitle') && (
-            <div className="hidden lg:block fixed bottom-0 left-0 right-0 z-20 bg-sand-100 border-t border-sand-200 px-6 py-2 shadow-lg">
-                <WaveformCanvas peaks={stateWaveformPeaks} videoRef={videoRef}
-                    selection={(() => {
-                        const cue = stateFocusedCueIndex !== null ? stateCues.find(c => c.index === stateFocusedCueIndex) : undefined
-                        return cue ? { start: cue.start_ms / 1000, end: cue.end_ms / 1000 } : undefined
-                    })()}
-                    onSelectionChange={(start, end) => {
-                        if (stateFocusedCueIndex === null) return
-                        updateStateCues(draft => {
-                            const idx = draft.findIndex(c => c.index === stateFocusedCueIndex)
-                            if (idx !== -1) {
-                                draft[idx].start_ms = Math.round(start * 1000)
-                                draft[idx].end_ms = Math.round(end * 1000)
-                            }
-                        })
-                    }}
-                />
-            </div>
-        )}
-        </>
     )
 }

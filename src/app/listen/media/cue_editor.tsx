@@ -5,7 +5,7 @@ import { Button, Chip, Input, InputGroup, Link, TextArea, Tooltip } from '@herou
 import { Cue, formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
 import { MdOutlineLightbulbCircle } from 'react-icons/md'
-import { ArrowLeftToLine, ArrowRightToLine, FloppyDisk, MapPin, PencilToSquare, Play, SquarePlus, TrashBin, Xmark } from '@gravity-ui/icons'
+import { ArrowLeftToLine, ArrowRightToLine, FloppyDisk, MapPin, PencilToSquare, Play, PlayFill, SquarePlus, TrashBin, Xmark } from '@gravity-ui/icons'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
@@ -16,9 +16,10 @@ type DictationProps = {
     setStateSuccess: React.Dispatch<React.SetStateAction<boolean>>
     onSuccess?: (index: number, success: boolean) => void
     onFocusInput?: () => void
+    mode: "compact" | "large"
 }
 
-function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFocusInput }: DictationProps) {
+function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFocusInput, mode }: DictationProps) {
     const [stateInput, setStateInput] = useState<string>('')
 
     const isSuccess = (answer: string) => {
@@ -38,72 +39,141 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
     }
 
     return (
-        <div className='flex flex-col items-start justify-center w-full gap-1'>
-            <div className='flex flex-row items-center justify-start w-full gap-1'>
-                <Input aria-label='input answer' autoComplete="one-time-code"
-                    id={`d-s-i-${cue.index}`}
-                    className='text-xl font-bold border-b-2 border-b-gray-400 bg-sand-100 rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
-                    value={stateInput}
-                    onFocus={onFocusInput}
-                    onChange={(e) => {
-                        const content = e.target.value
-                        if (content.endsWith('  ')) {
-                            if (!!media) {
-                                if (media.paused) playMediaPart(cue, media, false)
-                                else media.pause()
-                            }
-                        } else {
-                            setStateInput(content)
-                            if (!stateSuccess && isSuccess(content)) {
-                                setStateSuccess(true)
-                                onSuccess?.(cue.index, true)
-                            }
-                        }
-                    }}
-                    onKeyDown={(e) => {
-                        if (!media) return
-                        if (e.ctrlKey && 'sS'.includes(e.key)) {
-                            if (media.paused) playMediaPart(cue, media, false)
-                            else media.pause()
-                            e.preventDefault()
-                        }
-                        if (e.ctrlKey && 'dD'.includes(e.key)) {
-                            if (media.paused) playMediaPart(cue, media, false)
-                            else media.pause()
-                            e.preventDefault()
-                        }
-                    }}
-                />
-                {!!cue.translation && cue.translation.length > 0 && (
-                    <Tooltip>
-                        <Tooltip.Trigger>
-                            <Button isIconOnly variant='ghost'>
-                                <MdOutlineLightbulbCircle size={30} />
-                            </Button>
-                        </Tooltip.Trigger>
-                        <Tooltip.Content placement='top end' className='bg-slate-300'>
-                            <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
-                                {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
-                            </div>
-                        </Tooltip.Content>
-                    </Tooltip>
-                )}
-            </div>
-            <div className='bg-slate-200 rounded-sm px-1 text-gray-400 font-normal'>
-                {getTip(stateInput)}
-            </div>
+        <div>
+            {mode === "compact" ? (
+                <div className='flex flex-col items-start justify-center w-full gap-1'>
+                    <div className='flex flex-row items-center justify-start w-full gap-1'>
+                        <Input aria-label='input answer' autoComplete="one-time-code"
+                            id={`d-s-i-${cue.index}`}
+                            className='text-xl font-bold border-b-2 border-b-gray-400 bg-sand-100 rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
+                            value={stateInput}
+                            onFocus={onFocusInput}
+                            onChange={(e) => {
+                                const content = e.target.value
+                                if (content.endsWith('  ')) {
+                                    if (!!media) {
+                                        if (media.paused) playMediaPart(cue, media, false)
+                                        else media.pause()
+                                    }
+                                } else {
+                                    setStateInput(content)
+                                    if (!stateSuccess && isSuccess(content)) {
+                                        setStateSuccess(true)
+                                        onSuccess?.(cue.index, true)
+                                    }
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (!media) return
+                                if (e.ctrlKey && 'sS'.includes(e.key)) {
+                                    if (media.paused) playMediaPart(cue, media, false)
+                                    else media.pause()
+                                    e.preventDefault()
+                                }
+                                if (e.ctrlKey && 'dD'.includes(e.key)) {
+                                    if (media.paused) playMediaPart(cue, media, false)
+                                    else media.pause()
+                                    e.preventDefault()
+                                }
+                            }}
+                        />
+                        {!!cue.translation && cue.translation.length > 0 && (
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button isIconOnly variant='ghost'>
+                                        <MdOutlineLightbulbCircle size={30} />
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content placement='top end' className='bg-slate-300'>
+                                    <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
+                                        {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
+                                    </div>
+                                </Tooltip.Content>
+                            </Tooltip>
+                        )}
+                    </div>
+                    <div className='bg-slate-200 rounded-sm px-1 text-gray-400 font-normal'>
+                        {getTip(stateInput)}
+                    </div>
+                </div>
+            ) : (
+                <div className='flex flex-col items-start justify-center w-full gap-1'>
+                    <div className='flex flex-row items-center justify-start w-full gap-1'>
+                        <TextArea aria-label='input answer' autoComplete="one-time-code"
+                            id={`d-s-i-${cue.index}`}
+                            className='text-4xl font-bold border-b-2 border-b-gray-400 bg-sand-300 rounded-lg p-2 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
+                            value={stateInput}
+                            rows={5}
+                            onFocus={onFocusInput}
+                            onChange={(e) => {
+                                const content = e.target.value
+                                if (content.endsWith('  ')) {
+                                    if (!!media) {
+                                        if (media.paused) playMediaPart(cue, media, false)
+                                        else media.pause()
+                                    }
+                                } else {
+                                    setStateInput(content)
+                                    if (!stateSuccess && isSuccess(content)) {
+                                        setStateSuccess(true)
+                                        onSuccess?.(cue.index, true)
+                                    }
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (!media) return
+                                if (e.ctrlKey && 'sS'.includes(e.key)) {
+                                    if (media.paused) playMediaPart(cue, media, false)
+                                    else media.pause()
+                                    e.preventDefault()
+                                }
+                                if (e.ctrlKey && 'dD'.includes(e.key)) {
+                                    if (media.paused) playMediaPart(cue, media, false)
+                                    else media.pause()
+                                    e.preventDefault()
+                                }
+                            }}
+                        />
+                        {!!cue.translation && cue.translation.length > 0 && (
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <Button isIconOnly variant='ghost'>
+                                        <MdOutlineLightbulbCircle size={30} />
+                                    </Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content placement='top end' className='bg-slate-300'>
+                                    <div className='flex flex-col items-start justify-start text-xl px-4 py-0.5 whitespace-pre-wrap'>
+                                        {!!cue.translation.join(" ").replaceAll(/\d/g, 'x')}
+                                    </div>
+                                </Tooltip.Content>
+                            </Tooltip>
+                        )}
+                    </div>
+                    <div className='bg-slate-200 rounded-sm px-1 text-gray-400 text-2xl'>
+                        {getTip(stateInput)}
+                    </div>
+                </div>
+            )}
         </div>
+
     )
 }
 
 // ── CueEditor ─────────────────────────────────────────────────────────────
 
+/**
+ * Mode:
+ * 1) dictation: 
+ * 2) edit: edit subtitle
+ * 3) dictation_edit: edit subtile during dictation, will add save and close button on every cue
+ * 4) focus: dictate only one line, no editing
+ */
 export type CueEditorProps = {
     cue: Cue
     media: HTMLMediaElement | null
 
     allowEdit: boolean
-    mode: "dictation" | "edit" | "dictation_edit"
+    mode: "dictation" | "edit" | "dictation_edit" | "dictation_focus"
 
     // Editor
     saving: boolean
@@ -245,6 +315,22 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                         shortcut: Ctrl+S, Ctrl+D, or type two spaces at the end
                     </Tooltip.Content>
                 </Tooltip>
+                <Tooltip isDisabled={mode !== "dictation"}>
+                    <Tooltip.Trigger>
+                        <Button isIconOnly variant='ghost' size="sm"
+                            onPress={() => {
+                                if (!media) return
+                                if (media.paused) playMediaPart(cue, media, true)
+                                else media.pause()
+                            }}
+                        >
+                            <PlayFill />
+                        </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                        extend play
+                    </Tooltip.Content>
+                </Tooltip>
                 {(mode === "edit" || mode === "dictation_edit") && allowEdit && (
                     <>
                         <Tooltip>
@@ -343,7 +429,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
             <div className="lg:hidden flex">
                 {timeEditorEl}
             </div>
-            {mode === "dictation" ? (
+            {(mode === "dictation" || mode === "dictation_focus") ? (
                 <Dictation
                     cue={cue}
                     media={media}
@@ -351,15 +437,14 @@ export default function CueEditor({ cue, media, allowEdit, mode, saving, onUpdat
                     setStateSuccess={setStateSuccess}
                     onSuccess={onSuccess}
                     onFocusInput={onFocusInput}
+                    mode={mode === "dictation_focus" ? "large" : "compact"}
                 />
             ) : (
-                (mode === "edit" || mode === "dictation_edit") && (
-                    <TextArea aria-label='text' autoComplete="one-time-code"
-                        className='text-xl font-bold border-2 border-gray-400'
-                        value={cue.text.join('\n')}
-                        onChange={(e) => onUpdate({ ...cue, text: e.target.value.split('\n') })}
-                    />
-                )
+                <TextArea aria-label='text' autoComplete="one-time-code"
+                    className='text-xl font-bold border-2 border-gray-400'
+                    value={cue.text.join('\n')}
+                    onChange={(e) => onUpdate({ ...cue, text: e.target.value.split('\n') })}
+                />
             )}
         </div>
     )

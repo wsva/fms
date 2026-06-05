@@ -74,9 +74,9 @@ export const isAudio = (src: string): boolean => {
 export const playMediaPart = async (cue: Cue, media: HTMLMediaElement, extend: boolean = false) => {
     if (!media) return;
 
-    // 扩展 0.5 秒
-    const start_ms = extend && cue.start_ms >= 500 ? cue.start_ms - 500 : cue.start_ms;
-    const end_ms = extend ? cue.end_ms + 500 : cue.end_ms;
+    // 扩展 2 秒
+    const start_ms = extend ? (cue.start_ms >= 2000 ? cue.start_ms - 2000 : 0) : cue.start_ms;
+    const end_ms = extend ? cue.end_ms + 2000 : cue.end_ms;
 
     // 暂停当前播放
     media.pause();
