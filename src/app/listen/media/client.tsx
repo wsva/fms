@@ -57,6 +57,7 @@ import CueEditor from './cue_editor'
 import Note from './note'
 import Transcript from './transcript'
 import { ArrowShapeUpFromLine, Plus } from '@gravity-ui/icons';
+import Subtitle from './subtitle';
 
 const newMedia = (user_id: string): listen_media_ext => ({
     media: {
@@ -824,27 +825,9 @@ export default function Page({ user_id, uuid }: Props) {
                                 </Button>
                             </div>
                             <Separator className="my-4" />
-
-                            {stateSubtitleList.length > 1 && (
-                                <Select aria-label="Select subtitle"
-                                    value={stateSubtitle?.uuid ?? null}
-                                    onChange={(v) => setStateSubtitle(stateSubtitleList.find(s => s.uuid === String(v ?? '')))}
-                                >
-                                    <Select.Trigger>
-                                        <Select.Value />
-                                        <Select.Indicator />
-                                    </Select.Trigger>
-                                    <Select.Popover>
-                                        <ListBox>
-                                            {stateSubtitleList.map(v => (
-                                                <ListBox.Item id={v.uuid} key={v.uuid} textValue={`${v.language} (${v.user_id})`}>
-                                                    {`${v.language} (${v.user_id})`}
-                                                </ListBox.Item>
-                                            ))}
-                                        </ListBox>
-                                    </Select.Popover>
-                                </Select>
-                            )}
+                            {stateSubtitleList.map(v => (
+                                <Subtitle key={v.uuid} item={v} user_id={user_id} />
+                            ))}
                         </div>
 
                         <div>

@@ -81,7 +81,7 @@ export default function Page({ item, user_id, setStateReloadNote }: Props) {
                 />
             ) : (
                 <div className='flex flex-col items-start justify-start w-full gap-0.5'>
-                    <div className='text-lg whitespace-pre-wrap bg-sand-300 rounded-sm p-2 w-full'>
+                    <div className='text-lg whitespace-pre-wrap bg-sand-300 rounded-sm p-2 w-full h-[calc(1.75rem*10)] overflow-y-auto'>
                         {item.note}
                     </div>
                     <div className='text-sm'>by {item.user_id}</div>
