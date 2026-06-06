@@ -1,4 +1,4 @@
-import { qsa_card, qsa_card_review, listen_media, listen_subtitle_line } from "@/generated/prisma/client";
+import { qsa_card, qsa_card_review, listen_media, listen_subtitle_cue } from "@/generated/prisma/client";
 import { ZodIssue } from "zod";
 
 type ActionResult<T> = {
@@ -61,7 +61,7 @@ type audio = {
     updated_at: Date;
 }
 
-type Cue = listen_subtitle_line & {
+type Cue = listen_subtitle_cue & {
     active?: boolean;
     content_original?: string;
     modified?: boolean;

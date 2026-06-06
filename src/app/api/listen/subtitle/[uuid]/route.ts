@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ uui
     try {
         const { uuid } = await context.params;
 
-        const cueList = await prisma.listen_subtitle_line.findMany({
+        const cueList = await prisma.listen_subtitle_cue.findMany({
             where: { subtitle_uuid: uuid },
             orderBy: { order_num: "asc" }
         })

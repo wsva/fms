@@ -221,20 +221,22 @@ model listen_subtitle {
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
-model listen_subtitle_line {
+model listen_subtitle_cue {
   uuid          String   @id @db.VarChar(100)
   subtitle_uuid String   @db.VarChar(100)
   order_num     Int
   start_ms      Int
   end_ms        Int
   content       String
+  reference     String?
 }
 
-view listen_subtitle_vtt {
-  uuid String
-  content       String?
-
-  @@map("listen_subtitle_vtt")
+model listen_subtitle_reference {
+  uuid       String   @id @db.VarChar(100)
+  chunk_uuid String   @db.VarChar(100)
+  order_num  Int
+  content    String
+  cue_uuid   String?
 }
 
 model listen_transcript {

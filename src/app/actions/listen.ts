@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils"
-import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_subtitle_line, listen_transcript, Prisma } from "@/generated/prisma/client";
+import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_subtitle_cue, listen_transcript, Prisma } from "@/generated/prisma/client";
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {
@@ -294,9 +294,9 @@ export async function removeSubtitle(uuid: string): Promise<ActionResult<listen_
     }
 }
 
-export async function getSubtitleLine(uuid: string): Promise<ActionResult<listen_subtitle_line>> {
+export async function getSubtitleLine(uuid: string): Promise<ActionResult<listen_subtitle_cue>> {
     try {
-        const result = await prisma.listen_subtitle_line.findUnique({
+        const result = await prisma.listen_subtitle_cue.findUnique({
             where: { uuid }
         })
         if (!result) {
@@ -309,9 +309,9 @@ export async function getSubtitleLine(uuid: string): Promise<ActionResult<listen
     }
 }
 
-export async function getSubtitleLineAll(subtitle_uuid: string): Promise<ActionResult<listen_subtitle_line[]>> {
+export async function getSubtitleLineAll(subtitle_uuid: string): Promise<ActionResult<listen_subtitle_cue[]>> {
     try {
-        const result = await prisma.listen_subtitle_line.findMany({
+        const result = await prisma.listen_subtitle_cue.findMany({
             where: { subtitle_uuid },
             orderBy: { order_num: "asc" },
         })
@@ -322,13 +322,13 @@ export async function getSubtitleLineAll(subtitle_uuid: string): Promise<ActionR
     }
 }
 
-export async function saveSubtitleLine(item: listen_subtitle_line): Promise<ActionResult<listen_subtitle_line>> {
+export async function saveSubtitleLine(item: listen_subtitle_cue): Promise<ActionResult<listen_subtitle_cue>> {
     try {
         if (!item.uuid || item.uuid === '') {
             item.uuid = getUUID()
         }
 
-        const result = await prisma.listen_subtitle_line.upsert({
+        const result = await prisma.listen_subtitle_cue.upsert({
             where: { uuid: item.uuid },
             create: item,
             update: item,
@@ -341,9 +341,9 @@ export async function saveSubtitleLine(item: listen_subtitle_line): Promise<Acti
     }
 }
 
-export async function createSubtitleLine(item: listen_subtitle_line): Promise<ActionResult<listen_subtitle_line>> {
+export async function createSubtitleLine(item: listen_subtitle_cue): Promise<ActionResult<listen_subtitle_cue>> {
     try {
-        const result = await prisma.listen_subtitle_line.create({
+        const result = await prisma.listen_subtitle_cue.create({
             data: item,
         })
 
@@ -354,9 +354,9 @@ export async function createSubtitleLine(item: listen_subtitle_line): Promise<Ac
     }
 }
 
-export async function removeSubtitleLine(uuid: string): Promise<ActionResult<listen_subtitle_line>> {
+export async function removeSubtitleLine(uuid: string): Promise<ActionResult<listen_subtitle_cue>> {
     try {
-        const result = await prisma.listen_subtitle_line.delete({
+        const result = await prisma.listen_subtitle_cue.delete({
             where: { uuid }
         })
         await prisma.qsa_card_tag.deleteMany({

@@ -66,6 +66,7 @@ export function parseVTT(vttText: string, contain_translation: boolean): Cue[] {
             start_ms: start,
             end_ms: end,
             content: textLines.join(" "),
+            reference: null,
             active: false
         });
     }
@@ -129,6 +130,7 @@ export function parseSRT(srtText: string, contain_translation: boolean = false):
             start_ms: start,
             end_ms: end,
             content: textLines.join(" "),
+            reference: null,
             active: false
         });
     }

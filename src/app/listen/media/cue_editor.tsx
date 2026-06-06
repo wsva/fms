@@ -195,7 +195,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                                 if (media) {
                                     const startMs = Math.round(media.currentTime * 1000)
                                     setStateStart(formatVttTime(startMs))
-                                    onUpdate({ ...cue, start_ms: startMs, modified:true })
+                                    onUpdate({ ...cue, start_ms: startMs, modified: true })
                                 }
                             }}
                         >
@@ -232,7 +232,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                                 if (media) {
                                     const endMs = Math.round(media.currentTime * 1000)
                                     setStateEnd(formatVttTime(endMs))
-                                    onUpdate({ ...cue, end_ms: endMs, modified:true })
+                                    onUpdate({ ...cue, end_ms: endMs, modified: true })
                                 }
                             }}
                         >
@@ -412,12 +412,19 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                     mode={mode === "dictation_focus" ? "large" : "compact"}
                 />
             ) : (
-                <TextArea aria-label='text' autoComplete="one-time-code"
-                    className='text-xl font-bold border-2 border-gray-400'
-                    disabled={isDisabled || cue.deleted}
-                    value={cue.content}
-                    onChange={(e) => onUpdate({ ...cue, content: e.target.value, modified: e.target.value !== cue.content_original })}
-                />
+                <>
+                    <TextArea aria-label='text' autoComplete="one-time-code"
+                        className='text-xl font-bold border-2 border-gray-400'
+                        disabled={isDisabled || cue.deleted}
+                        value={cue.content}
+                        onChange={(e) => onUpdate({ ...cue, content: e.target.value, modified: e.target.value !== cue.content_original })}
+                    />
+                    {!!cue.reference && (
+                        <div>
+                            {cue.reference}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )

@@ -42,7 +42,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { toast, Button, Chip, ProgressCircle, Input, InputGroup, Link, Select, Tabs, ListBox, Label, TextField, Separator } from "@heroui/react"
-import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag, listen_subtitle_line } from "@/generated/prisma/client";
+import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag, listen_subtitle_cue } from "@/generated/prisma/client";
 import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getSubtitleLineAll, getTranscriptAll, removeMedia, removeSubtitleLine, saveDictation, saveMedia, saveMediaTag, saveSubtitleLine } from '@/app/actions/listen'
 import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
@@ -504,7 +504,7 @@ export default function Page({ user_id, uuid }: Props) {
         setStateSaving(true)
         try {
             const toRemove: string[] = []
-            const toUpdate: listen_subtitle_line[] = []
+            const toUpdate: listen_subtitle_cue[] = []
 
             for (const cue of stateCues) {
                 if (cue.deleted) {
@@ -991,6 +991,7 @@ export default function Page({ user_id, uuid }: Props) {
                                                 start_ms: 0,
                                                 end_ms: 0,
                                                 content: "",
+                                                reference: null,
                                             };
 
                                             if (pos < 1) {
@@ -1061,6 +1062,7 @@ export default function Page({ user_id, uuid }: Props) {
                                                 start_ms: 0,
                                                 end_ms: 0,
                                                 content: "",
+                                                reference: null,
                                             };
 
                                             if (pos < 1) {
