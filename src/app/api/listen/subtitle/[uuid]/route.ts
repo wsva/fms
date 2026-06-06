@@ -1,45 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import { prisma } from "@/lib/prisma";
+import { buildVTT } from "@/lib/listen/subtitle";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ uuid: string }> }) {
     console.log(request);
-    
+
     try {
         const { uuid } = await context.params;
 
-        const resultSubtitle = await prisma.listen_subtitle.findUnique({
-            where: { uuid }
+        const cueList = await prisma.listen_subtitle_line.findMany({
+            where: { subtitle_uuid: uuid },
+            orderBy: { order_num: "asc" }
         })
-        if (!resultSubtitle) {
-            return NextResponse.json(
-                { error: `Subtitle not found by uuid: ${uuid}` },
-                { status: 404 }
-            );
-        }
 
-        let filename = "";
-        let contentType = "";
-        switch (resultSubtitle.format) {
-            case "vtt":
-                filename = `${uuid}.vtt`;
-                contentType = "text/vtt; charset=utf-8";
-                break;
-            case "srt":
-                filename = `${uuid}.srt`;
-                contentType = "text/plain; charset=utf-8";
-                break;
-            default:
-                filename = `${uuid}.txt`;
-                contentType = "text/plain; charset=utf-8";
-        }
-
-        const buffer = Buffer.from(resultSubtitle.subtitle, "utf-8");
-
+        const buffer = Buffer.from(buildVTT(cueList), "utf-8");
+        
         return new NextResponse(buffer, {
             headers: {
-                "Content-Type": contentType,
-                "Content-Disposition": `inline; filename="${path.basename(filename)}"`,
+                "Content-Type": "text/vtt; charset=utf-8",
+                "Content-Disposition": `inline; filename="${uuid}.vtt"`,
             },
         });
     } catch (error) {

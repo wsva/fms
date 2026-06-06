@@ -1,14 +1,11 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Button, Chip, Input, InputGroup, Link, TextArea, toast, Tooltip } from '@heroui/react'
+import { Button, Chip, Input, InputGroup, Link, TextArea, Tooltip } from '@heroui/react'
 import { formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
-import { ArrowLeftToLine, ArrowRightToLine, FloppyDisk, MapPin, PencilToSquare, Play, PlayFill, SquarePlus, TrashBin, Xmark } from '@gravity-ui/icons'
+import { ArrowLeftToLine, ArrowRightToLine, MapPin, PencilToSquare, Play, PlayFill, SquarePlus, TrashBin, Xmark } from '@gravity-ui/icons'
 import { Cue } from '@/lib/types'
-import { saveSubtitleLine } from '@/app/actions/listen'
-import { toExactType } from '@/lib/utils'
-import { listen_subtitle_line } from '@/generated/prisma/client'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
@@ -150,6 +147,7 @@ export type CueEditorProps = {
     mode: "dictation" | "edit" | "dictation_edit" | "dictation_focus"
 
     // Editor
+    isDisabled: boolean
     onUpdate: (updated: Cue) => void
     onExpandStart: () => void
     onExpandEnd: () => void
@@ -165,11 +163,10 @@ export type CueEditorProps = {
     onFocusInput?: () => void
 }
 
-export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onEdit, onDone, initialSuccess, onSuccess, onFocusInput }: CueEditorProps) {
+export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onEdit, onDone, initialSuccess, onSuccess, onFocusInput }: CueEditorProps) {
     const [stateStart, setStateStart] = useState(formatVttTime(cue.start_ms))
     const [stateEnd, setStateEnd] = useState(formatVttTime(cue.end_ms))
     const [stateSuccess, setStateSuccess] = useState<boolean>(initialSuccess ?? false)
-    const [stateSaving, setStateSaving] = useState<boolean>(false)
 
     useEffect(() => setStateStart(formatVttTime(cue.start_ms)), [cue.start_ms])
     useEffect(() => setStateEnd(formatVttTime(cue.end_ms)), [cue.end_ms])
@@ -178,25 +175,12 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
         setStateSuccess(initialSuccess ?? false)
     }, [initialSuccess])
 
-    const saveCue = async () => {
-        setStateSaving(true)
-        try {
-            const result = await saveSubtitleLine(toExactType<listen_subtitle_line>(cue))
-            if (result.status === 'error') {
-                console.log(result.error)
-                toast.danger('Load data error')
-            }
-        } finally {
-            setStateSaving(false)
-        }
-    }
-
     const timeEditorEl = (
         <InputGroup className="w-xs shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
             <InputGroup.Prefix className="p-0 bg-sand-100">
                 <Tooltip>
                     <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" onPress={onExpandStart}>
+                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" isDisabled={isDisabled} onPress={onExpandStart}>
                             <ArrowLeftToLine />
                         </Button>
                     </Tooltip.Trigger>
@@ -206,7 +190,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                 </Tooltip>
                 <Tooltip>
                     <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2"
+                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" isDisabled={isDisabled}
                             onPress={() => {
                                 if (media) {
                                     const startMs = Math.round(media.currentTime * 1000)
@@ -226,6 +210,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
             <InputGroup.Input data-no-voice aria-label="start time" autoComplete="one-time-code"
                 className={`text-center font-normal bg-sand-100 w-min ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
                 value={`${stateStart} ➔ ${stateEnd}`}
+                disabled={isDisabled}
                 onChange={(e) => {
                     const parts = e.target.value.split(" ➔ ")
                     setStateStart(parts[0])
@@ -242,6 +227,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                 <Tooltip>
                     <Tooltip.Trigger>
                         <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2"
+                            isDisabled={isDisabled}
                             onPress={() => {
                                 if (media) {
                                     const endMs = Math.round(media.currentTime * 1000)
@@ -259,7 +245,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                 </Tooltip>
                 <Tooltip>
                     <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" onPress={onExpandEnd}>
+                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" isDisabled={isDisabled} onPress={onExpandEnd}>
                             <ArrowRightToLine />
                         </Button>
                     </Tooltip.Trigger>
@@ -271,8 +257,18 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
         </InputGroup>
     )
 
+    const containerClass = (cue: Cue) => {
+        if (cue.deleted) {
+            return "flex flex-col gap-0.5 w-full border-solid border-red-500"
+        }
+        if (cue.modified) {
+            return "flex flex-col gap-0.5 w-full border-solid border-orange-500"
+        }
+        return "flex flex-col gap-0.5 w-full"
+    }
+
     return (
-        <div className="flex flex-col gap-0.5 w-full">
+        <div className={containerClass(cue)}>
             <div className="flex flex-row items-center justify-start w-full gap-1">
                 <Tooltip isDisabled={mode !== "dictation"}>
                     <Tooltip.Trigger>
@@ -323,7 +319,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                     <>
                         <Tooltip>
                             <Tooltip.Trigger>
-                                <Button isIconOnly variant='ghost' size="sm"
+                                <Button isIconOnly variant='ghost' size="sm" isDisabled={isDisabled}
                                     onPress={() => onInsert(cue.order_num)}
                                 >
                                     <div className="text-lg">#1</div>
@@ -335,7 +331,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                         </Tooltip>
                         <Tooltip>
                             <Tooltip.Trigger>
-                                <Button isIconOnly variant='ghost' size="sm"
+                                <Button isIconOnly variant='ghost' size="sm" isDisabled={isDisabled}
                                     onPress={() => onInsert(cue.order_num + 1)}
                                 >
                                     <div className="text-lg">#2</div>
@@ -347,7 +343,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                         </Tooltip>
                         <Tooltip>
                             <Tooltip.Trigger>
-                                <Button isIconOnly variant='ghost' size="sm"
+                                <Button isIconOnly variant='ghost' size="sm" isDisabled={isDisabled}
                                     onPress={onMergeNext}
                                 >
                                     <div className="text-lg">#3</div>
@@ -357,7 +353,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                                 merge next
                             </Tooltip.Content>
                         </Tooltip>
-                        <Button isIconOnly variant="ghost" size="sm"
+                        <Button isIconOnly variant="ghost" size="sm" isDisabled={isDisabled}
                             onPress={onDelete}
                         >
                             <TrashBin color='red' />
@@ -393,18 +389,6 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
                     )}
                     {mode === "dictation_edit" && allowEdit && (
                         <div>
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <Button isIconOnly variant='ghost' size="sm" isDisabled={stateSaving}
-                                        onPress={saveCue}
-                                    >
-                                        <FloppyDisk />
-                                    </Button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content>
-                                    save
-                                </Tooltip.Content>
-                            </Tooltip>
                             <Button isIconOnly variant='ghost' size="sm"
                                 onPress={onDone}
                             >
@@ -430,8 +414,9 @@ export default function CueEditor({ cue, media, allowEdit, mode, onUpdate, onExp
             ) : (
                 <TextArea aria-label='text' autoComplete="one-time-code"
                     className='text-xl font-bold border-2 border-gray-400'
+                    disabled={isDisabled || cue.deleted}
                     value={cue.content}
-                    onChange={(e) => onUpdate({ ...cue, content: e.target.value })}
+                    onChange={(e) => onUpdate({ ...cue, content: e.target.value, modified: e.target.value !== cue.content_original })}
                 />
             )}
         </div>

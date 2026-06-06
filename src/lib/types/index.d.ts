@@ -62,5 +62,8 @@ type audio = {
 }
 
 type Cue = listen_subtitle_line & {
-    active: boolean;
+    active?: boolean;
+    content_original?: string;
+    modified?: boolean;
+    deleted?: boolean;
 }
