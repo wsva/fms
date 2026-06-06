@@ -195,7 +195,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                                 if (media) {
                                     const startMs = Math.round(media.currentTime * 1000)
                                     setStateStart(formatVttTime(startMs))
-                                    onUpdate({ ...cue, start_ms: startMs })
+                                    onUpdate({ ...cue, start_ms: startMs, modified:true })
                                 }
                             }}
                         >
@@ -232,7 +232,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                                 if (media) {
                                     const endMs = Math.round(media.currentTime * 1000)
                                     setStateEnd(formatVttTime(endMs))
-                                    onUpdate({ ...cue, end_ms: endMs })
+                                    onUpdate({ ...cue, end_ms: endMs, modified:true })
                                 }
                             }}
                         >
