@@ -23,12 +23,25 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
     const [stateInput, setStateInput] = useState<string>('')
 
     const isSuccess = (answer: string) => {
-        return answer === cue.content || pureContent(answer) === pureContent(cue.content)
+        return answer === cue.content
+            || pureContent(answer) === pureContent(cue.content)
+            || answer === cue.reference
+            || pureContent(answer) === pureContent(cue.reference || "")
     }
 
-    const getTip = (answer: string) => {
+    const getTipOfContent = (answer: string) => {
         const answerParts = splitContent(answer, true).map((v) => v.content)
         const tipParts = splitContent(cue.content, false)
+        for (let i = 0; i < tipParts.length; i++) {
+            if (tipParts[i].isWord && !answerParts.includes(tipParts[i].content)) {
+                tipParts[i].content = hideWord(tipParts[i].content)
+            }
+        }
+        return tipParts.map((v) => v.content).join('')
+    }
+    const getTipOfReference = (answer: string) => {
+        const answerParts = splitContent(answer, true).map((v) => v.content)
+        const tipParts = splitContent(cue.reference || '', false)
         for (let i = 0; i < tipParts.length; i++) {
             if (tipParts[i].isWord && !answerParts.includes(tipParts[i].content)) {
                 tipParts[i].content = hideWord(tipParts[i].content)
@@ -78,8 +91,13 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                         />
                     </div>
                     <div className='bg-slate-200 rounded-sm px-1 text-gray-400 font-normal'>
-                        {getTip(stateInput)}
+                        {getTipOfContent(stateInput)}
                     </div>
+                    {!!cue.reference && cue.reference !== cue.content && (
+                        <div className='bg-slate-200 rounded-sm px-1 mt-3 text-gray-400 font-normal'>
+                            {getTipOfReference(stateInput)}
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className='flex flex-col items-start justify-center w-full gap-1'>
@@ -121,8 +139,13 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                         />
                     </div>
                     <div className='bg-slate-200 rounded-sm px-1 text-gray-400 text-2xl'>
-                        {getTip(stateInput)}
+                        {getTipOfContent(stateInput)}
                     </div>
+                    {!!cue.reference && cue.reference !== cue.content && (
+                        <div className='bg-slate-200 rounded-sm px-1 mt-3 text-gray-400 text-2xl'>
+                            {getTipOfReference(stateInput)}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

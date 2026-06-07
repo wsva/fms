@@ -42,7 +42,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { toast, Button, Chip, ProgressCircle, Input, InputGroup, Link, Select, Tabs, ListBox, Label, TextField, Separator } from "@heroui/react"
-import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag, listen_subtitle_cue } from "@/generated/prisma/client";
+import { listen_media, listen_note, listen_subtitle, listen_transcript, dataset_tag } from "@/generated/prisma/client";
 import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNoteAll, getSubtitleAll, getSubtitleLineAll, getTranscriptAll, removeMedia, removeSubtitleLine, saveDictation, saveMedia, saveMediaTag, saveSubtitleLine } from '@/app/actions/listen'
 import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
@@ -502,35 +502,42 @@ export default function Page({ user_id, uuid }: Props) {
 
     const handleSaveSubtitle = async () => {
         setStateSaving(true)
-        try {
-            const toRemove: string[] = []
-            const toUpdate: listen_subtitle_cue[] = []
 
-            for (const cue of stateCues) {
+        try {
+            const tasks = stateCues.map(async cue => {
                 if (cue.deleted) {
                     const result = await removeSubtitleLine(cue.uuid)
-                    if (result.status === 'success') {
-                        toRemove.push(cue.uuid)
-                    }
-                } else if (cue.modified) {
-                    const result = await saveSubtitleLine(toExactType(cue))
-                    if (result.status === 'success') {
-                        toUpdate.push(result.data)
+                    return result.status === 'success'
+                        ? { type: 'remove' as const, uuid: cue.uuid }
+                        : null
+                } else {
+                    if (cue.modified) {
+                        const result = await saveSubtitleLine(toExactType(cue))
+                        return result.status === 'success'
+                            ? { type: 'update' as const, cue: result.data }
+                            : null
                     }
                 }
-            }
+                return null
+            })
+
+            const results = (await Promise.all(tasks)).filter(Boolean)
 
             updateStateCues(draft => {
-                for (const id of toRemove) {
-                    const idx = draft.findIndex(c => c.uuid === id)
-                    if (idx !== -1) draft.splice(idx, 1)
-                }
+                for (const item of results) {
+                    if (item?.type === 'remove') {
+                        const idx = draft.findIndex(c => c.uuid === item.uuid)
+                        if (idx !== -1) {
+                            draft.splice(idx, 1)
+                        }
+                    }
 
-                for (const cue of toUpdate) {
-                    const idx = draft.findIndex(c => c.uuid === cue.uuid)
-                    if (idx !== -1) {
-                        draft[idx].content_original = cue.content
-                        draft[idx].modified = false
+                    if (item?.type === 'update') {
+                        const idx = draft.findIndex(c => c.uuid === item.cue.uuid)
+                        if (idx !== -1) {
+                            draft[idx].content_original = item.cue.content
+                            draft[idx].modified = false
+                        }
                     }
                 }
             })
@@ -932,6 +939,10 @@ export default function Page({ user_id, uuid }: Props) {
                                     </Button>
                                 </div>
                             </div>
+                        )}
+
+                        {!!stateSubtitle && (
+                            <span className='text-xs text-gray-300'>UUID: {stateSubtitle.uuid}</span>
                         )}
 
                         {stateDictMode === "full" ? (
