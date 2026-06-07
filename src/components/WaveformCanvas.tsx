@@ -82,12 +82,22 @@ export default function WaveformCanvas({ peaks, videoRef, selection, onSelection
 
     const video = videoRef.current
     const duration = video && isFinite(video.duration) && video.duration > 0 ? video.duration : 0
-    const progress = duration > 0 ? video!.currentTime / duration : 0
+    const hasSelection = stopRef.current > startRef.current
+    const selectionLength = hasSelection ? stopRef.current - startRef.current : duration
+    const padding = Math.max(1, selectionLength * 0.2)
+    const visibleStart = hasSelection ? Math.max(0, startRef.current - padding) : 0
+    const visibleEnd = hasSelection ? Math.min(duration, stopRef.current + padding) : duration
+    const visibleDuration = Math.max(0.001, visibleEnd - visibleStart)
+    const progress = duration > 0 ? (video!.currentTime - visibleStart) / visibleDuration : 0
     const playheadX = Math.round(progress * w)
+
+    const sampleStart = Math.floor((visibleStart / duration) * numSamples)
+    const sampleEnd = Math.floor((visibleEnd / duration) * numSamples)
+    const visibleSamples = Math.max(1, sampleEnd - sampleStart)
 
     // Draw bars
     for (let px = 0; px < w; px++) {
-      const idx = Math.min(Math.floor((px / w) * numSamples), numSamples - 1)
+      const idx = Math.min(sampleStart + Math.floor((px / w) * visibleSamples), sampleEnd - 1)
       const min = data[idx * stride] / scale
       const max = data[idx * stride + 1] / scale
       const yTop = Math.floor(h / 2 - max * (h / 2) * 0.9)
@@ -98,8 +108,8 @@ export default function WaveformCanvas({ peaks, videoRef, selection, onSelection
 
     // Selection overlay
     if (duration > 0 && stopRef.current > startRef.current) {
-      const x0 = Math.round((startRef.current / duration) * w)
-      const x1 = Math.round((stopRef.current / duration) * w)
+      const x0 = Math.round(((startRef.current - visibleStart) / visibleDuration) * w)
+      const x1 = Math.round(((stopRef.current - visibleStart) / visibleDuration) * w)
       ctx.fillStyle = SELECTION_FILL
       ctx.fillRect(x0, 0, x1 - x0, h)
       ctx.fillStyle = SELECTION_EDGE
@@ -177,15 +187,27 @@ export default function WaveformCanvas({ peaks, videoRef, selection, onSelection
     setStartText(fmtTime(selection.start))
     setStopText(fmtTime(selection.end))
     draw()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection?.start, selection?.end])
 
   // --- Seek on canvas click/drag ---
-  const seek = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const seek = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ) => {
     const video = videoRef.current
-    if (!video || !isFinite(video.duration) || video.duration <= 0) return
+    if (!video || !isFinite(video.duration) || video.duration <= 0) {
+      return
+    }
+
+    const hasSelection = stopRef.current > startRef.current
+    const selectionLength = hasSelection ? stopRef.current - startRef.current : video.duration
+    const padding = Math.max(1, selectionLength * 0.2)
+    const visibleStart = hasSelection ? Math.max(0, startRef.current - padding) : 0
+    const visibleEnd = hasSelection ? Math.min(video.duration, stopRef.current + padding) : video.duration
+    const visibleDuration = visibleEnd - visibleStart
     const rect = e.currentTarget.getBoundingClientRect()
-    video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration
+    const ratio = (e.clientX - rect.left) / rect.width
+    video.currentTime = visibleStart + ratio * visibleDuration
   }
 
   // --- Control handlers ---
