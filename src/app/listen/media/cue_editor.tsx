@@ -6,6 +6,7 @@ import { formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subti
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
 import { ArrowLeftToLine, ArrowRightToLine, MapPin, PencilToSquare, Play, PlayFill, SquarePlus, TrashBin, Xmark } from '@gravity-ui/icons'
 import { Cue } from '@/lib/types'
+import { lcs } from '@/app/speak/lcs'
 
 // ── Dictation ────────────────────────────────────────────────────────────────
 
@@ -29,25 +30,21 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
             || pureContent(answer) === pureContent(cue.reference || "")
     }
 
-    const getTipOfContent = (answer: string) => {
-        const answerParts = splitContent(answer, true).map((v) => v.content)
-        const tipParts = splitContent(cue.content, false)
-        for (let i = 0; i < tipParts.length; i++) {
-            if (tipParts[i].isWord && !answerParts.includes(tipParts[i].content)) {
-                tipParts[i].content = hideWord(tipParts[i].content)
+    const getTip = (answer: string, content: string) => {
+        const answerWords = splitContent(answer, true).map(v => v.content)
+        const tipParts = splitContent(content, false)
+        const wordParts = tipParts.filter(v => v.isWord)
+
+        const matches = lcs(wordParts.map(v => v.content), answerWords)
+        const matchedIndexes = new Set(matches.map(([, contentIndex]) => contentIndex))
+
+        wordParts.forEach((part, index) => {
+            if (!matchedIndexes.has(index)) {
+                part.content = hideWord(part.content)
             }
-        }
-        return tipParts.map((v) => v.content).join('')
-    }
-    const getTipOfReference = (answer: string) => {
-        const answerParts = splitContent(answer, true).map((v) => v.content)
-        const tipParts = splitContent(cue.reference || '', false)
-        for (let i = 0; i < tipParts.length; i++) {
-            if (tipParts[i].isWord && !answerParts.includes(tipParts[i].content)) {
-                tipParts[i].content = hideWord(tipParts[i].content)
-            }
-        }
-        return tipParts.map((v) => v.content).join('')
+        })
+
+        return tipParts.map(v => v.content).join('')
     }
 
     return (
@@ -91,11 +88,11 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                         />
                     </div>
                     <div className='bg-slate-200 rounded-sm px-1 text-gray-400 font-normal'>
-                        {getTipOfContent(stateInput)}
+                        {getTip(stateInput, cue.content)}
                     </div>
                     {!!cue.reference && cue.reference !== cue.content && (
                         <div className='bg-slate-200 rounded-sm px-1 mt-3 text-gray-400 font-normal'>
-                            {getTipOfReference(stateInput)}
+                            {getTip(stateInput, cue.reference)}
                         </div>
                     )}
                 </div>
@@ -139,11 +136,11 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                         />
                     </div>
                     <div className='bg-slate-200 rounded-sm px-1 text-gray-400 text-2xl'>
-                        {getTipOfContent(stateInput)}
+                        {getTip(stateInput, cue.content)}
                     </div>
                     {!!cue.reference && cue.reference !== cue.content && (
                         <div className='bg-slate-200 rounded-sm px-1 mt-3 text-gray-400 text-2xl'>
-                            {getTipOfReference(stateInput)}
+                            {getTip(stateInput, cue.reference)}
                         </div>
                     )}
                 </div>

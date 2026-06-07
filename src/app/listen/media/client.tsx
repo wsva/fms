@@ -1103,16 +1103,25 @@ export default function Page({ user_id, uuid }: Props) {
                                         onFocusInput={() => setStateFocusedCueUUID(stateDictCue.uuid)}
                                     />
                                 )}
-                                <div className='flex flex-row items-center justify-center gap-1 w-full'>
-                                    <Button
-                                        onPress={() => {
-                                            const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.uuid))
-                                            setStateDictCue(cueList.length > 0 ? cueList[0] : undefined)
-                                        }}
-                                    >
-                                        Next
-                                    </Button>
-                                </div>
+                                {!!stateDictCue && (
+                                    <div className='flex flex-row items-center justify-center gap-1 w-full'>
+                                        <Button
+                                            onPress={() => {
+                                                // after current one
+                                                for (const cue of stateCues) {
+                                                    if (cue.order_num > stateDictCue.order_num && !stateDictSuccessSet.has(cue.uuid)) {
+                                                        setStateDictCue(cue)
+                                                        return
+                                                    }
+                                                }
+                                                // 
+                                                alert("finished!")
+                                            }}
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </Tabs.Panel>

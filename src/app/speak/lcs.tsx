@@ -10,7 +10,7 @@ function tokenize(s: string): string[] {
 }
 
 // Longest Common Subsequence
-function lcs(a: string[], b: string[]) {
+export function lcs(a: string[], b: string[]) {
     const n = a.length,
         m = b.length;
     const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
