@@ -47,7 +47,7 @@ import { getDictation, getMedia, getMediaByInvalidSubtitle, getMediaByTag, getNo
 import { getTagAllUsed } from '@/app/actions/dataset'
 import { getKey } from '@/app/actions/settings_general'
 import { Cue, listen_media_ext } from '@/lib/types'
-import { getUUID, toExactType } from '@/lib/utils'
+import { getUUID } from '@/lib/utils'
 import { MdCheckCircle, MdPeople } from 'react-icons/md'
 import { isAudio } from '@/lib/listen/utils'
 import HlsPlayer from '@/components/HlsPlayer'
@@ -507,15 +507,22 @@ export default function Page({ user_id, uuid }: Props) {
             const tasks = stateCues.map(async cue => {
                 if (cue.deleted) {
                     const result = await removeSubtitleLine(cue.uuid)
-                    return result.status === 'success'
-                        ? { type: 'remove' as const, uuid: cue.uuid }
-                        : null
+                    if (result.status === 'success') {
+                        return { type: 'remove' as const, uuid: cue.uuid }
+                    } else {
+                        toast.info(result.error as string)
+                        return null
+                    }
                 } else {
                     if (cue.modified) {
-                        const result = await saveSubtitleLine(toExactType(cue))
-                        return result.status === 'success'
-                            ? { type: 'update' as const, cue: result.data }
-                            : null
+                        const { active, content_original, modified, deleted, ...saveData } = cue;
+                        const result = await saveSubtitleLine(saveData)
+                        if (result.status === 'success') {
+                            return { type: 'update' as const, cue: result.data }
+                        } else {
+                            toast.info(result.error as string)
+                            return null
+                        }
                     }
                 }
                 return null

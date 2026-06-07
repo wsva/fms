@@ -198,87 +198,61 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
         setStateSuccess(initialSuccess ?? false)
     }, [initialSuccess])
 
-    const timeEditorEl = (
-        <InputGroup className="w-xs shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
-            <InputGroup.Prefix className="p-0 bg-sand-100">
-                <Tooltip>
-                    <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" isDisabled={isDisabled} onPress={onExpandStart}>
-                            <ArrowLeftToLine />
-                        </Button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>
-                        expand to the end of former
-                    </Tooltip.Content>
-                </Tooltip>
-                <Tooltip>
-                    <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" isDisabled={isDisabled}
-                            onPress={() => {
-                                if (media) {
-                                    const startMs = Math.round(media.currentTime * 1000)
-                                    setStateStart(formatVttTime(startMs))
-                                    onUpdate({ ...cue, start_ms: startMs, modified: true })
-                                }
-                            }}
-                        >
-                            <MapPin />
-                        </Button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>
-                        use current time
-                    </Tooltip.Content>
-                </Tooltip>
-            </InputGroup.Prefix>
-            <InputGroup.Input data-no-voice aria-label="start time" autoComplete="one-time-code"
-                className={`text-center font-normal bg-sand-100 w-min ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
-                value={`${stateStart} ➔ ${stateEnd}`}
-                disabled={isDisabled}
-                onChange={(e) => {
-                    const parts = e.target.value.split(" ➔ ")
-                    setStateStart(parts[0])
-                    setStateEnd(parts[1])
-                }}
-                onBlur={() => {
-                    if (validateVttTime(stateStart))
-                        onUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
-                    if (validateVttTime(stateEnd))
-                        onUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
-                }}
-            />
-            <InputGroup.Suffix className="p-0 bg-sand-100">
-                <Tooltip>
-                    <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2"
-                            isDisabled={isDisabled}
-                            onPress={() => {
-                                if (media) {
-                                    const endMs = Math.round(media.currentTime * 1000)
-                                    setStateEnd(formatVttTime(endMs))
-                                    onUpdate({ ...cue, end_ms: endMs, modified: true })
-                                }
-                            }}
-                        >
-                            <MapPin />
-                        </Button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>
-                        use current time
-                    </Tooltip.Content>
-                </Tooltip>
-                <Tooltip>
-                    <Tooltip.Trigger>
-                        <Button isIconOnly variant="ghost" size="sm" className="w-min mx-2" isDisabled={isDisabled} onPress={onExpandEnd}>
-                            <ArrowRightToLine />
-                        </Button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>
-                        expand to the start of next
-                    </Tooltip.Content>
-                </Tooltip>
-            </InputGroup.Suffix>
-        </InputGroup>
-    )
+    const timeEditorEl = () => {
+        return (
+            <InputGroup className="w-xs shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
+                <InputGroup.Prefix className="p-0 bg-sand-100">
+                    <Button isIconOnly variant="ghost" size="sm" className="w-min px-2" isDisabled={isDisabled} onPress={onExpandStart}>
+                        <ArrowLeftToLine />
+                    </Button>
+                    <Button isIconOnly variant="ghost" size="sm" className="w-min px-2" isDisabled={isDisabled}
+                        onPress={() => {
+                            if (media) {
+                                const startMs = Math.round(media.currentTime * 1000)
+                                setStateStart(formatVttTime(startMs))
+                                onUpdate({ ...cue, start_ms: startMs, modified: true })
+                            }
+                        }}
+                    >
+                        <MapPin />
+                    </Button>
+                </InputGroup.Prefix>
+                <InputGroup.Input data-no-voice aria-label="start time" autoComplete="one-time-code"
+                    className={`text-center font-normal bg-sand-100 w-min ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
+                    value={`${stateStart} ➔ ${stateEnd}`}
+                    disabled={isDisabled}
+                    onChange={(e) => {
+                        const parts = e.target.value.split(" ➔ ")
+                        setStateStart(parts[0])
+                        setStateEnd(parts[1])
+                    }}
+                    onBlur={() => {
+                        if (validateVttTime(stateStart))
+                            onUpdate({ ...cue, start_ms: parseVttTime(stateStart) })
+                        if (validateVttTime(stateEnd))
+                            onUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
+                    }}
+                />
+                <InputGroup.Suffix className="p-0 bg-sand-100">
+                    <Button isIconOnly variant="ghost" size="sm" className="w-min px-2"
+                        isDisabled={isDisabled}
+                        onPress={() => {
+                            if (media) {
+                                const endMs = Math.round(media.currentTime * 1000)
+                                setStateEnd(formatVttTime(endMs))
+                                onUpdate({ ...cue, end_ms: endMs, modified: true })
+                            }
+                        }}
+                    >
+                        <MapPin />
+                    </Button>
+                    <Button isIconOnly variant="ghost" size="sm" className="w-min px-2" isDisabled={isDisabled} onPress={onExpandEnd}>
+                        <ArrowRightToLine />
+                    </Button>
+                </InputGroup.Suffix>
+            </InputGroup>
+        )
+    }
 
     const containerClass = (cue: Cue) => {
         if (cue.deleted) {
@@ -304,7 +278,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                     </Tooltip.Content>
                 </Tooltip>
                 <div className="hidden lg:flex">
-                    {timeEditorEl}
+                    {timeEditorEl()}
                 </div>
                 <Tooltip isDisabled={mode !== "dictation"}>
                     <Tooltip.Trigger>
@@ -422,7 +396,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                 </div>
             </div>
             <div className="lg:hidden flex">
-                {timeEditorEl}
+                {timeEditorEl()}
             </div>
             {(mode === "dictation" || mode === "dictation_focus") ? (
                 <Dictation
