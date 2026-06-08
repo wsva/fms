@@ -26,8 +26,8 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
     const isSuccess = (answer: string) => {
         return answer === cue.content
             || pureContent(answer) === pureContent(cue.content)
-            || answer === cue.reference
-            || pureContent(answer) === pureContent(cue.reference || "")
+            || (!!cue.reference && answer === cue.reference)
+            || (!!cue.reference && pureContent(answer) === pureContent(cue.reference))
     }
 
     const getTip = (answer: string, content: string) => {
