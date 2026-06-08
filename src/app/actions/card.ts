@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { ActionResult, card_ext, card_review } from "@/lib/types";
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils";
-import { qsa_card, Prisma, qsa_card_tag, qsa_card_review } from "@/generated/prisma/client";
+import { qsa_card, Prisma, qsa_card_review } from "@/generated/prisma/client";
 
 import { FilterType, TagAll, TagUnspecified, TagNo, normalizeQuestion } from "@/lib/card";
 
@@ -350,14 +350,10 @@ export async function setCardFamiliarity(uuid: string, familiarity: number): Pro
     }
 }
 
-export async function getCardTag(email: string, card_uuid: string): Promise<ActionResult<card_ext>> {
+export async function getCardTag(card_uuid: string): Promise<ActionResult<card_ext>> {
     try {
-        const result = await prisma.$queryRaw<qsa_card_tag[]>(
-            Prisma.sql`select t0.* from qsa_card_tag t0, settings_tag t1 where
-                t0.tag_uuid = t1.uuid
-                and t0.card_uuid = ${card_uuid}
-                and t1.user_id in (${email}, 'public')
-                `
+        const result = await prisma.qsa_card_tag.findMany(
+            { where: { card_uuid } }
         )
         if (!result) {
             return { status: 'error', error: 'no data found' }

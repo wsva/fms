@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { ActionResult, listen_media_ext } from "@/lib/types"
 import { toErrorMessage } from "@/lib/errors";
 import { getUUID } from "@/lib/utils"
-import { listen_dictation, listen_media, listen_media_tag, listen_note, listen_subtitle, listen_subtitle_cue, listen_transcript, Prisma } from "@/generated/prisma/client";
+import { listen_dictation, listen_media, listen_note, listen_subtitle, listen_subtitle_cue, listen_transcript, Prisma } from "@/generated/prisma/client";
 
 export async function getMedia(uuid: string): Promise<ActionResult<listen_media_ext>> {
     try {
@@ -443,14 +443,10 @@ export async function removeNote(uuid: string): Promise<ActionResult<listen_note
     }
 }
 
-export async function getMediaTag(email: string, media_uuid: string): Promise<ActionResult<string[]>> {
+export async function getMediaTag(media_uuid: string): Promise<ActionResult<string[]>> {
     try {
-        const result = await prisma.$queryRaw<listen_media_tag[]>(
-            Prisma.sql`select t0.* from listen_media_tag t0, settings_tag t1 where
-                t0.tag_uuid = t1.uuid
-                and t0.media_uuid = ${media_uuid}
-                and t1.user_id in (${email}, 'public')
-                `
+        const result = await prisma.listen_media_tag.findMany(
+            { where: { media_uuid } }
         )
         if (!result) {
             return { status: 'error', error: 'no data found' }

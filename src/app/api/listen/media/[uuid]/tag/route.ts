@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ uui
     if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { uuid } = await context.params;
-    const result = await getMediaTag(email, uuid);
+    const result = await getMediaTag(uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data);
 }

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     if (card.status === 'error') return NextResponse.json({ error: card.error }, { status: 404 });
     if (card.data.user_id !== email) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const result = await getCardTag(email, card_uuid);
+    const result = await getCardTag(card_uuid);
     if (result.status === 'error') return NextResponse.json({ error: result.error }, { status: 500 });
     return NextResponse.json(result.data);
 }

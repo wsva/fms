@@ -30,7 +30,7 @@ export default function SetTag({ user_id, card, tag_list, onSuccess }: Props) {
     useEffect(() => {
         const loadData = async () => {
             setStateLoading(true)
-            const result = await getCardTag(user_id, card.uuid)
+            const result = await getCardTag(card.uuid)
             if (result.status === "success"
                 && !!result.data.tag_list_added) {
                 setStateAdded(result.data.tag_list_added.sort())

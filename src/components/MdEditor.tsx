@@ -2,7 +2,7 @@
 
 import { Button, Tooltip } from "@heroui/react";
 import { BiExpand, BiCollapse, BiHelpCircle } from 'react-icons/bi';
-import { forwardRef, useRef, useState } from 'react'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 import Markdown2Html from '@/components/markdown/markdown';
 
 type Props = {
@@ -62,6 +62,12 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
         el.style.height = el.scrollHeight + 'px'
         window.scrollTo(0, scrollY)
     }
+
+    useEffect(() => {
+        if (innerRef.current) {
+            autoResize(innerRef.current)
+        }
+    }, [stateValue])
 
     const toggleFullscreen = () => {
         setStateFullscreen(prev => {
@@ -345,13 +351,13 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
                 onPaste={handlePaste}
                 onInput={(e) => {
                     const el = e.currentTarget
-                    autoResize(el)
+                    // autoResize(el)
                     setStateValue(el.value)
                 }}
                 onKeyDown={handleKeyDown}
                 ref={(e) => {
                     innerRef.current = e
-                    if (e) autoResize(e)
+                    //if (e) autoResize(e)
                     if (typeof forwardedRef === 'function') forwardedRef(e)
                     else if (forwardedRef) forwardedRef.current = e
                 }}
