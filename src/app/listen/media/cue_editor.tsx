@@ -395,7 +395,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
             <div className="lg:hidden flex">
                 {timeEditorEl()}
             </div>
-            {(mode === "dictation" || mode === "dictation_focus") ? (
+            <div className={mode === "dictation" || mode === "dictation_focus" ? "" : "hidden"}>
                 <Dictation
                     cue={cue}
                     media={media}
@@ -405,21 +405,18 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                     onFocusInput={onFocusInput}
                     mode={mode === "dictation_focus" ? "large" : "compact"}
                 />
-            ) : (
-                <>
-                    <TextArea aria-label='text' autoComplete="one-time-code"
-                        className='text-xl font-bold border-2 border-gray-400'
-                        disabled={isDisabled || cue.deleted}
-                        value={cue.content}
-                        onChange={(e) => onUpdate({ ...cue, content: e.target.value, modified: e.target.value !== cue.content_original })}
-                    />
-                    {!!cue.reference && (
-                        <div>
-                            {cue.reference}
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
+            </div>
+            <div className={mode === "edit" || mode === "dictation_edit" ? "w-full" : "hidden"}>
+                <TextArea aria-label='text' autoComplete="one-time-code"
+                    className='w-full text-xl font-bold border-2 border-gray-400'
+                    disabled={isDisabled || cue.deleted}
+                    value={cue.content}
+                    onChange={(e) => onUpdate({ ...cue, content: e.target.value, modified: e.target.value !== cue.content_original })}
+                />
+                {!!cue.reference && (
+                    <div>{cue.reference}</div>
+                )}
+            </div>
+        </div >
     )
 }
