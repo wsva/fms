@@ -268,7 +268,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                     </Button>
                     <Button type='submit' variant="primary" size='sm'
                         isPending={formState.isSubmitting}
-                        isDisabled={!create_new && !formState.isDirty && [...stateTagSelected].sort().join() === [...stateTagAdded].sort().join()}
+                        isDisabled={!create_new && !formState.isDirty && [...stateTagSelected.keys()].sort().join() === Array.from(new Set(stateTagAdded)).sort().join()}
                     >
                         Save
                     </Button>
