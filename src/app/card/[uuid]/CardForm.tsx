@@ -111,18 +111,14 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
 
             const card_tag_result = await getCardTag(card.uuid)
             if (card_tag_result.status === "success" && !!card_tag_result.data.tag_list_added) {
-                console.log("card_tag_result", card_tag_result)
                 setStateTagAdded(card_tag_result.data.tag_list_added)
                 const selected = card_ext.tag_list_suggestion
                     ? Array.from(new Set([...card_tag_result.data.tag_list_added, ...card_ext.tag_list_suggestion]))
                     : card_tag_result.data.tag_list_added
 
-
-                console.log("selected", selected)
                 const selectedMap: Map<string, dataset_tag | null> = new Map()
                 selected.forEach((v) => selectedMap.set(v, null))
                 setStateTagSelected(selectedMap)
-                console.log("selectedMap", selectedMap)
             }
         };
         loadData();
