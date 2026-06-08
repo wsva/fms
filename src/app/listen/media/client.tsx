@@ -92,7 +92,6 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateSubtitle, setStateSubtitle] = useState<listen_subtitle>()
     const [stateCues, updateStateCues] = useImmer<Cue[]>([])
     const [stateActiveCue, setStateActiveCue] = useState<string>("")
-    const [stateDictation, setStateDictation] = useState<boolean>(true)
     const [stateDictSuccessSet, setStateDictSuccessSet] = useState<Set<string>>(new Set())
     const [stateDictStatus, setStateDictStatus] = useState<'in_progress' | 'complete'>('in_progress')
     const [stateDictMode, setStateDictMode] = useState<'full' | 'focus'>('full')
@@ -616,12 +615,12 @@ export default function Page({ user_id, uuid }: Props) {
                     {hasVideo && (
                         audioMode ? (
                             <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
-                                subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
+                                subtitleSrc={stateActiveTab !== "dictation" ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
                             />
                         ) : (
                             <div className="rounded-xl overflow-hidden shadow-lg bg-black">
                                 <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc}
-                                    subtitleSrc={!stateDictation ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
+                                    subtitleSrc={stateActiveTab !== "dictation" ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
                                 />
                             </div>
                         )
@@ -650,7 +649,7 @@ export default function Page({ user_id, uuid }: Props) {
                     )}
 
                     {/* Active cue */}
-                    {stateCues.length > 0 && !stateDictation && (
+                    {stateCues.length > 0 && stateActiveTab !== "dictation" && (
                         <div className='flex flex-row items-center justify-center w-full py-3'>
                             <div className=" transition-all duration-300 text-xl font-semibold leading-snug">
                                 {stateActiveCue || '...'}
@@ -661,10 +660,7 @@ export default function Page({ user_id, uuid }: Props) {
 
                 {/* Tabs */}
                 <Tabs className="font-bold w-full" selectedKey={stateActiveTab}
-                    onSelectionChange={(v) => {
-                        setStateDictation(v === "dictation")
-                        setStateActiveTab(String(v))
-                    }}
+                    onSelectionChange={(v) => setStateActiveTab(String(v))}
                 >
                     <Tabs.ListContainer>
                         <Tabs.List aria-label="Media tabs"
