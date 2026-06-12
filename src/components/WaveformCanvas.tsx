@@ -1,329 +1,342 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from '@heroui/react'
-import { Play, Pause } from '@gravity-ui/icons'
-import { MdContentCopy } from 'react-icons/md'
+
+import { useCallback, useEffect, useRef } from 'react'
 
 export type WaveformData = {
-  version?: number
-  channels?: number
-  sample_rate?: number
-  samples_per_pixel?: number
-  bits?: number
-  length: number
-  data: number[]
+    version?: number
+    channels?: number
+    sample_rate?: number
+    samples_per_pixel?: number
+    bits?: number
+    length: number
+    data: number[]
 }
 
 type Props = {
-  peaks: WaveformData
-  videoRef: React.RefObject<HTMLVideoElement | null>
-  selection?: { start: number; end: number }
-  onSelectionChange?: (start: number, end: number) => void
+    peaks: WaveformData
+    videoRef: React.RefObject<HTMLVideoElement | null>
+    selection?: {
+        start: number
+        end: number
+    }
+    onSelectionChange?: (
+        start: number,
+        end: number
+    ) => void
 }
 
 const UNPLAYED = '#b8a48e'
-const PLAYED = '#b45309'
-const SELECTION_FILL = 'rgba(34, 197, 94, 0.20)'
+const PLAYED = '#b8a48e' // b45309
+const SELECTION_FILL = 'rgba(34,197,94,0.20)'
 const SELECTION_EDGE = '#16a34a'
+const HOVER_LINE = 'rgba(37,99,235,0.75)'
 
-const fmtTime = (sec: number): string => {
-  if (!isFinite(sec) || sec < 0) return '00:00:00.000'
-  const h = Math.floor(sec / 3600)
-  const m = Math.floor((sec % 3600) / 60)
-  const sFloor = Math.floor(sec % 60)
-  const ms = Math.min(999, Math.round((sec % 1) * 1000))
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sFloor).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
+const fmtTime = (
+    sec: number
+): string => {
+    if (!isFinite(sec) || sec < 0) {
+        return '00:00:00.000'
+    }
+
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const s = Math.floor(sec % 60)
+    const ms = Math.min(999, Math.round((sec % 1) * 1000))
+
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
 }
 
-const parseTime = (str: string): number => {
-  const parts = str.trim().split(':')
-  const nums = parts.map(Number)
-  if (nums.some(isNaN)) return NaN
-  if (nums.length === 3) return nums[0] * 3600 + nums[1] * 60 + nums[2]
-  if (nums.length === 2) return nums[0] * 60 + nums[1]
-  return nums[0]
+function getVisibleRange(
+    duration: number,
+    start: number,
+    stop: number
+) {
+    const hasSelection = stop > start
+
+    if (!hasSelection) {
+        return {
+            visibleStart: 0,
+            visibleEnd: duration,
+        }
+    }
+
+    const length = stop - start
+
+    const padding = Math.max(1, length * 0.2)
+
+    return {
+        visibleStart: Math.max(0, start - padding),
+        visibleEnd: Math.min(duration, stop + padding),
+    }
 }
 
-export default function WaveformCanvas({ peaks, videoRef, selection, onSelectionChange }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const peaksRef = useRef(peaks)
-  peaksRef.current = peaks
+export default function WaveformCanvas({
+    peaks,
+    videoRef,
+    selection,
+}: Props) {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const peaksRef = useRef(peaks)
+    peaksRef.current = peaks
 
-  // refs read inside draw() and event handlers — no stale closures
-  const startRef = useRef(0)
-  const stopRef = useRef(0)
-  const playingSelectionRef = useRef(false)
-  const timeDisplayRef = useRef<HTMLSpanElement>(null)
+    const startRef = useRef(0)
+    const stopRef = useRef(0)
 
-  // React state for button/input rendering
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [startTime, setStartTime] = useState(0)
-  const [stopTime, setStopTime] = useState(0)
-  const [startText, setStartText] = useState('00:00:00.000')
-  const [stopText, setStopText] = useState('00:00:00.000')
+    const hoverXRef = useRef<number | null>(null)
+    const drawRafRef = useRef<number>(0)
+    const seekRafRef = useRef<number>(0)
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const draw = useCallback(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
 
-    const w = canvas.width
-    const h = canvas.height
-    if (w === 0 || h === 0) return
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
 
-    ctx.clearRect(0, 0, w, h)
+        const width = canvas.clientWidth
+        const height = canvas.clientHeight
 
-    const { data, bits = 8, channels = 1, length: numSamples } = peaksRef.current
-    if (!data || numSamples === 0) return
+        if (!width || !height) {
+            return
+        }
 
-    const scale = bits === 8 ? 128 : 32768
-    const stride = channels * 2
+        ctx.clearRect(0, 0, width, height)
 
-    const video = videoRef.current
-    const duration = video && isFinite(video.duration) && video.duration > 0 ? video.duration : 0
-    const hasSelection = stopRef.current > startRef.current
-    const selectionLength = hasSelection ? stopRef.current - startRef.current : duration
-    const padding = Math.max(1, selectionLength * 0.2)
-    const visibleStart = hasSelection ? Math.max(0, startRef.current - padding) : 0
-    const visibleEnd = hasSelection ? Math.min(duration, stopRef.current + padding) : duration
-    const visibleDuration = Math.max(0.001, visibleEnd - visibleStart)
-    const progress = duration > 0 ? (video!.currentTime - visibleStart) / visibleDuration : 0
-    const playheadX = Math.round(progress * w)
+        const {
+            data,
+            bits = 8,
+            channels = 1,
+            length: numSamples,
+        } = peaksRef.current
 
-    const sampleStart = Math.floor((visibleStart / duration) * numSamples)
-    const sampleEnd = Math.floor((visibleEnd / duration) * numSamples)
-    const visibleSamples = Math.max(1, sampleEnd - sampleStart)
+        if (!data || numSamples === 0) {
+            return
+        }
 
-    // Draw bars
-    for (let px = 0; px < w; px++) {
-      const idx = Math.min(sampleStart + Math.floor((px / w) * visibleSamples), sampleEnd - 1)
-      const min = data[idx * stride] / scale
-      const max = data[idx * stride + 1] / scale
-      const yTop = Math.floor(h / 2 - max * (h / 2) * 0.9)
-      const yBot = Math.ceil(h / 2 - min * (h / 2) * 0.9)
-      ctx.fillStyle = px <= playheadX ? PLAYED : UNPLAYED
-      ctx.fillRect(px, yTop, 1, Math.max(1, yBot - yTop))
-    }
+        const video = videoRef.current
+        const duration = video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0
+        const scale = bits === 8 ? 128 : 32768
+        const stride = channels * 2
 
-    // Selection overlay
-    if (duration > 0 && stopRef.current > startRef.current) {
-      const x0 = Math.round(((startRef.current - visibleStart) / visibleDuration) * w)
-      const x1 = Math.round(((stopRef.current - visibleStart) / visibleDuration) * w)
-      ctx.fillStyle = SELECTION_FILL
-      ctx.fillRect(x0, 0, x1 - x0, h)
-      ctx.fillStyle = SELECTION_EDGE
-      ctx.fillRect(x0, 0, 2, h)
-      ctx.fillRect(x1 - 1, 0, 2, h)
-    }
+        let visibleStart = 0
+        let visibleEnd = duration
 
-    // Playhead
-    ctx.fillStyle = PLAYED
-    ctx.fillRect(Math.max(0, playheadX - 1), 0, 2, h)
+        if (duration > 0) {
+            const range = getVisibleRange(duration, startRef.current, stopRef.current)
+            visibleStart = range.visibleStart
+            visibleEnd = range.visibleEnd
+        }
 
-    // Update time display via direct DOM — avoids React re-render on every tick
-    if (timeDisplayRef.current && video) {
-      timeDisplayRef.current.textContent = fmtTime(video.currentTime)
-    }
-  }, [videoRef])
+        const visibleDuration = Math.max(0.001, visibleEnd - visibleStart)
 
-  // Resize → sync canvas pixel size and redraw
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const sync = () => {
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = canvas.clientWidth * dpr
-      canvas.height = canvas.clientHeight * dpr
-      draw()
-    }
-    sync()
-    const ro = new ResizeObserver(sync)
-    ro.observe(canvas)
-    return () => ro.disconnect()
-  }, [draw])
+        const playheadX = duration > 0
+            ? Math.round(
+                ((video!.currentTime - visibleStart) / visibleDuration) * width
+            )
+            : 0
 
-  // Video events
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
+        const sampleStart = duration > 0
+            ? Math.floor((visibleStart / duration) * numSamples)
+            : 0
 
-    const onTimeUpdate = () => {
-      draw()
-      if (playingSelectionRef.current && video.currentTime >= stopRef.current) {
-        video.pause()
-        playingSelectionRef.current = false
-      }
-    }
-    const onPlay = () => setIsPlaying(true)
-    const onPause = () => { setIsPlaying(false); playingSelectionRef.current = false }
-    const onEnded = () => { setIsPlaying(false); playingSelectionRef.current = false }
+        const sampleEnd = duration > 0
+            ? Math.max(
+                sampleStart + 1,
+                Math.floor((visibleEnd / duration) * numSamples)
+            )
+            : numSamples
 
-    video.addEventListener('timeupdate', onTimeUpdate)
-    video.addEventListener('loadedmetadata', draw)
-    video.addEventListener('play', onPlay)
-    video.addEventListener('pause', onPause)
-    video.addEventListener('ended', onEnded)
+        const visibleSamples = Math.max(1, sampleEnd - sampleStart)
 
-    return () => {
-      video.removeEventListener('timeupdate', onTimeUpdate)
-      video.removeEventListener('loadedmetadata', draw)
-      video.removeEventListener('play', onPlay)
-      video.removeEventListener('pause', onPause)
-      video.removeEventListener('ended', onEnded)
-    }
-  }, [videoRef, draw])
+        for (let px = 0; px < width; px++) {
+            const idx = Math.min(
+                sampleStart + Math.floor((px / width) * visibleSamples),
+                sampleEnd - 1
+            )
 
-  useEffect(() => { draw() }, [peaks, draw])
+            const min = data[idx * stride] / scale
+            const max = data[idx * stride + 1] / scale
+            const yTop = Math.floor(height / 2 - max * (height / 2) * 0.9)
+            const yBottom = Math.ceil(height / 2 - min * (height / 2) * 0.9)
 
-  // Sync external selection (e.g. focused cue) → internal start/stop
-  useEffect(() => {
-    if (!selection) return
-    if (selection.start === startRef.current && selection.end === stopRef.current) return
-    startRef.current = selection.start
-    stopRef.current = selection.end
-    setStartTime(selection.start)
-    setStopTime(selection.end)
-    setStartText(fmtTime(selection.start))
-    setStopText(fmtTime(selection.end))
-    draw()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection?.start, selection?.end])
+            ctx.fillStyle = px <= playheadX ? PLAYED : UNPLAYED
+            ctx.fillRect(px, yTop, 1, Math.max(1, yBottom - yTop))
+        }
 
-  // --- Seek on canvas click/drag ---
-  const seek = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ) => {
-    const video = videoRef.current
-    if (!video || !isFinite(video.duration) || video.duration <= 0) {
-      return
-    }
+        if (duration > 0 && stopRef.current > startRef.current) {
+            const x0 = ((startRef.current - visibleStart) / visibleDuration) * width
+            const x1 = ((stopRef.current - visibleStart) / visibleDuration) * width
+            ctx.fillStyle = SELECTION_FILL
+            ctx.fillRect(x0, 0, x1 - x0, height)
+            ctx.fillStyle = SELECTION_EDGE
+            ctx.fillRect(x0, 0, 2, height)
+            ctx.fillRect(x1 - 1, 0, 2, height)
+        }
 
-    const hasSelection = stopRef.current > startRef.current
-    const selectionLength = hasSelection ? stopRef.current - startRef.current : video.duration
-    const padding = Math.max(1, selectionLength * 0.2)
-    const visibleStart = hasSelection ? Math.max(0, startRef.current - padding) : 0
-    const visibleEnd = hasSelection ? Math.min(video.duration, stopRef.current + padding) : video.duration
-    const visibleDuration = visibleEnd - visibleStart
-    const rect = e.currentTarget.getBoundingClientRect()
-    const ratio = (e.clientX - rect.left) / rect.width
-    video.currentTime = visibleStart + ratio * visibleDuration
-  }
+        ctx.fillStyle = PLAYED
+        ctx.fillRect(Math.max(0, playheadX - 1), 0, 2, height)
 
-  // --- Control handlers ---
-  const handlePlay = () => videoRef.current?.play().catch(() => { })
-  const handlePause = () => videoRef.current?.pause()
+        if (hoverXRef.current !== null && duration > 0) {
+            ctx.save()
+            ctx.strokeStyle = HOVER_LINE
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            ctx.moveTo(hoverXRef.current, 0)
+            ctx.lineTo(hoverXRef.current, height)
+            ctx.stroke()
 
-  const handleSetStart = () => {
-    const t = videoRef.current?.currentTime ?? 0
-    startRef.current = t
-    setStartTime(t)
-    setStartText(fmtTime(t))
-    onSelectionChange?.(t, stopRef.current)
-    draw()
-  }
+            const hoverRatio = hoverXRef.current / width
+            const hoverTime = visibleStart + hoverRatio * visibleDuration
+            const text = fmtTime(hoverTime)
+            ctx.font = '11px system-ui,sans-serif'
+            ctx.textBaseline = 'middle'
+            const paddingX = 6
+            const textWidth = ctx.measureText(text).width
+            const boxWidth = textWidth + paddingX * 2
+            const boxHeight = 18
+            let boxX = hoverXRef.current + 8
 
-  const handleSetStop = () => {
-    const t = videoRef.current?.currentTime ?? 0
-    stopRef.current = t
-    setStopTime(t)
-    setStopText(fmtTime(t))
-    onSelectionChange?.(startRef.current, t)
-    draw()
-  }
+            if (boxX + boxWidth > width) {
+                boxX = hoverXRef.current - boxWidth - 8
+            }
 
-  const handlePlaySelection = () => {
-    const video = videoRef.current
-    if (!video || stopRef.current <= startRef.current) return
-    video.currentTime = startRef.current
-    playingSelectionRef.current = true
-    video.play().catch(() => { })
-  }
+            const boxY = 2
+            ctx.fillStyle = 'rgba(17,24,39,.92)'
+            ctx.fillStyle = 'rgba(17,24,39,.92)'
+            ctx.beginPath()
+            ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 4)
+            ctx.fill()
+            ctx.fillStyle = '#ffffff'
+            ctx.fillText(text, boxX + paddingX, boxY + boxHeight / 2)
+            ctx.restore()
+        }
+    }, [videoRef])
 
-  const handleStartTextChange = (v: string) => {
-    setStartText(v)
-    const t = parseTime(v)
-    if (isFinite(t) && t >= 0) {
-      startRef.current = t
-      setStartTime(t)
-      onSelectionChange?.(t, stopRef.current)
-      draw()
-    }
-  }
+    const scheduleDraw = useCallback(() => {
+        cancelAnimationFrame(drawRafRef.current!)
 
-  const handleStopTextChange = (v: string) => {
-    setStopText(v)
-    const t = parseTime(v)
-    if (isFinite(t) && t >= 0) {
-      stopRef.current = t
-      setStopTime(t)
-      onSelectionChange?.(startRef.current, t)
-      draw()
-    }
-  }
+        drawRafRef.current = requestAnimationFrame(draw)
+    }, [draw])
 
-  const handleCopyTime = () => {
-    const t = videoRef.current?.currentTime ?? 0
-    navigator.clipboard.writeText(fmtTime(t)).catch(() => { })
-  }
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
 
-  const timeInput = 'w-28 text-xs font-mono bg-sand-200 rounded px-1.5 py-0.5 border border-sand-300 focus:outline-none focus:border-primary'
+        const resize = () => {
+            const dpr = window.devicePixelRatio || 1
+            canvas.width = canvas.clientWidth * dpr
+            canvas.height = canvas.clientHeight * dpr
 
-  return (
-    <div className="flex flex-col gap-1 bg-gray-200 rounded-sm">
-      <canvas
-        ref={canvasRef}
-        className="w-full cursor-pointer rounded"
-        style={{ height: '44px', display: 'block' }}
-        onClick={seek}
-        onMouseMove={(e) => { if (e.buttons === 1) seek(e) }}
-      />
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
 
-      <div className="flex items-center justify-center gap-1.5 flex-wrap text-sm">
-        {/* Playback */}
-        <Button isIconOnly size="sm" variant="ghost" onPress={handlePlay} isDisabled={isPlaying} aria-label="Play">
-          <Play />
-        </Button>
-        <Button isIconOnly size="sm" variant="ghost" onPress={handlePause} isDisabled={!isPlaying} aria-label="Pause">
-          <Pause />
-        </Button>
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-        <div className="w-px h-5 bg-sand-300 mx-0.5" />
+            scheduleDraw()
+        }
+        resize()
 
-        {/* Selection */}
-        <Button size="sm" variant="ghost" onPress={handleSetStart}>Set Start</Button>
-        <input data-no-voice
-          className={timeInput}
-          value={startText}
-          onChange={(e) => handleStartTextChange(e.target.value)}
-          aria-label="Start time"
-          spellCheck={false}
-        />
+        const ro = new ResizeObserver(resize)
+        ro.observe(canvas)
 
-        <Button size="sm" variant="ghost" onPress={handleSetStop}>Set Stop</Button>
-        <input data-no-voice
-          className={timeInput}
-          value={stopText}
-          onChange={(e) => handleStopTextChange(e.target.value)}
-          aria-label="Stop time"
-          spellCheck={false}
-        />
+        return () => ro.disconnect()
+    }, [scheduleDraw])
 
-        <Button size="sm" variant="ghost" onPress={handlePlaySelection} isDisabled={stopTime <= startTime}>
-          Play Range
-        </Button>
+    useEffect(() => {
+        scheduleDraw()
+    }, [peaks, scheduleDraw])
 
-        <div className="w-px h-5 bg-sand-300 mx-0.5" />
+    useEffect(() => {
+        if (!selection) return
 
-        {/* Current time + copy */}
-        <span ref={timeDisplayRef} className="text-xs font-mono text-foreground-500 tabular-nums min-w-[7rem]">
-          00:00:00.000
-        </span>
-        <Button size="sm" variant="ghost" onPress={handleCopyTime} aria-label="Copy current time">
-          <MdContentCopy size={14} />
-          <span className="text-xs">Copy</span>
-        </Button>
-      </div>
-    </div>
-  )
+        startRef.current = selection.start
+        stopRef.current = selection.end
+
+        scheduleDraw()
+    }, [selection?.start, selection?.end, scheduleDraw])
+
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        let raf = 0
+
+        const render = () => {
+            draw()
+            raf = requestAnimationFrame(render)
+        }
+
+        const onPlay = () => {
+            cancelAnimationFrame(raf)
+            render()
+        }
+
+        const onPause = () => { cancelAnimationFrame(raf) }
+
+        video.addEventListener('play', onPlay)
+        video.addEventListener('pause', onPause)
+        video.addEventListener('seeked', scheduleDraw)
+        video.addEventListener('loadedmetadata', scheduleDraw)
+
+        return () => {
+            cancelAnimationFrame(raf)
+            video.removeEventListener('play', onPlay)
+            video.removeEventListener('pause', onPause)
+            video.removeEventListener('seeked', scheduleDraw)
+            video.removeEventListener('loadedmetadata', scheduleDraw)
+        }
+    }, [draw, scheduleDraw, videoRef])
+
+    const seek = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+        const video = videoRef.current
+        if (!video || !Number.isFinite(video.duration) || video.duration <= 0) {
+            return
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect()
+        const ratio = (e.clientX - rect.left) / rect.width
+
+        const { visibleStart, visibleEnd } = getVisibleRange(
+            video.duration,
+            startRef.current,
+            stopRef.current
+        )
+
+        video.currentTime = visibleStart + ratio * (visibleEnd - visibleStart)
+    }, [videoRef])
+
+    const throttledSeek = useCallback(
+        (e: React.MouseEvent<HTMLCanvasElement>) => {
+            cancelAnimationFrame(seekRafRef.current!)
+            seekRafRef.current = requestAnimationFrame(() => seek(e))
+        }, [seek])
+
+    return (
+        <div className="flex flex-col gap-1 bg-gray-200 rounded-sm">
+            <canvas
+                ref={canvasRef}
+                className="w-full cursor-pointer rounded"
+                style={{
+                    height: '44px',
+                    display: 'block',
+                }}
+                onClick={seek}
+                onMouseMove={(
+                    e
+                ) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    hoverXRef.current = e.clientX - rect.left
+                    scheduleDraw()
+
+                    if (e.buttons === 1) {
+                        throttledSeek(e)
+                    }
+                }}
+                onMouseLeave={() => {
+                    hoverXRef.current = null
+                    scheduleDraw()
+                }}
+            />
+        </div>
+    )
 }
