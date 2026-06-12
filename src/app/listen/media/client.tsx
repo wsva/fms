@@ -97,6 +97,7 @@ export default function Page({ user_id, uuid }: Props) {
     const [stateDictMode, setStateDictMode] = useState<'full' | 'focus'>('full')
     const [stateDictCue, setStateDictCue] = useState<Cue>()
     const [stateEditingCue, setStateEditingCue] = useState<string | null>(null)
+    const [stateNeedSave, setStateNeedSave] = useState<boolean>(false)
     const dictSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const [stateTranscriptList, setStateTranscriptList] = useState<listen_transcript[]>([])
@@ -489,6 +490,7 @@ export default function Page({ user_id, uuid }: Props) {
             if (index === 0) draft[index] = { ...draft[index], start_ms: 1, modified: true }
             else if (index > 0) draft[index] = { ...draft[index], start_ms: draft[index - 1].end_ms + 1, modified: true }
         })
+        setStateNeedSave(true)
     }
 
     const handleExpandEnd = (cue: Cue) => {
@@ -497,6 +499,7 @@ export default function Page({ user_id, uuid }: Props) {
             if (index === draft.length - 1) draft[index] = { ...draft[index], end_ms: draft[index].start_ms + 3600000, modified: true }
             else if (index >= 0) draft[index] = { ...draft[index], end_ms: draft[index + 1].start_ms - 1, modified: true }
         })
+        setStateNeedSave(true)
     }
 
     const handleSaveSubtitle = async () => {
@@ -547,6 +550,7 @@ export default function Page({ user_id, uuid }: Props) {
                     }
                 }
             })
+            setStateNeedSave(false)
         } finally {
             setStateSaving(false)
         }
@@ -935,17 +939,22 @@ export default function Page({ user_id, uuid }: Props) {
                                         {stateDictStatus === 'complete' && <MdCheckCircle size={16} />}
                                         {stateDictStatus === 'complete' ? 'Complete' : 'Mark Complete'}
                                     </Button>
-                                    <Button size="sm" isDisabled={stateSaving} variant='primary'
-                                        onPress={handleSaveSubtitle}
-                                    >
-                                        Save
-                                    </Button>
                                 </div>
                             </div>
                         )}
 
                         {!!stateSubtitle && (
                             <span className='text-xs text-gray-300'>UUID: {stateSubtitle.uuid}</span>
+                        )}
+
+                        {stateNeedSave && (
+                            <div className="flex items-center justify-end px-1 sticky top-20 z-10">
+                                <Button size="sm" isDisabled={stateSaving} variant='primary'
+                                    onPress={handleSaveSubtitle}
+                                >
+                                    Save
+                                </Button>
+                            </div>
                         )}
 
                         {stateDictMode === "full" ? (
@@ -966,6 +975,7 @@ export default function Page({ user_id, uuid }: Props) {
                                         onUpdate={(updated) => updateStateCues(draft => {
                                             const idx = draft.findIndex(c => c.uuid === updated.uuid)
                                             if (idx !== -1) draft[idx] = updated
+                                            setStateNeedSave(true)
                                         })}
                                         onExpandStart={() => handleExpandStart(cue)}
                                         onExpandEnd={() => handleExpandEnd(cue)}
@@ -981,6 +991,7 @@ export default function Page({ user_id, uuid }: Props) {
                                                     item.modified = true;
                                                 }
                                             })
+                                            setStateNeedSave(true)
                                         })}
                                         onMergeNext={() => updateStateCues(draft => {
                                             const idx = draft.findIndex(c => c.uuid === cue.uuid)
@@ -996,6 +1007,7 @@ export default function Page({ user_id, uuid }: Props) {
                                                     }
                                                 })
                                             }
+                                            setStateNeedSave(true)
                                         })}
                                         onInsert={(pos: number) => updateStateCues(draft => {
                                             const newItem = {
@@ -1022,6 +1034,7 @@ export default function Page({ user_id, uuid }: Props) {
                                                     item.modified = true;
                                                 }
                                             })
+                                            setStateNeedSave(true)
                                         })}
                                         onEdit={() => setStateEditingCue(cue.uuid)}
                                         onDone={() => setStateEditingCue(null)}
