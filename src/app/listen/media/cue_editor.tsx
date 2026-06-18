@@ -12,7 +12,7 @@ import { lcs } from '@/app/speak/lcs'
 
 type DictationProps = {
     cue: Cue
-    videoRef: React.RefObject<HTMLVideoElement | null>
+    media: HTMLMediaElement | null
     stateSuccess: boolean
     setStateSuccess: React.Dispatch<React.SetStateAction<boolean>>
     onSuccess?: (uuid: string, success: boolean) => void
@@ -20,7 +20,7 @@ type DictationProps = {
     mode: "compact" | "large"
 }
 
-function Dictation({ cue, videoRef, stateSuccess, setStateSuccess, onSuccess, onFocusInput, mode }: DictationProps) {
+function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFocusInput, mode }: DictationProps) {
     const [stateInput, setStateInput] = useState<string>('')
 
     const isSuccess = (answer: string) => {
@@ -60,7 +60,6 @@ function Dictation({ cue, videoRef, stateSuccess, setStateSuccess, onSuccess, on
                             onChange={(e) => {
                                 const content = e.target.value
                                 if (content.endsWith('  ')) {
-                                    const media = videoRef.current
                                     if (!!media) {
                                         if (media.paused) playMediaPart(cue, media, false)
                                         else media.pause()
@@ -74,7 +73,6 @@ function Dictation({ cue, videoRef, stateSuccess, setStateSuccess, onSuccess, on
                                 }
                             }}
                             onKeyDown={(e) => {
-                                const media = videoRef.current
                                 if (!media) return
                                 if (e.ctrlKey && 'sS'.includes(e.key)) {
                                     if (media.paused) playMediaPart(cue, media, false)
@@ -110,7 +108,6 @@ function Dictation({ cue, videoRef, stateSuccess, setStateSuccess, onSuccess, on
                             onChange={(e) => {
                                 const content = e.target.value
                                 if (content.endsWith('  ')) {
-                                    const media = videoRef.current
                                     if (!!media) {
                                         if (media.paused) playMediaPart(cue, media, false)
                                         else media.pause()
@@ -124,12 +121,9 @@ function Dictation({ cue, videoRef, stateSuccess, setStateSuccess, onSuccess, on
                                 }
                             }}
                             onKeyDown={(e) => {
-                                const media = videoRef.current
                                 if (!media) return
                                 if (e.ctrlKey && 'sS'.includes(e.key)) {
-                                    if (media.paused) {
-                                        playMediaPart(cue, media, false)
-                                    }
+                                    if (media.paused) playMediaPart(cue, media, false)
                                     else media.pause()
                                     e.preventDefault()
                                 }
@@ -167,7 +161,7 @@ function Dictation({ cue, videoRef, stateSuccess, setStateSuccess, onSuccess, on
  */
 export type CueEditorProps = {
     cue: Cue
-    videoRef: React.RefObject<HTMLVideoElement | null>
+    media: HTMLMediaElement | null
 
     allowEdit: boolean
     mode: "dictation" | "edit" | "dictation_edit" | "dictation_focus"
@@ -189,7 +183,7 @@ export type CueEditorProps = {
     onFocusInput?: () => void
 }
 
-export default function CueEditor({ cue, videoRef, allowEdit, mode, isDisabled, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onEdit, onDone, initialSuccess, onSuccess, onFocusInput }: CueEditorProps) {
+export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onUpdate, onExpandStart, onExpandEnd, onDelete, onInsert, onMergeNext, onEdit, onDone, initialSuccess, onSuccess, onFocusInput }: CueEditorProps) {
     const [stateStart, setStateStart] = useState(formatVttTime(cue.start_ms))
     const [stateEnd, setStateEnd] = useState(formatVttTime(cue.end_ms))
     const [stateSuccess, setStateSuccess] = useState<boolean>(initialSuccess ?? false)
@@ -210,7 +204,6 @@ export default function CueEditor({ cue, videoRef, allowEdit, mode, isDisabled, 
                     </Button>
                     <Button isIconOnly variant="ghost" size="sm" className="w-min px-2" isDisabled={isDisabled}
                         onPress={() => {
-                            const media = videoRef.current
                             if (media) {
                                 const startMs = Math.round(media.currentTime * 1000)
                                 setStateStart(formatVttTime(startMs))
@@ -241,7 +234,6 @@ export default function CueEditor({ cue, videoRef, allowEdit, mode, isDisabled, 
                     <Button isIconOnly variant="ghost" size="sm" className="w-min px-2"
                         isDisabled={isDisabled}
                         onPress={() => {
-                            const media = videoRef.current
                             if (media) {
                                 const endMs = Math.round(media.currentTime * 1000)
                                 setStateEnd(formatVttTime(endMs))
@@ -289,7 +281,6 @@ export default function CueEditor({ cue, videoRef, allowEdit, mode, isDisabled, 
                     <Tooltip.Trigger>
                         <Button isIconOnly variant='ghost' size="sm"
                             onPress={() => {
-                                const media = videoRef.current
                                 if (!media) return
                                 if (media.paused) playMediaPart(cue, media, false)
                                 else media.pause()
@@ -306,7 +297,6 @@ export default function CueEditor({ cue, videoRef, allowEdit, mode, isDisabled, 
                     <Tooltip.Trigger>
                         <Button isIconOnly variant='ghost' size="sm"
                             onPress={() => {
-                                const media = videoRef.current
                                 if (!media) return
                                 if (media.paused) playMediaPart(cue, media, true)
                                 else media.pause()
@@ -408,7 +398,7 @@ export default function CueEditor({ cue, videoRef, allowEdit, mode, isDisabled, 
             <div className={mode === "dictation" || mode === "dictation_focus" ? "" : "hidden"}>
                 <Dictation
                     cue={cue}
-                    videoRef={videoRef}
+                    media={media}
                     stateSuccess={stateSuccess}
                     setStateSuccess={setStateSuccess}
                     onSuccess={onSuccess}

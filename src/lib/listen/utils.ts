@@ -80,29 +80,8 @@ export const playMediaPart = async (cue: Cue, media: HTMLMediaElement, extend: b
 
     // 暂停当前播放
     media.pause();
-
-    // 等待 metadata
-    if (isNaN(media.duration) || media.readyState < 1) {
-        await new Promise<void>((resolve) => {
-            const onLoaded = () => {
-                media.removeEventListener('loadedmetadata', onLoaded);
-                resolve();
-            };
-            media.addEventListener('loadedmetadata', onLoaded);
-            media.load();
-        });
-    }
-
     // seek 到起始时间
-    await new Promise<void>((resolve) => {
-        const onSeeked = () => {
-            media.removeEventListener('seeked', onSeeked);
-            resolve();
-        };
-        media.addEventListener('seeked', onSeeked);
-        media.currentTime = start_ms / 1000;
-    });
-
+    media.currentTime = start_ms / 1000;
     // 播放
     await media.play().catch(() => { });
 
