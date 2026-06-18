@@ -618,9 +618,7 @@ export default function Page({ user_id, uuid }: Props) {
                     {/* Player */}
                     {hasVideo && (
                         audioMode ? (
-                            <HlsPlayer videoRef={videoRef} src={resolvedMediaSrc} audioMode={true}
-                                subtitleSrc={stateActiveTab !== "dictation" ? `/api/listen/subtitle/${stateSubtitle?.uuid}` : undefined}
-                            />
+                            <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc} audioMode={true} />
                         ) : (
                             <div className="rounded-xl overflow-hidden shadow-lg bg-black">
                                 <HlsPlayer className="w-full" videoRef={videoRef} src={resolvedMediaSrc}
@@ -948,8 +946,8 @@ export default function Page({ user_id, uuid }: Props) {
                         )}
 
                         {stateNeedSave && (
-                            <div className="flex items-center justify-end px-1 sticky top-20 z-10">
-                                <Button size="sm" isDisabled={stateSaving} variant='primary'
+                            <div className="flex flex-row items-end justify-end fixed bottom-10 end-10 p-4 z-10">
+                                <Button size="lg" isDisabled={stateSaving} variant='danger'
                                     onPress={handleSaveSubtitle}
                                 >
                                     Save
