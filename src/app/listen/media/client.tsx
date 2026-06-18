@@ -964,7 +964,7 @@ export default function Page({ user_id, uuid }: Props) {
                                 >
                                     <CueEditor
                                         cue={cue}
-                                        media={videoRef.current}
+                                        videoRef={videoRef}
 
                                         allowEdit={stateSubtitle?.user_id === user_id}
                                         mode={stateEditingCue !== cue.uuid ? "dictation" : "dictation_edit"}
@@ -1050,7 +1050,7 @@ export default function Page({ user_id, uuid }: Props) {
                                 ) : (
                                     <CueEditor
                                         cue={stateDictCue}
-                                        media={videoRef.current}
+                                        videoRef={videoRef}
 
                                         allowEdit={stateSubtitle?.user_id === user_id}
                                         mode="dictation_focus"
