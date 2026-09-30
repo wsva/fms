@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
         return respondErr('too many failed attempts, please try again later')
     }
 
-    let body: { data?: Record<string, string> }
+    let body: { data?: Record<string, string>; desktop_callback?: string }
     try {
         body = await request.json()
     } catch {
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
         return respondErr('invalid request')
     }
     const d = body.data ?? {}
+    const desktopCallback = body.desktop_callback ?? ''
 
     const identity = d.Nickname ?? d.nickname ?? d.Email ?? d.email ?? ''
     const password = d.Password ?? d.password ?? ''
@@ -58,6 +59,18 @@ export async function POST(request: NextRequest) {
             parent: null,
         },
     })
+
+    if (desktopCallback) {
+        if (!desktopCallback.startsWith('fms-app://')) {
+            return respondErr('invalid desktop callback scheme')
+        }
+        const cbUrl = new URL(desktopCallback)
+        cbUrl.searchParams.set('access_token', accessToken)
+        cbUrl.searchParams.set('refresh_token', refreshToken)
+        cbUrl.searchParams.set('user_id', user.user_id)
+        cbUrl.searchParams.set('username', user.username ?? '')
+        return NextResponse.json({ success: true, redirect: cbUrl.toString() })
+    }
 
     const response = NextResponse.json({
         success: true,

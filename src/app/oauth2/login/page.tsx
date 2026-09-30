@@ -10,12 +10,15 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false)
     const [returnTo, setReturnTo] = useState('/oauth2/dashboard')
     const [registerHref, setRegisterHref] = useState('/oauth2/register')
+    const [desktopCallback, setDesktopCallback] = useState('')
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
         const rt = params.get('return_to') ?? '/oauth2/dashboard'
+        const dc = params.get('desktop_callback') ?? ''
         setReturnTo(rt)
         setRegisterHref(`/oauth2/register?return_to=${encodeURIComponent(rt)}`)
+        setDesktopCallback(dc)
     }, [])
 
     async function handleSubmit(e: React.FormEvent) {
@@ -23,16 +26,24 @@ export default function LoginPage() {
         setLoading(true)
         setError('')
         try {
+            const body: Record<string, unknown> = {
+                data: { Nickname: identity, Email: identity, Password: password },
+            }
+            if (desktopCallback) {
+                body.desktop_callback = desktopCallback
+            }
             const res = await fetch('/api/oauth2/signin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    data: { Nickname: identity, Email: identity, Password: password },
-                }),
+                body: JSON.stringify(body),
             })
             const data = await res.json()
             if (data.success) {
-                window.location.href = returnTo
+                if (data.redirect) {
+                    window.location.href = data.redirect
+                } else {
+                    window.location.href = returnTo
+                }
             } else {
                 setError(data.errMsg ?? 'Invalid email or password. Please try again.')
             }
