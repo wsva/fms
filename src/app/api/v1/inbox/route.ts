@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
         }
 
         const result = await prisma.$transaction(async (tx) => {
-            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${clusterId}))`;
+            // $executeRaw: the `void` return of the lock call is not deserializable.
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${clusterId}))`;
             return ingestProposals(tx, clusterId, clusterId, proposals);
         });
         return NextResponse.json(result);

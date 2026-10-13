@@ -94,7 +94,9 @@ export async function POST(request: NextRequest) {
         // an advisory xact lock held until commit (§11.2). This is what makes the
         // per-cluster seq monotonic even with several Next.js instances behind a LB.
         const results = await prisma.$transaction(async (tx) => {
-            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${clusterId}))`;
+            // $executeRaw, not $queryRaw: the lock call returns a `void` column
+            // the driver adapter cannot deserialize; the lock still holds to commit.
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${clusterId}))`;
             const out: ChangeResult[] = [];
 
             for (const ch of changes) {

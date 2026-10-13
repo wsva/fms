@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
         // lock held to commit (§11.2) so two Next.js instances behind a LB cannot
         // interleave writes to the same cluster's mirror.
         const result = await prisma.$transaction(async (tx) => {
-            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${clusterId}))`;
+            // $executeRaw: the `void` return of the lock call is not deserializable.
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${clusterId}))`;
             return ingestMirrorEntries(tx, clusterId, entries);
         });
 

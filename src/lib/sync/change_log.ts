@@ -9,9 +9,10 @@
  * the app client reads these pages back (`client.rs`) and applies them, so a
  * divergence silently mis-converges.
  *
- * Only the `@app` kinds (dictation, xp, card_review) are hosted in this phase;
- * the full classification/object-id match is ported verbatim anyway so later
- * phases (dataset scopes, phase 7b) inherit a faithful implementation.
+ * Only the `@app` kinds (dictation, xp, card_review, read_attempt_save,
+ * read_attempt_delete) are hosted in this phase; the full classification/object-id
+ * match is ported verbatim anyway so later phases (dataset scopes, phase 7b)
+ * inherit a faithful implementation.
  */
 import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 
@@ -26,7 +27,13 @@ export const LOG_RETENTION_DAYS = 30;
 
 /** Whether `kind` mutates per-user app data and journals under {@link APP_SCOPE}. */
 export function isAppScopeKind(kind: string): boolean {
-    return kind === 'dictation' || kind === 'xp' || kind === 'card_review';
+    return (
+        kind === 'dictation' ||
+        kind === 'xp' ||
+        kind === 'card_review' ||
+        kind === 'read_attempt_save' ||
+        kind === 'read_attempt_delete'
+    );
 }
 
 /**
@@ -137,9 +144,14 @@ export function objectIdFor(kind: string, payload: unknown, userKey: string): st
             return '';
         case 'read_text_save':
         case 'read_text_delete':
+            return get('uuid');
         case 'read_attempt_save':
         case 'read_attempt_delete':
-            return get('uuid');
+            // The app's recipe keys per-user practice events by owner
+            // (`{user_key}:{uuid}`, change_log.rs::object_id_for) — a bare uuid
+            // would let one user's attempt contest another's in the pull-side
+            // pending-edit guard.
+            return `${userKey}:${get('uuid')}`;
         case 'wiki_file_save':
         case 'wiki_file_delete':
             return get('rel_path');
@@ -173,11 +185,20 @@ export interface ChangesPage {
     resync_required: boolean;
 }
 
-/** Coerce a Postgres numeric (bigint | string | number) to a JS number. */
+/**
+ * Coerce a Postgres numeric to a JS number. The pg driver adapter returns
+ * NUMERIC columns (e.g. `SUM(bigint)`) as `Prisma.Decimal` objects, so the
+ * object arm stringifies before parsing — a plain typeof check would silently
+ * zero every aggregate.
+ */
 export function toNum(v: unknown): number {
     if (typeof v === 'number') return v;
     if (typeof v === 'bigint') return Number(v);
     if (typeof v === 'string') return Number(v);
+    if (v && typeof v === 'object') {
+        const n = Number(String(v));
+        if (Number.isFinite(n)) return n;
+    }
     return 0;
 }
 
@@ -365,9 +386,12 @@ export async function latestForObject(
  * cursor-ing below it has a gap it can never be served, so its next pull is told
  * `resync_required`. Also expires the dedup ledger on the same clock.
  *
- * `card_review` rows are NEVER pruned (INV-21 non-prunable): they are the only
- * state-readable record of a rating until a consumer reads them back, so pruning
- * would lose history with no way to reconstruct it.
+ * The practice-plane kinds (`card_review`, `read_attempt_save`,
+ * `read_attempt_delete`) are NEVER pruned: a pre-v6 app build cannot backfill
+ * events from `/app/state` (its events half is gated at protocol >= 6), so
+ * pruning their journal rows would lose history irrecoverably for a mixed
+ * fleet. Once retention scheduling ships and the fleet is v6+, INV-21's
+ * state-readable arm allows relaxing this exclusion.
  *
  * Returns the new prune high-water mark for the scope.
  */
@@ -382,14 +406,16 @@ export async function pruneLog(
     const maxRows = await tx.$queryRaw<{ m: unknown }[]>`
         SELECT COALESCE(MAX(seq), 0) AS m FROM app_sync_log
         WHERE cluster_id = ${clusterId} AND scope = ${scope}
-          AND kind <> 'card_review' AND created_at < ${cutoff}
+          AND kind NOT IN ('card_review', 'read_attempt_save', 'read_attempt_delete')
+          AND created_at < ${cutoff}
     `;
     const maxDeleted = toNum(maxRows[0]?.m);
 
     await tx.$executeRaw`
         DELETE FROM app_sync_log
         WHERE cluster_id = ${clusterId} AND scope = ${scope}
-          AND kind <> 'card_review' AND created_at < ${cutoff}
+          AND kind NOT IN ('card_review', 'read_attempt_save', 'read_attempt_delete')
+          AND created_at < ${cutoff}
     `;
     await tx.$executeRaw`
         DELETE FROM app_applied_change

@@ -24,8 +24,19 @@
  * protocol change (WEBSITE_CONTRACT_VERSION).
  */
 
-/** Wire protocol version, mirrored from the app's `sync::PROTOCOL_VERSION`. */
-export const PROTOCOL_VERSION = 5;
+/**
+ * Wire protocol version, mirrored from the app's `sync::PROTOCOL_VERSION`.
+ *
+ * `6` grows `GET /api/v1/app/state` from two tables to four: `reviews`
+ * (card_review_event) and `attempts` (read_attempt_event) join dictation + xp,
+ * each paged by rowid per identity. The response stays wire-compatible — an older
+ * client ignores the extra fields — so the bump exists purely so a follower can
+ * tell the event streams are present: the app's `want_events` backfill half,
+ * `events_owed` round trigger and `events_available` report all gate on
+ * `protocol_version >= 6`, and refuse to stamp the practice backfill complete
+ * against a host that omits them (INV-21 exit-losslessness).
+ */
+export const PROTOCOL_VERSION = 6;
 
 /** The capabilities this website host actually serves routes for. */
 export const WEBSITE_FEATURES = ['app_journal', 'registry_reads'] as const;
