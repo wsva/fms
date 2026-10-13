@@ -200,6 +200,120 @@ model dataset_tag_link {
   @@index([tag_uuid])
 }
 
+// ---------- sync-v2 @app cloud authority (phase 7a)
+
+/*
+Per-cluster seq minter. `seq` is monotonic within a cluster (cluster_id =
+account email; the website hosts one cloud cluster per account), not globally,
+because one Postgres serves every account. Advanced under a per-cluster advisory
+xact lock so appends serialize across instances (sync-v2.md §11.2).
+*/
+model app_sync_seq {
+  cluster_id String @id @db.VarChar(320)
+  next_seq   BigInt @default(1)
+}
+
+/* Append-only change journal for the `@app` scope (dictation, xp, card_review). */
+model app_sync_log {
+  cluster_id String   @db.VarChar(320)
+  seq        BigInt
+  scope      String   @db.VarChar(100)
+  object_id  String
+  kind       String   @db.VarChar(40)
+  op         String   @db.VarChar(10)
+  edit_time  String   @default("") @db.VarChar(64)
+  user_key   String   @default("") @db.VarChar(320)
+  payload    Json
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([cluster_id, seq])
+  @@index([cluster_id, scope, seq])
+}
+
+/*
+Replay dedup ledger (INV-3): a lost ack makes the follower re-send the same
+change_id; the hub applies it once. Keyed per cluster so one account's id can
+never shadow another's. Pruned by applied_at, never by edit_time.
+*/
+model app_applied_change {
+  cluster_id String   @db.VarChar(320)
+  change_id  String   @db.VarChar(128)
+  applied_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([cluster_id, change_id])
+  @@index([cluster_id, applied_at])
+}
+
+/*
+Retention high-water mark per (cluster, scope). A follower cursoring below it
+has an unrecoverable gap and is told `resync_required` on its next pull.
+*/
+model app_sync_prune_mark {
+  cluster_id   String @db.VarChar(320)
+  scope        String @db.VarChar(100)
+  pruned_up_to BigInt @default(0)
+
+  @@id([cluster_id, scope])
+}
+
+/*
+dictation progress projection (State, later-edit_time-wins). `completed` is a
+String on the wire (`ListenDictation.completed`), so it stays text here.
+*/
+model app_dictation {
+  id            BigInt   @id @default(autoincrement())
+  cluster_id    String   @db.VarChar(320)
+  media_uuid    String   @db.VarChar(100)
+  subtitle_uuid String   @db.VarChar(100)
+  status        String   @default("") @db.VarChar(20)
+  completed     String   @default("")
+  edit_time     String   @default("") @db.VarChar(64)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([cluster_id, media_uuid, subtitle_uuid])
+}
+
+/*
+XP ledger (Counter): one delta row per award; lifetime_xp = SUM(amount) (INV-16,
+recomputed, never accumulated). The unique key is exactly the dedup key the app's
+`xp_award_internal` checks, so a replayed award is a no-op.
+*/
+model app_xp_ledger {
+  id           BigInt   @id @default(autoincrement())
+  cluster_id   String   @db.VarChar(320)
+  amount       BigInt
+  source       String   @default("") @db.VarChar(60)
+  reference_id String   @default("") @db.VarChar(128)
+  dataset_uuid String   @default("") @db.VarChar(100)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([cluster_id, source, reference_id, dataset_uuid])
+}
+
+/*
+card-review results (AppendOnly; INV-21 non-prunable). One stored result per
+rating, keyed by the author's event_uuid so a replayed event is inserted once.
+*/
+model app_card_review_event {
+  id             BigInt   @id @default(autoincrement())
+  cluster_id     String   @db.VarChar(320)
+  event_uuid     String   @db.VarChar(100)
+  user_id        String   @default("") @db.VarChar(320)
+  dataset_uuid   String   @default("") @db.VarChar(100)
+  card_uuid      String   @db.VarChar(100)
+  quality        Int?
+  reviewed_at    String?  @db.VarChar(64)
+  familiarity    Int      @default(0)
+  interval_days  Int      @default(0)
+  ease_factor    Int      @default(250)
+  repetitions    Int      @default(0)
+  next_review_at String?  @db.VarChar(64)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([cluster_id, event_uuid])
+}
+
 // ---------- word
 
 model dict_de {
