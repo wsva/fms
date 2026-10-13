@@ -220,7 +220,15 @@ model app_sync_seq {
   next_seq   BigInt @default(1)
 }
 
-/* Append-only change journal for the `@app` scope (dictation, xp, card_review). */
+/*
+Append-only change journal. Holds TWO seq number spaces under one cluster_id,
+disambiguated by `scope` (sync-v2.md §3-fact-2 / §6.1):
+  - scope='@app' — the website-MINTED cloud-authority journal (dictation, xp,
+    card_review); seq comes from app_sync_seq via nextSeq (INV-1).
+  - scope=<dataset uuid> — hub-MIRRORED dataset entries; the hub's seq is stored
+    verbatim, never re-minted (a mirror reproduces the authority's journal).
+Both spaces start at 1, so the PK must include `scope` or they collide.
+*/
 model app_sync_log {
   cluster_id String   @db.VarChar(320)
   seq        BigInt
@@ -233,8 +241,7 @@ model app_sync_log {
   payload    Json
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  @@id([cluster_id, seq])
-  @@index([cluster_id, scope, seq])
+  @@id([cluster_id, scope, seq])
 }
 
 /*
