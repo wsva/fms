@@ -637,7 +637,7 @@ export default function Client({ email }: Props) {
                 </div>
 
                 <div
-                    className="flex-shrink-0 h-3 cursor-row-resize flex items-center justify-center group"
+                    className="shrink-0 h-3 cursor-row-resize flex items-center justify-center group"
                     onMouseDown={handleSelectorHeightDrag}
                 >
                     <div className="h-0.5 w-12 rounded-full bg-sand-300 group-hover:bg-primary transition-colors" />
