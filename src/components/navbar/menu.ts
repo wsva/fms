@@ -32,7 +32,8 @@ export const menuList: MenuGroup[] = [
             { key: "speak_ask", name: "Asking", description: "preparations for interviews", href: "/speak/ask" },
 
             { key: "seperator_read", name: "Read", description: "", href: "" },
-            { key: "read_book_main", name: "Reading", description: "read a book", href: "/speak/read" },
+            { key: "read_book_main", name: "Reading", description: "read a book from datasets", href: "/speak/read" },
+            { key: "read_book_local", name: "Reading (Local)", description: "read your own Prisma books", href: "/speak/read-local" },
             { key: "read_book_manage", name: "Manage Books", description: "manage books and chapters", href: "/speak/read/book" },
             { key: "read_book_text", name: "View Book Text", description: "show content in pure text", href: "/speak/read/text" },
         ],

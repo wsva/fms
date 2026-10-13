@@ -1,24 +1,31 @@
-import { book_chapter, book_sentence } from "@/generated/prisma/client"
+import type { BookChapterRow, BookSentenceRow, BookWordRow } from '@/lib/datasets/bookstore'
 
-export type SentenceClient = book_sentence & {
-    modified: boolean       // order_num changed, needs Save Order
-    hasLocalAudio: boolean  // unsaved audio blob in IndexedDB
+/**
+ * Client-side sentence row: dataset `BookSentenceRow` (TEXT timestamps) plus
+ * ephemeral UI flags. `play_url` is resolved at load time via /api/v1/file;
+ * `hasLocalAudio` marks an unsaved recorded blob staged in IndexedDB (dormant
+ * path — see the edit flag in client.tsx).
+ */
+export type SentenceClient = BookSentenceRow & {
+    modified: boolean
+    hasLocalAudio: boolean
+    play_url: string | null
 }
 
 export type Paragraph = {
     sentences: SentenceClient[]
-    breakSentence?: SentenceClient  // the paragraph_break row that ends this group
+    breakSentence?: SentenceClient
 }
 
 export type DrawerState =
     | { mode: 'edit'; sentence: SentenceClient }
-    | { mode: 'add'; insertBeforeUUID: string | null }  // null = append to end
+    | { mode: 'add'; insertBeforeUUID: string | null }
     | null
 
-export type FlatChapter = book_chapter & { depth: number }
+export type FlatChapter = BookChapterRow & { depth: number }
 
 export function flattenChapters(
-    all: book_chapter[],
+    all: BookChapterRow[],
     parentUuid: string | null = null,
     depth = 0,
 ): FlatChapter[] {
@@ -43,7 +50,16 @@ export function groupIntoParagraphs(sentences: SentenceClient[]): Paragraph[] {
     return result
 }
 
-export function toDbSentence(s: SentenceClient): book_sentence {
-    const { modified: _m, hasLocalAudio: _h, ...db } = s
+/** Drop UI-only fields when composing a save draft. */
+export function toDraftSentence(s: SentenceClient): BookSentenceRow {
+    const { modified: _m, hasLocalAudio: _h, play_url: _p, ...db } = s
     return db
+}
+
+export type WordsBySentence = Record<string, BookWordRow[]>
+
+export function groupWordsBySentence(words: BookWordRow[]): WordsBySentence {
+    const map: WordsBySentence = {}
+    for (const w of words) (map[w.sentence_uuid] ??= []).push(w)
+    return map
 }

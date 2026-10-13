@@ -3,10 +3,9 @@
 import { Button, Dropdown, Label, TextArea, Tooltip } from "@heroui/react"
 import { highlightDifferences } from '@/app/speak/lcs'
 import { DrawerState } from './types'
+import type { BookWordRow } from '@/lib/datasets/bookstore'
 import { useState, useRef, useEffect } from 'react'
 import { getLocalServiceUrl } from '@/lib/local-stt'
-import { getBookSentenceWords } from '@/app/actions/book'
-import type { book_sentence_word } from '@/generated/prisma/client'
 import { ChevronsCollapseVertical, ChevronsExpandVertical, EllipsisVertical, Microphone, MicrophoneSlash, PlayFill, TrashBin, Xmark } from "@gravity-ui/icons"
 
 const LS_KEY = 'read_auto_replace_rules'
@@ -44,14 +43,15 @@ type Props = {
     content: string
     onContentChange: (v: string) => void
     hasAudio: boolean
+    allowEdit: boolean
     saving: boolean
     recording: boolean
     processing: boolean
-    engine: string
-    onEngineChange: (v: string) => void
     bgColor: string | null
     onBgColorChange: (v: string | null) => void
-    bookUUID?: string
+    /** Vocab words for the open sentence (supplied by the parent's bulk load). */
+    words: BookWordRow[]
+    datasetUUID?: string
     chapterPath?: string
     onClose: () => void
     onPlay: () => void
@@ -77,9 +77,9 @@ export { BG_COLORS }
 
 export default function SentenceDrawer({
     drawer, recognized, content, onContentChange,
-    bgColor, onBgColorChange,
-    hasAudio, saving, recording, processing,
-    bookUUID, chapterPath,
+    bgColor, onBgColorChange, words,
+    hasAudio, allowEdit, saving, recording, processing,
+    datasetUUID, chapterPath,
     onClose, onPlay, onToggleRecording,
     onSaveAdd, onSaveEdit, onDelete,
     onInsertBefore, onInsertAfter, onParagraphBefore, onParagraphAfter,
@@ -88,7 +88,6 @@ export default function SentenceDrawer({
     const [rulesText, setRulesText] = useState(DEFAULT_RULES_TEXT)
     const [showRulesEditor, setShowRulesEditor] = useState(false)
     const [hasLocalService, setHasLocalService] = useState(false)
-    const [words, setWords] = useState<book_sentence_word[]>([])
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
@@ -98,13 +97,6 @@ export default function SentenceDrawer({
     useEffect(() => {
         getLocalServiceUrl().then(url => setHasLocalService(!!url))
     }, [])
-
-    useEffect(() => {
-        if (drawer?.mode !== 'edit') { setWords([]); return }
-        getBookSentenceWords(drawer.sentence.uuid).then(r => {
-            if (r.status === 'success') setWords(r.data)
-        })
-    }, [drawer?.mode === 'edit' ? drawer.sentence.uuid : null])
 
     const handleWordMouseDown = (e: React.MouseEvent<HTMLSpanElement>) => {
         e.preventDefault()
@@ -170,12 +162,14 @@ export default function SentenceDrawer({
                         {drawer.mode === 'edit' ? 'Edit Sentence' : 'New Sentence'}
                     </span>
                     <div className="flex flex-row items-center gap-4">
-                        <Button variant="primary" size="sm" isDisabled={saving}
-                            onPress={drawer.mode === 'add' ? onSaveAdd : onSaveEdit}
-                        >
-                            {drawer.mode === 'add' ? 'Add' : 'Save'}
-                        </Button>
-                        {drawer.mode === 'edit' && (
+                        {allowEdit && (
+                            <Button variant="primary" size="sm" isDisabled={saving}
+                                onPress={drawer.mode === 'add' ? onSaveAdd : onSaveEdit}
+                            >
+                                {drawer.mode === 'add' ? 'Add' : 'Save'}
+                            </Button>
+                        )}
+                        {allowEdit && drawer.mode === 'edit' && (
                             <Dropdown>
                                 <Button isIconOnly size="sm" variant="ghost" isDisabled={saving}>
                                     <EllipsisVertical />
@@ -187,7 +181,7 @@ export default function SentenceDrawer({
                                         </Dropdown.Item>
                                         <Dropdown.Item id="link_card" textValue="Link Card" onPress={() => {
                                             const s = (drawer as { mode: 'edit'; sentence: { uuid: string } }).sentence
-                                            const tags = bookUUID ? `&tags=${bookUUID}` : ''
+                                            const tags = datasetUUID ? `&tags=${datasetUUID}` : ''
                                             const note = chapterPath ? `&note=${encodeURIComponent(chapterPath)}` : ''
                                             window.open(`/card/${s.uuid}?question=${encodeURIComponent(content)}&edit=y${tags}${note}`, '_blank')
                                         }}>
@@ -232,7 +226,7 @@ export default function SentenceDrawer({
                                 <PlayFill />
                             </Button>
                         )}
-                        {hasLocalService && (
+                        {allowEdit && hasLocalService && (
                             <Button size={expanded ? 'md' : 'sm'} variant="secondary"
                                 isDisabled={!recording && processing}
                                 onPress={onToggleRecording}
@@ -251,61 +245,63 @@ export default function SentenceDrawer({
                     )}
 
                     {/* Special character insertion + auto-replace */}
-                    <div className="flex flex-row flex-wrap items-center gap-1">
-                        {([
-                            { char: '–', label: '–', hint: 'en dash — Alt 0150' },
-                            { char: '„', label: '„', hint: 'opening quotation marks — Alt 0132' },
-                            { char: '“', label: '“', hint: 'closing quotation marks — Alt 0147' },
-                            { char: '‚', label: '‚', hint: 'single open quote — Alt 0130' }, // single quotation marks, for nested quotes
-                            { char: '‘', label: '‘', hint: 'single close quote — Alt 0145' },
-                            { char: '»', label: '»', hint: 'Alt 0187' }, // chevrons, chevrons in German: »…«, chevrons in French: «…»
-                            { char: '«', label: '«', hint: 'Alt 0171' },
-                            { char: '›', label: '›', hint: 'Alt 0155' }, // single chevrons, for nested quotes
-                            { char: '‹', label: '‹', hint: 'Alt 0139' },
-                            { char: 'é', label: 'é', hint: 'Alt 0233' },
-                        ] as { char: string; label: string; hint: string }[]).map(({ char, label, hint }) => (
-                            <button
-                                key={char}
-                                title={hint}
-                                className="px-2 py-0.5 text-sm rounded bg-sand-100 hover:bg-sand-200 border border-sand-300 font-mono"
-                                onClick={() => insertAtCursor(char)}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                        <div className="ml-auto flex flex-row gap-1">
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <Button size="sm" variant="ghost" onPress={applySmartQuotes}>
-                                        „“
-                                    </Button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content>
-                                    Replace "..." with „...“
-                                </Tooltip.Content>
-                            </Tooltip>
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <Button size="sm" variant="ghost" onPress={applyRules}>
-                                        Apply
-                                    </Button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content>
-                                    Apply auto-replace rules to content
-                                </Tooltip.Content>
-                            </Tooltip>
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <Button size="sm" variant="ghost" onPress={openRulesEditor}>
-                                        Rules
-                                    </Button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content>
-                                    Edit auto-replace rules
-                                </Tooltip.Content>
-                            </Tooltip>
+                    {allowEdit && (
+                        <div className="flex flex-row flex-wrap items-center gap-1">
+                            {([
+                                { char: '–', label: '–', hint: 'en dash — Alt 0150' },
+                                { char: '„', label: '„', hint: 'opening quotation marks — Alt 0132' },
+                                { char: '“', label: '“', hint: 'closing quotation marks — Alt 0147' },
+                                { char: '‚', label: '‚', hint: 'single open quote — Alt 0130' }, // single quotation marks, for nested quotes
+                                { char: '‘', label: '‘', hint: 'single close quote — Alt 0145' },
+                                { char: '»', label: '»', hint: 'Alt 0187' }, // chevrons, chevrons in German: »…«, chevrons in French: «…»
+                                { char: '«', label: '«', hint: 'Alt 0171' },
+                                { char: '›', label: '›', hint: 'Alt 0155' }, // single chevrons, for nested quotes
+                                { char: '‹', label: '‹', hint: 'Alt 0139' },
+                                { char: 'é', label: 'é', hint: 'Alt 0233' },
+                            ] as { char: string; label: string; hint: string }[]).map(({ char, label, hint }) => (
+                                <button
+                                    key={char}
+                                    title={hint}
+                                    className="px-2 py-0.5 text-sm rounded bg-sand-100 hover:bg-sand-200 border border-sand-300 font-mono"
+                                    onClick={() => insertAtCursor(char)}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                            <div className="ml-auto flex flex-row gap-1">
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button size="sm" variant="ghost" onPress={applySmartQuotes}>
+                                            „“
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        {'Replace "..." with „...“'}
+                                    </Tooltip.Content>
+                                </Tooltip>
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button size="sm" variant="ghost" onPress={applyRules}>
+                                            Apply
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        Apply auto-replace rules to content
+                                    </Tooltip.Content>
+                                </Tooltip>
+                                <Tooltip>
+                                    <Tooltip.Trigger>
+                                        <Button size="sm" variant="ghost" onPress={openRulesEditor}>
+                                            Rules
+                                        </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        Edit auto-replace rules
+                                    </Tooltip.Content>
+                                </Tooltip>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Content editor */}
                     <TextArea data-no-voice
@@ -313,33 +309,36 @@ export default function SentenceDrawer({
                         className={expanded ? 'text-2xl font-bold' : 'text-base'}
                         rows={3}
                         value={content}
+                        readOnly={!allowEdit}
                         onChange={e => onContentChange(e.target.value)}
                     />
 
                     {/* Background color picker */}
-                    <div className="flex flex-row items-center gap-2">
-                        <span className="text-xs text-foreground-500 shrink-0">Color:</span>
-                        <button
-                            title="None"
-                            onClick={() => onBgColorChange(null)}
-                            className={[
-                                'w-6 h-6 rounded-full border-2 bg-sand-50',
-                                bgColor === null ? 'border-sand-500' : 'border-sand-300',
-                            ].join(' ')}
-                        />
-                        {BG_COLORS.map(c => (
+                    {allowEdit && (
+                        <div className="flex flex-row items-center gap-2">
+                            <span className="text-xs text-foreground-500 shrink-0">Color:</span>
                             <button
-                                key={c.key}
-                                title={c.label}
-                                onClick={() => onBgColorChange(bgColor === c.key ? null : c.key)}
+                                title="None"
+                                onClick={() => onBgColorChange(null)}
                                 className={[
-                                    'w-6 h-6 rounded-full border-2',
-                                    c.swatch,
-                                    bgColor === c.key ? 'border-sand-500' : 'border-transparent',
+                                    'w-6 h-6 rounded-full border-2 bg-sand-50',
+                                    bgColor === null ? 'border-sand-500' : 'border-sand-300',
                                 ].join(' ')}
                             />
-                        ))}
-                    </div>
+                            {BG_COLORS.map(c => (
+                                <button
+                                    key={c.key}
+                                    title={c.label}
+                                    onClick={() => onBgColorChange(bgColor === c.key ? null : c.key)}
+                                    className={[
+                                        'w-6 h-6 rounded-full border-2',
+                                        c.swatch,
+                                        bgColor === c.key ? 'border-sand-500' : 'border-transparent',
+                                    ].join(' ')}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                     {/* Words */}
                     {words.length > 0 && (

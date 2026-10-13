@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Select, Spinner, ListBox, Label } from "@heroui/react"
 import { book_meta, book_chapter } from "@/generated/prisma/client"
 import { getBookMetaAll, getBookChapterAll, getBookSentenceAll } from "@/app/actions/book"
-import { SentenceClient, flattenChapters, groupIntoParagraphs } from '../types'
+import { SentenceClient, flattenChapters, groupIntoParagraphs } from '@/app/speak/read-local/types'
 
 type Props = { email: string }
 

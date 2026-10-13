@@ -462,6 +462,21 @@ model book_sentence_word {
   note           String
 }
 
+// Per-user chapter progress for dataset-backed books. The dataset's own
+// book_chapter.status is shared content and is never written from the web; this
+// table holds the caller's own completion state, keyed by dataset + chapter.
+model read_chapter_progress {
+  uuid         String   @id @db.VarChar(100)
+  user_id      String   @db.VarChar(100)
+  dataset_uuid String   @db.VarChar(100)
+  chapter_uuid String   @db.VarChar(100)
+  status       String   @db.VarChar(20)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([user_id, dataset_uuid, chapter_uuid])
+}
+
 // ---------- card
 
 model qsa_card {
