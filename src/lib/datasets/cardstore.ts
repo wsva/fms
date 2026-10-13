@@ -162,7 +162,7 @@ function openCardDb(dir: string): Database.Database {
  * refuses a read-only open (e.g. a WAL file whose `-shm` is missing) — read
  * paths treat that as "no rows" instead of writing to the uploaded blob.
  */
-function openCardDbReadonly(dir: string): Database.Database | null {
+export function openCardDbReadonly(dir: string): Database.Database | null {
     const p = cardDbPath(dir);
     if (!fs.existsSync(p)) return null;
     try {
@@ -206,7 +206,7 @@ export function getChangesSince(dir: string, since: string): { cards: SyncCard[]
     }
 }
 
-function tableExists(db: Database.Database, name: string): boolean {
+export function tableExists(db: Database.Database, name: string): boolean {
     return !!db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(name);
 }
 
