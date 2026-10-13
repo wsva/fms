@@ -89,13 +89,14 @@ model dataset_tag {
 }
 
 model dataset_subscription {
-  uuid       String   @id @db.VarChar(100)
-  user_id    String   @db.VarChar(100)
-  tag_uuid   String   @db.VarChar(100)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  uuid         String   @id @db.VarChar(100)
+  user_id      String   @db.VarChar(100)
+  tag_uuid     String?  @db.VarChar(100)
+  dataset_uuid String?  @db.VarChar(100)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
 
-  @@unique([user_id, tag_uuid])
+  @@unique([user_id, dataset_uuid])
 }
 
 model dataset_scope {
@@ -110,6 +111,93 @@ model dataset_tag_scope {
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 
   @@unique([tag_uuid, scope_uuid])
+}
+
+// ---------- dataset hub (fms-app dataset directories)
+
+/*
+Catalog row per dataset directory (uploaded as tar.gz, extracted live under
+DATASET_ROOT). Fields mirror the app's info.json spec v2; info_* stamps stay
+strings in canonical UTC second-precision form, never timestamptz.
+*/
+model dataset {
+  uuid            String   @id @db.VarChar(100)
+  user_id         String   @db.VarChar(100)
+  name            String
+  description     String   @default("")
+  dataset_type    String   @db.VarChar(20)
+  format          String   @db.VarChar(40)
+  language        String   @default("") @db.VarChar(10)
+  spec            Int      @default(2)
+  visibility      String   @default("private") @db.VarChar(10)
+  extra           Json?
+  info_created_at String?  @db.VarChar(32)
+  info_updated_at String?  @db.VarChar(32)
+  status          String   @default("ready") @db.VarChar(20)
+  archive_path    String?
+  archive_sha256  String?  @db.VarChar(64)
+  archive_size    BigInt?
+  file_count      Int      @default(0)
+  total_bytes     BigInt   @default(0)
+  overall_hash    String?  @db.VarChar(64)
+  snapshot_seq    BigInt   @default(0)
+  media_count     Int      @default(0)
+  card_count      Int      @default(0)
+  deleted         String   @default("N") @db.VarChar(1)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([dataset_type])
+  @@index([visibility, deleted])
+  @@index([user_id])
+}
+
+/*
+Immutable per-version upload record. Newest version is the extracted live dir;
+rollback re-extracts an older archive.
+*/
+model dataset_version {
+  uuid            String   @id @db.VarChar(100)
+  dataset_uuid    String   @db.VarChar(100)
+  version         Int
+  archive_path    String
+  archive_sha256  String   @db.VarChar(64)
+  archive_size    BigInt
+  file_count      Int      @default(0)
+  total_bytes     BigInt   @default(0)
+  overall_hash    String?  @db.VarChar(64)
+  info_updated_at String?  @db.VarChar(32)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([dataset_uuid, version])
+  @@index([dataset_uuid])
+}
+
+/*
+Manifest per-file hash cache keyed (dataset, path); rehash only when the
+(size, mtime) tuple changes.
+*/
+model dataset_file_hash {
+  dataset_uuid String   @db.VarChar(100)
+  path         String   @db.VarChar(1024)
+  size         BigInt
+  mtime        BigInt
+  sha256       String   @db.VarChar(64)
+
+  @@id([dataset_uuid, path])
+}
+
+/* Grouping only — links a dataset directory to legacy dataset_tag rows. */
+model dataset_tag_link {
+  uuid         String   @id @db.VarChar(100)
+  dataset_uuid String   @db.VarChar(100)
+  tag_uuid     String   @db.VarChar(100)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([dataset_uuid, tag_uuid])
+  @@index([tag_uuid])
 }
 
 // ---------- word
@@ -231,6 +319,17 @@ model listen_subtitle_cue {
   reference     String?
 }
 
+/*
+A book contains the text of all audios.
+
+The format of a book maybe not good, with hyphens, new-lines and trivial texts.
+
+We must use STT models to generate subtitles, but we can reference the book to correct the subtitles, we cannot know which one is better.
+
+If a cue exists exactly in the book, then it's perfect. If there is only a similiar text in the book, we give the two texts to the user, let the user decide which one is correct.
+
+In the database, we call the full text of a book as a chunk. It's just a chunk of contents, we don't treat it as a well formated book.
+*/
 model listen_subtitle_reference {
   uuid       String   @id @db.VarChar(100)
   chunk_uuid String   @db.VarChar(100)

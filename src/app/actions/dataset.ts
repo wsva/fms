@@ -40,7 +40,7 @@ export async function getTagAllUsed(email: string, scope: string): Promise<Actio
             prisma.dataset_subscription.findMany({ where: { user_id: email }, select: { tag_uuid: true } }),
             resolveScopeUuids(scope),
         ]);
-        const subUuids = subs.map(s => s.tag_uuid);
+        const subUuids = subs.map(s => s.tag_uuid).filter((x): x is string => x !== null);
         const result = await prisma.dataset_tag.findMany({
             where: {
                 AND: [
@@ -69,7 +69,7 @@ export async function getTagAllSubscribed(email: string, scope: string): Promise
             prisma.dataset_subscription.findMany({ where: { user_id: email }, select: { tag_uuid: true } }),
             resolveScopeUuids(scope),
         ]);
-        const subUuids = subs.map(s => s.tag_uuid);
+        const subUuids = subs.map(s => s.tag_uuid).filter((x): x is string => x !== null);
         if (subUuids.length === 0) return { status: "success", data: [] };
         const result = await prisma.dataset_tag.findMany({
             where: {

@@ -1,6 +1,8 @@
 'use client';
 
 import { toast, Button, Chip, Input, Select, TextArea, TextField, ListBox, Label } from "@heroui/react";
+import Link from "next/link";
+import { getDatasetCountsByTag } from '@/app/actions/dataset_hub';
 import { useEffect, useState } from 'react'
 import {
     getTagAllOwned, removeTag, saveTag,
@@ -242,6 +244,7 @@ export default function Page({ user_id }: Props) {
     const [stateNew, setStateNew] = useState<NewTagState>({ scopeUuids: [] });
     const [stateSaving, setStateSaving] = useState<boolean>(false);
     const [stateShowForm, setStateShowForm] = useState<boolean>(false);
+    const [stateHubCounts, setStateHubCounts] = useState<Record<string, number>>({});
 
     const openNewForm = (parentUuid?: string) => {
         setStateNew({ scopeUuids: [], parent_uuid: parentUuid ?? null });
@@ -314,6 +317,11 @@ export default function Page({ user_id }: Props) {
         };
         load();
     }, []);
+
+    // Live dataset counts per tag (grouping only — see Dataset → Market)
+    useEffect(() => {
+        getDatasetCountsByTag().then(r => { if (r.status === 'success') setStateHubCounts(r.data); });
+    }, [stateReload]);
 
     // Load tags + scope map
     useEffect(() => {
@@ -399,6 +407,17 @@ export default function Page({ user_id }: Props) {
                         >
                             {s.uuid}
                         </Chip>
+                    ))}
+                </div>
+            )}
+
+            {Object.keys(stateHubCounts).length > 0 && (
+                <div className='flex gap-1.5 flex-wrap items-center'>
+                    <span className="text-xs text-sand-500">datasets per tag:</span>
+                    {stateData.filter(t => stateHubCounts[t.uuid]).map(t => (
+                        <Link key={t.uuid} href={`/dataset/market?tag=${t.uuid}`} className="hover:opacity-80">
+                            <Chip size="sm" variant="secondary">{t.tag} · {stateHubCounts[t.uuid]}</Chip>
+                        </Link>
                     ))}
                 </div>
             )}

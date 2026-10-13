@@ -59,6 +59,10 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: SMTP_FROM
+            - name: DATASET_ROOT
+              value: "/fms_datasets"
+            - name: MAX_DATASET_UPLOAD_MB
+              value: "512"
           command:
             - sh
             - -c
@@ -89,12 +93,18 @@ spec:
           volumeMounts:
             - name: fms-data
               mountPath: /fms_data
+            - name: fms-datasets
+              mountPath: /fms_datasets
             - name: ssl
               mountPath: /ssl
       volumes:
         - name: fms-data
           hostPath:
             path: /wsva/data/fms_data
+            type: Directory
+        - name: fms-datasets
+          hostPath:
+            path: /wsva/data/fms_datasets
             type: Directory
         - name: ssl
           hostPath:

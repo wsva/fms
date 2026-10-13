@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import mime from "mime";
-import { Readable } from "stream";
-import { readFile } from "fs/promises";
+import { streamFileResponse } from "@/lib/streamFile";
 
 export async function GET(
     request: NextRequest,
@@ -57,52 +56,7 @@ export async function GET(
             return NextResponse.json({ error: "File not found" }, { status: 404 });
         }
 
-        const stat = fs.statSync(filePath);
-        const totalSize = stat.size;
-
-        const range = request.headers.get("range");
-        const contentType = mime.getType(filePath) || "application/octet-stream";
-
-        // ------------------------
-        // 4. 处理 Range 请求（视频/音频播放必要）
-        // ------------------------
-        if (range) {
-            const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
-
-            const chunkSize = end - start + 1;
-            const fileStream = fs.createReadStream(filePath, { start, end });
-            const webStream = Readable.toWeb(fileStream) as ReadableStream<Uint8Array>;
-
-            return new NextResponse(webStream, {
-                status: 206,
-                headers: {
-                    "Content-Type": contentType,
-                    "Content-Length": String(chunkSize),
-                    "Content-Range": `bytes ${start}-${end}/${totalSize}`,
-                    "Accept-Ranges": "bytes",
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "GET, OPTIONS",
-                    "Access-Control-Allow-Headers": "*",
-                },
-            });
-        }
-
-        // ------------------------
-        // 5. 无 Range → 直接返回整个文件
-        // ------------------------
-        const fileBuffer = await readFile(filePath);
-        return new NextResponse(new Uint8Array(fileBuffer), {
-            headers: {
-                "Content-Type": contentType,
-                "Content-Length": String(totalSize),
-                "Accept-Ranges": "bytes",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "*",
-            },
-        });
+        return streamFileResponse(filePath, request.headers.get("range"));
     } catch (err) {
         console.error("File server error:", err);
         return NextResponse.json({ error: "Internal error" }, { status: 500 });
