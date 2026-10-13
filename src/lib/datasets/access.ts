@@ -30,6 +30,7 @@ export interface DatasetCatalog {
     total_bytes: bigint;
     overall_hash: string | null;
     snapshot_seq: bigint;
+    current_version: number | null;
     media_count: number;
     card_count: number;
     deleted: string;
@@ -93,6 +94,7 @@ export function serializeDataset(ds: DatasetCatalog) {
         total_bytes: ds.total_bytes.toString(),
         overall_hash: ds.overall_hash,
         snapshot_seq: ds.snapshot_seq.toString(),
+        current_version: ds.current_version,
         media_count: ds.media_count,
         card_count: ds.card_count,
         deleted: ds.deleted,
@@ -119,6 +121,7 @@ export const datasetCatalogFields = {
     total_bytes: true,
     overall_hash: true,
     snapshot_seq: true,
+    current_version: true,
     media_count: true,
     card_count: true,
     deleted: true,

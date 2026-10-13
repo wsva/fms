@@ -141,6 +141,11 @@ model dataset {
   total_bytes     BigInt   @default(0)
   overall_hash    String?  @db.VarChar(64)
   snapshot_seq    BigInt   @default(0)
+  // Published pin (sync-v2 §7/§8.4, INV-8/INV-17): the dataset_version.registry
+  // reads resolve to. NULL = nothing published, so registry reads 404. Only an
+  // explicit publish moves it; an upload or card push updates the live mirror and
+  // snapshot_seq but never this, so subscribers never see un-published edits.
+  current_version Int?
   media_count     Int      @default(0)
   card_count      Int      @default(0)
   deleted         String   @default("N") @db.VarChar(1)
@@ -153,8 +158,10 @@ model dataset {
 }
 
 /*
-Immutable per-version upload record. Newest version is the extracted live dir;
-rollback re-extracts an older archive.
+Immutable per-version upload record: the bytes + hashes of one v<N>.tar.gz under
+_archive/. Registry reads serve the version named by dataset.current_version (the
+pin), independent of the live dir — a later upload adds a row here but does not
+move the pin, so a published version stays immutable (INV-8/INV-17).
 */
 model dataset_version {
   uuid            String   @id @db.VarChar(100)

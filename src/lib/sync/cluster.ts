@@ -8,10 +8,16 @@
  * existed the client's `fetch_cluster` got a 404 → `None` → every gate stayed
  * closed, so serving it is the switch that turns on the `@app` cloud journal.
  *
- * This increment advertises `app_journal` ONLY:
- *   - not `dataset_journal` — the website hosts no dataset-scope journal yet (phase 7b);
- *   - not `registry_reads` — the `/api/v1/registry/*` reads land in phase 3, and
- *     advertising a capability whose routes 404 would break the client's gate.
+ * This increment advertises:
+ *   - `app_journal` — the `@app` cloud journal (`/api/v1/sync/changes`, `/app/changes`,
+ *     `/app/state`);
+ *   - `registry_reads` — the versioned registry reads (`/api/v1/registry/{uuid}/manifest`
+ *     and `/snapshot?version=N`), which resolve to a *published* version instead of the
+ *     mutable live dir, fixing §3's leak. The routes are live, so the capability is safe
+ *     to advertise; the client gates its registry path on exactly this string.
+ *
+ * Still not advertised: `dataset_journal` — the website hosts no dataset-scope journal
+ * yet (phase 7b).
  *
  * Field names mirror `sync/mod.rs::ClusterInfo` byte-for-byte (snake_case, `epoch`
  * and `protocol_version` as u32): a renamed field on either side is a breaking
@@ -22,7 +28,7 @@
 export const PROTOCOL_VERSION = 5;
 
 /** The capabilities this website host actually serves routes for. */
-export const WEBSITE_FEATURES = ['app_journal'] as const;
+export const WEBSITE_FEATURES = ['app_journal', 'registry_reads'] as const;
 
 /** `GET /api/v1/cluster` payload — "who am I talking to, and what can it do". */
 export interface ClusterInfo {

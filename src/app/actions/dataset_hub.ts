@@ -231,9 +231,25 @@ export async function setDatasetVisibility(uuid: string, visibility: string): Pr
         if (!(VISIBILITIES as readonly string[]).includes(visibility)) {
             return { status: 'error', error: `visibility must be one of ${VISIBILITIES.join(', ')}` };
         }
+        // Sharing is the UI's publish act (sync-v2 INV-17): pin the newest uploaded
+        // version so registry reads resolve to what the owner just shared, not to the
+        // mutable live dir. Narrowing to `private` leaves the pin untouched — the
+        // visibility gate already blocks reads.
+        const publishing = visibility === 'shared' || visibility === 'public';
+        const latest = publishing
+            ? await prisma.dataset_version.findFirst({
+                  where: { dataset_uuid: uuid },
+                  orderBy: { version: 'desc' },
+                  select: { version: true },
+              })
+            : null;
         const row = await prisma.dataset.update({
             where: { uuid },
-            data: { visibility, updated_at: new Date() },
+            data: {
+                visibility,
+                ...(latest?.version != null ? { current_version: latest.version } : {}),
+                updated_at: new Date(),
+            },
             select: datasetCatalogFields,
         });
         return { status: 'success', data: serializeDataset(row) };

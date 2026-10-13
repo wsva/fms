@@ -316,6 +316,10 @@ async function commitUpload(input: CommitInput) {
         overall_hash: manifest.overall_hash,
         // Every new version invalidates snapshots peers may have cached.
         snapshot_seq: (existing?.snapshot_seq ?? BigInt(0)) + BigInt(1),
+        // A brand-new dataset is pinned at its first version so registry reads can
+        // resolve it; an existing dataset keeps its pin (INV-17 — an upload updates the
+        // live mirror, only an explicit publish advances what subscribers see).
+        current_version: existing ? existing.current_version : version,
         media_count: mediaCount,
         card_count: cardCount,
         deleted: 'N',
