@@ -20,9 +20,11 @@
  * (`nextSeq`/`appendJournal`/`applyAppChange`) are untouched, so the shipped
  * cloud-authority path has zero regression risk from this receiver.
  *
- * **Dormant until the app builds its push client** — `upload.rs` is whole-archive
- * only and the conformance suite has no mirror vectors, so today this runs only via
- * hand-rolled curl. Same posture `registry_reads` held before Phase 3.
+ * **LIVE** — the app's desktop→cloud mirror-push client shipped
+ * (`sync/mirror.rs::sync_mirror_push`), POSTing this receiver's route with Bearer
+ * (`hub_request`) via `push_scope`. Caveat kept honest: the conformance suite still
+ * has no mirror vectors, so this leg's behaviour is pinned by the app-side unit tests
+ * rather than a cross-host vector here.
  */
 import type { Prisma } from '@/generated/prisma/client';
 import { APP_SCOPE } from '@/lib/sync/change_log';

@@ -142,10 +142,10 @@ the hub. `epoch_page_and_enforce` drives `readChanges` / `scopeAuthorityEpoch` /
 | `@app` never gated | `scopeAuthorityEpoch(cluster, APP_SCOPE) === 0` (the website is `@app`'s native authority, no handover applies), so the shipped cloud-authority push leg has zero regression |
 
 The route (`POST /api/v1/sync/changes`) runs the same `presented < authority` gate as its
-**first** per-change check, before dedup/apply/journal — exactly the hub's ordering. This
-ships dormant for dataset scopes: the app client still hard-errors a dataset-scope push to a
-Website origin, so no live follower reaches that branch yet (host-before-client, as phases
-4/5 did).
+**first** per-change check, before dedup/apply/journal — exactly the hub's ordering. This leg is
+**live**: the app now signs the POST with `hub_request` (Website origin → `Authorization: Bearer`,
+LAN → device-HMAC) and pushes dataset-scope changes behind the advertised `dataset_journal`
+capability (INV-20 default-deny), so an authority-hosting account's client reaches this branch.
 
 ### `app_lww` — @app writeback clamp + later-wins parity, §7/§14 (website-local)
 
@@ -169,8 +169,29 @@ dictation push blindly overwrote a newer row through `applyAppChange`'s upsert a
 Unlike the journal-backed vectors, `app_lww` is **deliberately not in `DB_CHECKS`**: its pure
 half (classes/clamp/lww) runs **without `DATABASE_URL`**, and only the round-trip self-guards on
 `haveDb()` — so a DB-less run exercises the predicates while skipping the seed, never a false
-skip. Like the `@app` push leg itself, this ships dormant until the app switches
-`writeback_flush_inner` to `hub_request` (host-before-client, as phases 4/5/7b did).
+skip. The `@app` push leg is **now live**: the app switched its writeback to `hub_request`, so a
+Bearer-authenticated stale dictation push hits this gate and is refused as `losing`, exactly as
+the vector pins.
+
+### `app_push_shape` — writeback request-shape coercion, §7/§14 (website-local)
+
+With the writeback leg live, the route's per-change **coercion** of the app's literal push body
+becomes part of the contract, so it is lifted into the pure `normalizeChange`
+(`lib/sync/change_log.ts`) and pinned here — no HTTP harness exists, and this is the one entry
+point a wire-shape regression would silently slip through. It drives `normalizeChange` (and, for
+`scope`, `scopeFor`/`isAppScopeKind`) directly against the app's real shapes from
+`sync/client/writeback.rs`:
+
+| Asserts | detail |
+| --- | --- |
+| scope resolution | `dataset_uuid: null` on an `@app` kind (`dictation`/`xp`/`card_review`) → `@app`; a shared-content kind (`cue_save`) with a string uuid → that uuid; a **non-string** uuid → empty scope (the route then routes it to the dataset authority-branch refusal) |
+| edit_time passthrough | the raw stamp passes through verbatim (the route clamps it via INV-6 downstream); a pre-Phase-5 queue row's `""` coerces to `""`, and an **absent** `edit_time` key also yields `""` — never `null`/`undefined` |
+| INV-13 epoch default | absent / `"junk"` → `0` (the app's `#[serde(default)] epoch: i64`); a float (`3.7`) truncates to `3`, a numeric string (`"5"`) → `5` — so a fractional/junk epoch never sneaks past the `presented < authority` compare |
+| missing guard | a non-string / empty `id` **or** `kind` sets `missing`, so the route's "needs a non-empty id and kind" refusal is reachable only through this flag |
+
+Like `app_lww`, `app_push_shape` is **not** in `DB_CHECKS` — it is pure and synchronous, running
+with no `DATABASE_URL`. Together the two vectors pin the now-live `@app` writeback leg end to
+end: `app_push_shape` the request coercion, `app_lww` the conflict resolution that follows.
 
 ## Intentional cross-host differences
 

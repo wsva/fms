@@ -253,6 +253,50 @@ export function lwwLoses(storedMs: number | null, effMs: number): boolean {
 }
 
 /**
+ * One offered writeback change after wire-shape coercion — the pure half of the
+ * `POST /api/v1/sync/changes` loop, lifted so the shape the app's client actually
+ * sends (`sync/client/writeback.rs`, `hub_request` Bearer now live) is pinned by the
+ * no-DB `app_push_shape` vector instead of only by the route. Behavior-identical to
+ * the inline coercion it replaces: non-string id/kind/edit_time fall back to `''`,
+ * a missing id or kind flags `missing` for the caller to refuse, scope resolves
+ * through {@link scopeFor} (mirroring the app's `scope_for`), and the presented
+ * epoch follows the app's `#[serde(default)] epoch: i64` — absent/invalid is 0 and
+ * it is truncated like a seq cursor so a float or junk value never sneaks past the
+ * `presented < authority` INV-13 comparison. Envelope-level checks (array shape, the
+ * per-push row cap) and everything else on the row stay in the route.
+ */
+export interface NormalizedPushChange {
+    id: string;
+    kind: string;
+    /** id or kind absent/non-string/empty — the caller must refuse this change. */
+    missing: boolean;
+    /** Journal scope: {@link APP_SCOPE} for per-user kinds, else the dataset uuid. */
+    scope: string;
+    /** Authority epoch the writer presented (INV-13). */
+    epoch: number;
+    /** Raw edit_time (already coerced to a string); the route clamps it via INV-6. */
+    editTime: string;
+}
+
+/** Coerce one offered change to wire shape. Pure, no DB. */
+export function normalizeChange(raw: {
+    id?: unknown;
+    kind?: unknown;
+    dataset_uuid?: unknown;
+    epoch?: unknown;
+    edit_time?: unknown;
+}): NormalizedPushChange {
+    const id = typeof raw?.id === 'string' ? raw.id : '';
+    const kind = typeof raw?.kind === 'string' ? raw.kind : '';
+    const editTime = typeof raw.edit_time === 'string' ? raw.edit_time : '';
+    if (!id || !kind) return { id, kind, missing: true, scope: '', epoch: 0, editTime };
+    const datasetUuid = typeof raw.dataset_uuid === 'string' ? raw.dataset_uuid : '';
+    const parsedEpoch = Number(raw.epoch);
+    const epoch = Number.isFinite(parsedEpoch) ? Math.trunc(parsedEpoch) : 0;
+    return { id, kind, missing: false, scope: scopeFor(kind, datasetUuid), epoch, editTime };
+}
+
+/**
  * Allocate the next journal seq for a cluster. Must run inside the caller's
  * transaction, which holds the per-cluster advisory lock (§11.2), so two
  * instances appending to the same cluster cannot mint the same seq.

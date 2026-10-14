@@ -7,9 +7,10 @@
  * journal (INV-1: exactly one writer per number space). Everything downstream of
  * the role already re-reads it live per request, so this module only performs the
  * one missing mutation: flip `journal_role` and, on a *real* change, bump the
- * per-scope `journal_epoch`. It ships dormant for the same reason phase 4/5 did —
- * the hub's export half is app-side and deferred — but the website's import target
- * (this flip) is what makes a handed-over scope actually writable here.
+ * per-scope `journal_epoch`. It is LIVE: the hub's export half shipped app-side
+ * (`sync/mirror.rs::sync_handover_to_cloud`, which POSTs this route with Bearer after
+ * draining the scope), and this website-side flip is what makes a handed-over scope
+ * actually writable here.
  *
  * INV-13 is the reason the epoch moves: a stale desktop hub that resumes pushing its
  * verbatim journal after losing authority must be refused, and `journal_epoch` is the

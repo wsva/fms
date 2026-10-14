@@ -7,19 +7,20 @@
  * `POST /api/v1/sync/changes`, which *mints* seqs for the website's own cloud
  * journal. Same §7 name, opposite seq semantics; the body's `origin` selects the leg.
  *
- * Scope of this increment (journal leg only): the changed-file transport + the
- * content-addressed blob store are deferred (unspecified in the doc, and the app has
- * no push client to co-design against). This route writes **only** `app_sync_log` +
+ * Journal-leg scope (this endpoint): this route writes **only** `app_sync_log` +
  * `app_applied_change` — never `versions/`, the `dataset` catalog, `current_version`,
- * or `snapshot_seq` (INV-17: mirroring and publishing stay separate acts).
+ * or `snapshot_seq` (INV-17: mirroring and publishing stay separate acts). The
+ * changed-file transport + content-addressed blob store are a SEPARATE live surface
+ * (`POST /api/v1/datasets/{uuid}/objects` + `/blob`, phase 4), not this route's job.
  *
  * Capability note (INV-20): a mirror-ingest is explicitly **not** an authority write
  * (doc open-item 11), so it is gated by Bearer + the `origin` tag + scope validation,
  * not by an advertised `features[]` capability. `dataset_journal` stays unadvertised.
  *
- * **Dormant until the app builds its push client** — `upload.rs` is whole-archive
- * only and the conformance suite has no mirror vectors, so today this is exercisable
- * via hand-rolled curl. Same posture `registry_reads` held before Phase 3.
+ * **LIVE** — the app's desktop→cloud mirror-push client shipped
+ * (`sync/mirror.rs::sync_mirror_push`), POSTing this route with Bearer via
+ * `hub_request`. Caveat kept honest: the conformance suite has no mirror vectors, so
+ * this leg is pinned by the app-side unit tests, not a cross-host vector here.
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';

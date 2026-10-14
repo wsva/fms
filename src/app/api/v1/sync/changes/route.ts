@@ -9,21 +9,22 @@
  * scope change mints a per-`(cluster,scope)` seq, applies to the dataset's live
  * `data.sqlite3`, and journals it — all behind the same per-cluster advisory lock
  * and change_id dedup. A mirrored or unwritable scope is refused per-change with an
- * actionable reason (INV-20), never silently queued. This ships dormant: the app
- * client hard-errors dataset-scope pushes against a Website hub today
- * (`client/mod.rs:539-542`), so no live follower reaches this branch yet — exactly
- * the phase 4/5 posture of standing up the host before the client points at it.
+ * actionable reason (INV-20), never silently queued. This leg is LIVE: the app client
+ * now pushes dataset-scope changes here, gated on the advertised `dataset_journal`
+ * capability (`sync/client/cluster.rs` — default-deny, INV-20), so a mirror-only
+ * account's client never asks and an authority-hosting account's does.
  *
  * Identity is the Bearer principal (account email), which is also the cluster id —
  * the website hosts one cloud cluster per account. The body's `user_key` is NOT
  * trusted for identity; it is only echoed for object-id parity.
  *
- * Auth note (cross-side dependency): the app's `writeback_flush_inner`
- * (`src-tauri/src/sync/client.rs`) currently signs this POST with `with_device_auth`
- * (device-HMAC) instead of `hub_request`, so against a website origin it arrives
- * WITHOUT a Bearer token and this route answers 401. That is correct per design §7;
- * the app-side fix is to use `hub_request` for this POST too (as `fetch_cluster`
- * already does). Until it lands, only the read legs activate.
+ * Auth note (cross-side, shipped): the app signs this POST with `hub_request`
+ * (`sync/client/auth.rs`): a Website origin gets `Authorization: Bearer <token>`, a
+ * LAN hub keeps the device-HMAC of `with_device_auth`. Each change carries `epoch` and
+ * the `dataset_uuid: null` / `edit_time: ""` shape from `sync/client/writeback.rs`; the
+ * `normalizeChange` coercion below accepts it as-is. Honesty caveats: a read-only API
+ * key still 403s (below); `dataset_journal` is advertised only when an authority
+ * dataset is hosted.
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -36,7 +37,6 @@ import { countLiveCards } from '@/lib/datasets/cardstore';
 import { rowStampAt } from '@/lib/datasets/stamps';
 import {
     APP_SCOPE,
-    scopeFor,
     changeClassOf,
     coalescible,
     objectIdFor,
@@ -47,6 +47,7 @@ import {
     parseEditTime,
     clampEditTimeMs,
     lwwLoses,
+    normalizeChange,
     scopeAuthorityEpoch,
     staleEpochReason,
 } from '@/lib/sync/change_log';
@@ -132,20 +133,18 @@ export async function POST(request: NextRequest) {
             const out: ChangeResult[] = [];
 
             for (const ch of changes) {
-                const id = typeof ch?.id === 'string' ? ch.id : '';
-                const kind = typeof ch?.kind === 'string' ? ch.kind : '';
-                if (!id || !kind) {
-                    out.push(failed(id || '(missing id)', 'change needs a non-empty id and kind'));
+                // Wire-shape coercion (id/kind, dataset_uuid→scope, presented epoch,
+                // edit_time) lives in `normalizeChange` so the app's actual push body is
+                // pinned by the no-DB `app_push_shape` conformance vector.
+                const c = normalizeChange(ch);
+                if (c.missing) {
+                    out.push(failed(c.id || '(missing id)', 'change needs a non-empty id and kind'));
                     continue;
                 }
-
-                const datasetUuid = typeof ch.dataset_uuid === 'string' ? ch.dataset_uuid : '';
-                const scope = scopeFor(kind, datasetUuid);
-                // The follower's recorded epoch for this scope (INV-13); the app's
-                // `#[serde(default)] epoch: i64` ⇒ absent/invalid is 0. Truncated like a
-                // seq cursor, so a float or junk never sneaks past the `<` comparison.
-                const parsedEpoch = Number(ch.epoch);
-                const presentedEpoch = Number.isFinite(parsedEpoch) ? Math.trunc(parsedEpoch) : 0;
+                const id = c.id;
+                const kind = c.kind;
+                const scope = c.scope;
+                const presentedEpoch = c.epoch;
 
                 // INV-13 stale-authority gate — runs FIRST, before dedup/apply/journal,
                 // for BOTH @app and dataset scopes (parity with `rest.rs::sync_changes`).
@@ -169,7 +168,7 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
-                const editTime = typeof ch.edit_time === 'string' ? ch.edit_time : '';
+                const editTime = c.editTime;
                 const objectId = objectIdFor(kind, ch.payload, userKey);
 
                 // INV-6 clamp: a stamp in the future (or unparseable) is replaced by the

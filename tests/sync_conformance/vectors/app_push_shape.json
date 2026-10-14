@@ -1,0 +1,46 @@
+{
+  "comment": "Website-local (not a desktop vector): sync-v2.md §7/§14 — the @app and dataset writeback legs are LIVE now that the app signs POST /api/v1/sync/changes with hub_request Bearer for a Website origin (learning/fms-app src-tauri/src/sync/client/auth.rs, writeback.rs). This vector pins the route's per-change REQUEST-SHAPE coercion (lib/sync/change_log.ts normalizeChange) against the app's LITERAL push bodies, so a wire-shape regression in the now-live entry point is caught without a DB or an HTTP harness. dataset_uuid:null resolves to the @app scope through scopeFor (mirroring the app's scope_for); a non-string dataset_uuid for a shared-content kind yields the empty scope, which the route then routes to the dataset authority-branch refusal. edit_time is passed through verbatim (the route clamps it via INV-6 downstream); a pre-Phase-5 queue row sends '' and that must coerce to '', not null/undefined. The app carries epoch as #[serde(default)] i64, so absent/junk is 0 and a float is truncated like a seq cursor (never sneaks a fractional past the INV-13 `presented < authority` compare). A missing id OR non-string/empty id, and likewise kind, flags missing so the route refuses the change — the empty-id/empty-kind guard must not be reachable past normalizeChange.",
+  "check": "app_push_shape",
+  "cases": [
+    {
+      "raw": { "id": "c1", "kind": "dictation", "dataset_uuid": null, "edit_time": "", "queued_at": "2026-10-01T00:00:00", "epoch": 0 },
+      "expect": { "id": "c1", "kind": "dictation", "missing": false, "scope": "@app", "epoch": 0, "editTime": "" }
+    },
+    {
+      "raw": { "id": "c2", "kind": "cue_save", "dataset_uuid": "ds-1", "edit_time": "2026-10-01T00:00:00Z", "epoch": 4 },
+      "expect": { "id": "c2", "kind": "cue_save", "missing": false, "scope": "ds-1", "epoch": 4, "editTime": "2026-10-01T00:00:00Z" }
+    },
+    {
+      "raw": { "id": "c3", "kind": "xp", "dataset_uuid": null, "edit_time": "" },
+      "expect": { "id": "c3", "kind": "xp", "missing": false, "scope": "@app", "epoch": 0, "editTime": "" }
+    },
+    {
+      "raw": { "id": "c4", "kind": "dictation", "edit_time": "", "epoch": 3.7 },
+      "expect": { "id": "c4", "kind": "dictation", "missing": false, "scope": "@app", "epoch": 3, "editTime": "" }
+    },
+    {
+      "raw": { "id": "c5", "kind": "dictation", "edit_time": "", "epoch": "junk" },
+      "expect": { "id": "c5", "kind": "dictation", "missing": false, "scope": "@app", "epoch": 0, "editTime": "" }
+    },
+    {
+      "raw": { "id": "c6", "kind": "dictation", "edit_time": "", "epoch": "5" },
+      "expect": { "id": "c6", "kind": "dictation", "missing": false, "scope": "@app", "epoch": 5, "editTime": "" }
+    },
+    {
+      "raw": { "id": "c7", "kind": "cue_save", "dataset_uuid": 5, "edit_time": 123 },
+      "expect": { "id": "c7", "kind": "cue_save", "missing": false, "scope": "", "epoch": 0, "editTime": "" }
+    },
+    {
+      "raw": { "kind": "xp" },
+      "expect": { "id": "", "kind": "xp", "missing": true, "scope": "", "epoch": 0, "editTime": "" }
+    },
+    {
+      "raw": { "id": "c9" },
+      "expect": { "id": "c9", "kind": "", "missing": true, "scope": "", "epoch": 0, "editTime": "" }
+    },
+    {
+      "raw": { "id": "c10", "kind": "card_review", "dataset_uuid": null },
+      "expect": { "id": "c10", "kind": "card_review", "missing": false, "scope": "@app", "epoch": 0, "editTime": "" }
+    }
+  ]
+}

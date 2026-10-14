@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE, scopeAuthorityEpoch, staleEpochReason, staleEpochRefused, changeClassOf, coalescible, latestForObject, nextSeq, parseEditTime, lwwLoses, clampEditTimeMs } from '../../src/lib/sync/change_log.ts';
+import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE, scopeAuthorityEpoch, staleEpochReason, staleEpochRefused, changeClassOf, coalescible, latestForObject, nextSeq, parseEditTime, lwwLoses, clampEditTimeMs, normalizeChange } from '../../src/lib/sync/change_log.ts';
 import { websiteClusterInfo, DATASET_JOURNAL_FEATURE, PROTOCOL_VERSION } from '../../src/lib/sync/cluster.ts';
 import { applyHandover } from '../../src/lib/sync/handover.ts';
 import { diffNeeded, swapLiveTree, readLiveTree } from '../../src/lib/sync/blobstore.ts';
@@ -657,6 +657,25 @@ async function checkAppLww(v, errs) {
     }
 }
 
+// ---- @app/dataset writeback REQUEST-SHAPE coercion (the live legs' entry point) ----
+// Pure and synchronous: it drives `normalizeChange` — the coercion the POST route runs on
+// every offered change now that the app pushes here via `hub_request` Bearer — against the
+// app's LITERAL body shapes (`sync/client/writeback.rs`: epoch carried per change,
+// `dataset_uuid: null` for @app, `edit_time: ""` for a pre-Phase-5 queue row). Pins that a
+// float/junk epoch truncates or falls to 0, a non-string dataset_uuid yields the empty scope,
+// and a missing id/kind is flagged for refusal. NOT in DB_CHECKS: needs no database.
+function checkAppPushShape(v, errs) {
+    for (const c of v.cases ?? []) {
+        const got = normalizeChange(c.raw);
+        const want = c.expect;
+        for (const k of ['id', 'kind', 'missing', 'scope', 'epoch', 'editTime']) {
+            if (got[k] !== want[k]) {
+                errs.push(`case ${JSON.stringify(c.raw)}: ${k} = ${JSON.stringify(got[k])} != expected ${JSON.stringify(want[k])}`);
+            }
+        }
+    }
+}
+
 // The blob-store check drives the real `swapLiveTree` / `diffNeeded` / `readLiveTree`
 // from `lib/sync/blobstore.ts` directly — these are DB-only (the fs/verify layer lives
 // in the route, not the swap), so the vectors pin the dedup + refcount invariants
@@ -725,6 +744,7 @@ async function runVector(name) {
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
         case 'app_lww': await checkAppLww(v, errs); break;
+        case 'app_push_shape': checkAppPushShape(v, errs); break;
         case 'blobstore': await checkBlobstore(v, errs); break;
         case 'features': checkFeatures(v, errs); break;
         case 'cluster_contract': checkClusterContract(v, errs); break;
