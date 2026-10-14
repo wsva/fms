@@ -524,6 +524,269 @@ async function checkAvailabilityWrite(v, errs) {
     }
 }
 
+// ---- §14 7a / §16 `@app` READ-plane checks (website-local) ----
+// The last shipped wire surface had no vector: the four-table projection that
+// `GET /api/v1/app/state` serves and `/stats` renders (sync-v2.md §16). These drive
+// `assembleAppState` / `assembleStats` directly against a scratch DB — the same rows
+// both surfaces read (INV-18) — so the three read-plane invariants hold regardless of
+// the HTTP/Server-Action wrapper:
+//   INV-16 — lifetime_xp is RECOMPUTED as SUM(amount), never a stored/accumulated figure;
+//   INV-21 — the four independent rowid cursors let a follower whose journal was pruned
+//            re-backfill the whole per-user history (a full page ⇒ non-null cursor);
+//   INV-18 — one projection feeds both surfaces, so `/stats` cannot disagree with a
+//            follower's `/app/state` backfill; the app-parity level curve is pinned too.
+// Single-cluster identity scoping (the `cluster_id` predicate is the ONLY scoping — one
+// cluster per account) is exercised by seeding a second cluster and asserting its rows
+// never surface. Each vector runs under its OWN cluster ids so the reset+seed is isolated.
+
+// The frozen wire key-set per projected table — an extra/renamed column breaks these,
+// exactly the drift the four lists must not silently acquire.
+const APP_WIRE_KEYS = {
+    dictation: ['media_uuid', 'subtitle_uuid', 'status', 'completed'],
+    xp: ['amount', 'source', 'reference_id', 'dataset_uuid'],
+    reviews: ['event_uuid', 'user_id', 'dataset_uuid', 'card_uuid', 'quality', 'reviewed_at', 'familiarity', 'interval_days', 'ease_factor', 'repetitions', 'next_review_at'],
+    attempts: ['uuid', 'user_id', 'dataset_uuid', 'text_uuid', 'audio_path', 'recognized', 'score', 'created_at'],
+};
+
+// Canonical key-sorted JSON so a field-ordering change is not mistaken for a shape change.
+function canon(obj) {
+    return JSON.stringify(Object.fromEntries(Object.entries(obj).sort(([a], [b]) => (a < b ? -1 : 1))));
+}
+
+async function appStateReset(client, clusters) {
+    for (const c of clusters) {
+        await client.$executeRaw`DELETE FROM app_dictation WHERE cluster_id = ${c}`;
+        await client.$executeRaw`DELETE FROM app_xp_ledger WHERE cluster_id = ${c}`;
+        await client.$executeRaw`DELETE FROM app_card_review_event WHERE cluster_id = ${c}`;
+        await client.$executeRaw`DELETE FROM app_read_attempt_event WHERE cluster_id = ${c}`;
+    }
+}
+
+async function seedDictationRow(client, cluster, row) {
+    await client.$executeRaw`
+        INSERT INTO app_dictation (cluster_id, media_uuid, subtitle_uuid, status, completed)
+        VALUES (${cluster}, ${row.media_uuid}, ${row.subtitle_uuid}, ${row.status}, ${row.completed})
+    `;
+}
+
+async function seedXpRow(client, cluster, row) {
+    await client.$executeRaw`
+        INSERT INTO app_xp_ledger (cluster_id, amount, source, reference_id, dataset_uuid)
+        VALUES (${cluster}, ${row.amount}, ${row.source}, ${row.reference_id}, ${row.dataset_uuid})
+    `;
+}
+
+async function seedReviewRow(client, cluster, row) {
+    await client.$executeRaw`
+        INSERT INTO app_card_review_event
+            (cluster_id, event_uuid, user_id, dataset_uuid, card_uuid, quality, reviewed_at,
+             familiarity, interval_days, ease_factor, repetitions, next_review_at)
+        VALUES (${cluster}, ${row.event_uuid}, ${row.user_id}, ${row.dataset_uuid}, ${row.card_uuid},
+                ${row.quality}, ${row.reviewed_at}, ${row.familiarity}, ${row.interval_days},
+                ${row.ease_factor}, ${row.repetitions}, ${row.next_review_at})
+    `;
+}
+
+async function seedAttemptRow(client, cluster, row) {
+    await client.$executeRaw`
+        INSERT INTO app_read_attempt_event
+            (cluster_id, uuid, user_id, dataset_uuid, text_uuid, audio_path, recognized, score, created_at)
+        VALUES (${cluster}, ${row.uuid}, ${row.user_id}, ${row.dataset_uuid}, ${row.text_uuid},
+                ${row.audio_path}, ${row.recognized}, ${row.score}, ${row.created_at})
+    `;
+}
+
+async function checkAppState(v, errs) {
+    const client = await db();
+    const clusters = [v.cluster, v.other_cluster];
+    await appStateReset(client, clusters);
+
+    // Seed the subject cluster's four tables in vector order (id asc ⇒ the projection
+    // returns them in the same order, so a per-index field compare is stable).
+    for (const d of v.dictation) await seedDictationRow(client, v.cluster, d);
+    for (const x of v.xp) await seedXpRow(client, v.cluster, x);
+    for (const r of v.reviews) await seedReviewRow(client, v.cluster, r);
+    for (const a of v.attempts) await seedAttemptRow(client, v.cluster, a);
+
+    // Seed the OTHER cluster: its rows must never surface (identity scoping). The 9999
+    // xp row makes the wrong SUM (10349) distinguishable from the cluster's own (350).
+    for (const d of v.other.dictation ?? []) await seedDictationRow(client, v.other_cluster, d);
+    for (const x of v.other.xp ?? []) await seedXpRow(client, v.other_cluster, x);
+    for (const a of v.other.attempts ?? []) await seedAttemptRow(client, v.other_cluster, a);
+
+    const { assembleAppState } = await import('../../src/lib/sync/appstate.ts');
+    const resp = await assembleAppState(client, v.cluster, v.cluster, 0, 0, 0, 0, v.row_limit);
+
+    if (resp.user_key !== v.expect.user_key) {
+        errs.push(`user_key ${JSON.stringify(resp.user_key)} != ${JSON.stringify(v.expect.user_key)}`);
+    }
+    // INV-16: recomputed SUM over the SUBJECT cluster's ledger only, never accumulated
+    // and never the other cluster's 9999 (which would make it 10349).
+    if (resp.lifetime_xp !== v.expect.lifetime_xp) {
+        errs.push(`lifetime_xp ${resp.lifetime_xp} != ${v.expect.lifetime_xp} (INV-16 SUM, cluster-scoped)`);
+    }
+
+    const tables = [
+        ['dictation', v.dictation],
+        ['xp', v.xp],
+        ['reviews', v.reviews],
+        ['attempts', v.attempts],
+    ];
+    for (const [key, seeded] of tables) {
+        const got = resp[key];
+        if (got.length !== v.expect.counts[key]) {
+            errs.push(`${key}: ${got.length} rows != expected ${v.expect.counts[key]} (other-cluster leakage?)`);
+        }
+        // Exact frozen key-set per row (INV-21 shape: no dataset_uuid on dictation,
+        // attempts echo the wire created_at String not the ingest inserted_at, …).
+        for (const row of got) {
+            const keys = Object.keys(row).sort().join(',');
+            const wantKeys = [...APP_WIRE_KEYS[key]].sort().join(',');
+            if (keys !== wantKeys) {
+                errs.push(`${key}: row keys ${keys} != frozen wire ${wantKeys}`);
+                break;
+            }
+        }
+        // Per-index field compare against the seeded vector row (projected keys only).
+        for (let i = 0; i < Math.min(got.length, seeded.length); i++) {
+            const want = canon(Object.fromEntries(APP_WIRE_KEYS[key].map((k) => [k, seeded[i][k]])));
+            if (canon(got[i]) !== want) {
+                errs.push(`${key}[${i}]: projected ${canon(got[i])} != seed ${want}`);
+            }
+        }
+    }
+
+    // Cursor rule (the rowid-cursor primitive / app backfill depends on): a page that
+    // FILLS row_limit ⇒ non-null next cursor; a short page ⇒ null. dictation is seeded at
+    // row_limit (3 ⇒ non-null); xp/reviews/attempts sit under it ⇒ null.
+    const nexts = {
+        dictation: resp.next_dictation_after,
+        xp: resp.next_xp_after,
+        reviews: resp.next_reviews_after,
+        attempts: resp.next_attempts_after,
+    };
+    for (const [key, cursorVal] of Object.entries(nexts)) {
+        const full = v.expect.counts[key] === v.row_limit;
+        if (full && cursorVal === null) {
+            errs.push(`${key}: page filled row_limit=${v.row_limit} but next cursor is null (backfill would stall)`);
+        }
+        if (!full && cursorVal !== null) {
+            errs.push(`${key}: short page (${v.expect.counts[key]}<${v.row_limit}) but next cursor is ${cursorVal} (should be null)`);
+        }
+    }
+}
+
+async function checkStats(v, errs) {
+    const client = await db();
+    const clusters = [v.cluster, v.other_cluster];
+    await appStateReset(client, clusters);
+    for (const d of v.datasets) {
+        await client.$executeRaw`DELETE FROM dataset WHERE uuid = ${d.uuid}`;
+        await client.$executeRaw`
+            INSERT INTO dataset (uuid, user_id, name, dataset_type, format)
+            VALUES (${d.uuid}, 'conf-stats-user', ${d.name}, 'cards', 'jsonl')
+        `;
+    }
+
+    // dictation: synthetic keyed media/subtitle (status drives the summary).
+    for (let i = 0; i < v.dictation.length; i++) {
+        const d = v.dictation[i];
+        await seedDictationRow(client, v.cluster, {
+            media_uuid: `md${i}`, subtitle_uuid: `md${i}`, status: d.status, completed: d.completed,
+        });
+    }
+
+    // xp: flatMap per source, one row per amount with a UNIQUE reference_id (the dedup
+    // key is (cluster, source, reference_id, dataset_uuid), so equal amounts must differ).
+    const xpSeeds = [];
+    let refIdx = 0;
+    for (const src of v.xp_sources) {
+        for (const amount of src.amounts) {
+            xpSeeds.push({ amount, source: src.source, reference_id: `x${refIdx++}`, dataset_uuid: src.dataset_uuid });
+        }
+    }
+    for (const x of xpSeeds) await seedXpRow(client, v.cluster, x);
+
+    // reviews: fixed stamps; quality may be null (the histogram must filter nulls).
+    for (let i = 0; i < v.reviews.length; i++) {
+        await seedReviewRow(client, v.cluster, {
+            event_uuid: `ev${i}`, user_id: 'u', dataset_uuid: v.reviews[i].dataset_uuid, card_uuid: `cd${i}`,
+            quality: v.reviews[i].quality, reviewed_at: '2020-01-01T00:00:00Z', familiarity: 1,
+            interval_days: 2, ease_factor: 2500, repetitions: 1, next_review_at: '2020-01-03T00:00:00Z',
+        });
+    }
+
+    // attempts: scores straddling both tier boundaries (85≥GOOD, 65≥PASS, 50<both).
+    const scores = [
+        ...Array(v.attempts.good).fill(85),
+        ...Array(v.attempts.pass_only).fill(65),
+        ...Array(v.attempts.fail).fill(50),
+    ];
+    for (let i = 0; i < scores.length; i++) {
+        await seedAttemptRow(client, v.cluster, {
+            uuid: `at${i}`, user_id: 'u', dataset_uuid: '', text_uuid: `at${i}`,
+            audio_path: null, recognized: '', score: scores[i], created_at: '2020-01-01T00:00:00Z',
+        });
+    }
+
+    // The other cluster's 5000-xp row must stay out of every aggregate.
+    await seedXpRow(client, v.other_cluster, { amount: v.other_xp_amount, source: 'other', reference_id: 'o1', dataset_uuid: '' });
+
+    const { assembleStats, levelBand, levelForXp, RECENT_LIMIT } = await import('../../src/lib/sync/stats.ts');
+    const { lifetimeXp } = await import('../../src/lib/sync/appstate.ts');
+    const s = await assembleStats(client, v.cluster);
+    const e = v.expect;
+
+    // INV-16/INV-18 seam agreement: the UI's lifetime equals the REST read's SUM.
+    const seam = await lifetimeXp(client, v.cluster);
+    if (s.lifetime_xp !== e.lifetime_xp) errs.push(`lifetime_xp ${s.lifetime_xp} != ${e.lifetime_xp} (other cluster leaked?)`);
+    if (s.lifetime_xp !== seam) errs.push(`stats lifetime_xp ${s.lifetime_xp} != appstate lifetimeXp ${seam} (INV-18)`);
+
+    // App-parity level curve (the constant most likely to diverge from xp.rs).
+    const wantBand = canon(e.level);
+    if (canon(s.level) !== wantBand) errs.push(`level ${canon(s.level)} != ${wantBand}`);
+    const expectBand = levelBand(s.lifetime_xp);
+    if (canon(expectBand) !== canon(s.level)) errs.push(`level != levelBand(${s.lifetime_xp}) = ${canon(expectBand)}`);
+    if (s.level.level !== levelForXp(s.lifetime_xp)) errs.push(`level.level ${s.level.level} != levelForXp ${levelForXp(s.lifetime_xp)}`);
+
+    // Per-source totals, biggest first.
+    if (canon({ rows: s.xp_by_source }) !== canon({ rows: e.xp_by_source })) {
+        errs.push(`xp_by_source ${JSON.stringify(s.xp_by_source)} != ${JSON.stringify(e.xp_by_source)}`);
+    }
+
+    // Dictation summary (status groupBy) — FULL history, cluster-scoped.
+    if (canon(s.dictation.summary) !== canon(e.dictation)) {
+        errs.push(`dictation summary ${canon(s.dictation.summary)} != ${canon(e.dictation)}`);
+    }
+
+    // Reviews: total / histogram (nulls filtered) / avg over the non-null qualities.
+    if (s.reviews.summary.total !== e.reviews.total) errs.push(`reviews total ${s.reviews.summary.total} != ${e.reviews.total}`);
+    if (canon(s.reviews.summary.by_quality) !== canon(e.reviews.by_quality)) {
+        errs.push(`reviews by_quality ${JSON.stringify(s.reviews.summary.by_quality)} != ${JSON.stringify(e.reviews.by_quality)} (nulls must be filtered)`);
+    }
+    if (Math.abs(s.reviews.summary.avg_quality - e.reviews.avg_quality) > 1e-6) {
+        errs.push(`reviews avg_quality ${s.reviews.summary.avg_quality} != ${e.reviews.avg_quality}`);
+    }
+
+    // Attempts: FULL-history summary vs the page-capped recent list (the property that
+    // summaries come from aggregate while recent is `take: RECENT_LIMIT`).
+    if (s.attempts.summary.total !== e.attempts.total) errs.push(`attempts total ${s.attempts.summary.total} != ${e.attempts.total}`);
+    if (s.attempts.summary.pass !== e.attempts.pass) errs.push(`attempts pass ${s.attempts.summary.pass} != ${e.attempts.pass} (score>=60)`);
+    if (s.attempts.summary.good !== e.attempts.good) errs.push(`attempts good ${s.attempts.summary.good} != ${e.attempts.good} (score>=80)`);
+    if (e.attempts.total > RECENT_LIMIT && s.attempts.recent.length !== RECENT_LIMIT) {
+        errs.push(`attempts recent ${s.attempts.recent.length} != RECENT_LIMIT ${RECENT_LIMIT} while summary total is ${e.attempts.total} (summary must cover full history, recent is capped)`);
+    }
+
+    // dataset_uuid → name resolution: a matching dataset row shows its name; an
+    // app-local-only uuid (no row) resolves to null (UI falls back to the raw uuid).
+    const deckName = s.recent_xp.find((r) => r.source === 'dictation_cue')?.dataset_name;
+    if (deckName !== e.name_for_deck) errs.push(`recent_xp dictation_cue dataset_name ${JSON.stringify(deckName)} != ${JSON.stringify(e.name_for_deck)}`);
+    const localName = s.recent_xp.find((r) => r.source === 'read_aloud')?.dataset_name;
+    if (localName !== null) errs.push(`recent_xp read_aloud dataset_name ${JSON.stringify(localName)} != null (app-local uuid has no dataset row)`);
+    const reviewDeckName = s.reviews.recent.find((r) => r.dataset_uuid === 'conf-stats-deck')?.dataset_name;
+    if (reviewDeckName !== e.name_for_deck) errs.push(`reviews.recent deck dataset_name ${JSON.stringify(reviewDeckName)} != ${JSON.stringify(e.name_for_deck)}`);
+}
+
 // ---- §9 flow 8 handover checks (website-local; the epoch+continuity primitive) ----
 // Drives `applyHandover` + `nextDatasetSeq` directly against the scratch journal — the
 // same advisory-lock transaction the route opens. These pin the two invariants handover
@@ -864,6 +1127,8 @@ async function runVector(name) {
         case 'version_availability': await checkVersionAvailability(v, errs); break;
         case 'publish_write': await checkPublishWrite(v, errs); break;
         case 'availability_write': await checkAvailabilityWrite(v, errs); break;
+        case 'app_state_shape': await checkAppState(v, errs); break;
+        case 'stats': await checkStats(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
         case 'app_lww': await checkAppLww(v, errs); break;
@@ -878,7 +1143,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'handover', 'epoch', 'blobstore']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'app_state_shape', 'stats', 'handover', 'epoch', 'blobstore']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

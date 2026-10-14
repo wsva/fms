@@ -1,0 +1,53 @@
+{
+    "check": "app_state_shape",
+    "_note": "sync-v2 §14 7a / §16 read plane (INV-16/INV-18/INV-21). Drives assembleAppState directly against a scratch DB — the same projection the REST GET /api/v1/app/state serves and /stats reads (INV-18). Pins the four-table frozen wire shape (exact projected keys, e.g. dictation carries no dataset_uuid; attempts echo the wire created_at String, not inserted_at), that lifetime_xp is RECOMPUTED as SUM(amount) over the ledger and never accumulated (INV-16), the per-table rowid cursor rule (a page that fills row_limit yields a non-null next_*_after, a short page yields null — so the backfill caller pages to the end), and single-cluster identity scoping (a second cluster's rows never appear). The app's backfill_app_history consumes exactly this shape at protocol >= 6.",
+    "cluster": "conf-appstate",
+    "other_cluster": "conf-appstate-x",
+    "row_limit": 3,
+    "dictation": [
+        { "media_uuid": "m1", "subtitle_uuid": "s1", "status": "in_progress", "completed": "a,b" },
+        { "media_uuid": "m2", "subtitle_uuid": "s2", "status": "complete", "completed": "c,d,e" },
+        { "media_uuid": "m3", "subtitle_uuid": "s3", "status": "in_progress", "completed": "" }
+    ],
+    "xp": [
+        { "amount": 100, "source": "dictation_cue", "reference_id": "r1", "dataset_uuid": "ds-1" },
+        { "amount": 250, "source": "read_aloud", "reference_id": "r2", "dataset_uuid": "" }
+    ],
+    "reviews": [
+        {
+            "event_uuid": "e1",
+            "user_id": "someone@example.com",
+            "dataset_uuid": "ds-1",
+            "card_uuid": "c1",
+            "quality": 5,
+            "reviewed_at": "2020-01-01T00:00:00Z",
+            "familiarity": 3,
+            "interval_days": 4,
+            "ease_factor": 2500,
+            "repetitions": 2,
+            "next_review_at": "2020-01-05T00:00:00Z"
+        }
+    ],
+    "attempts": [
+        {
+            "uuid": "t1",
+            "user_id": "someone@example.com",
+            "dataset_uuid": "",
+            "text_uuid": "tx1",
+            "audio_path": "/device/local/t1.wav",
+            "recognized": "hello world",
+            "score": 82.5,
+            "created_at": "2020-01-01T00:00:00Z"
+        }
+    ],
+    "other": {
+        "dictation": [{ "media_uuid": "oz", "subtitle_uuid": "oz", "status": "complete", "completed": "" }],
+        "xp": [{ "amount": 9999, "source": "other", "reference_id": "o1", "dataset_uuid": "" }],
+        "attempts": [{ "uuid": "ot", "user_id": "x@x", "dataset_uuid": "", "text_uuid": "ot", "recognized": "", "score": 99, "created_at": "2020-01-01T00:00:00Z" }]
+    },
+    "expect": {
+        "user_key": "conf-appstate",
+        "lifetime_xp": 350,
+        "counts": { "dictation": 3, "xp": 2, "reviews": 1, "attempts": 1 }
+    }
+}

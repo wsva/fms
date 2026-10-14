@@ -1,0 +1,45 @@
+{
+    "check": "stats",
+    "_note": "sync-v2 §14 item 6 / §15 Q6 phase-6 display derivation. Drives assembleStats directly against a scratch DB. Pins the invariants that shipped without a vector: (1) lifetime_xp + level come from the SAME seam /app/state uses — lifetime_xp == lifetimeXp (INV-16/INV-18, the UI can never disagree with a follower's backfill) and the app-parity curve level = floor(sqrt(xp/100))+1 with band [100·(L-1)^2, 100·L^2) (keep in step with the app's xp.rs — the value most likely to silently diverge); (2) summaries are computed over the FULL history (groupBy/aggregate) while the recent lists are page-capped at RECENT_LIMIT — seed 55 attempts and assert total==55 but recent.length==RECENT_LIMIT; (3) attempt tiers pass=score>=60 / good=score>=80 (SCORE_PASS/SCORE_GOOD parity) and the review quality histogram filters nulls; (4) dataset_uuid resolves to a name only when a dataset row exists (app-local-only uuid → null). Single-cluster scoping again excludes the other cluster from every aggregate.",
+    "cluster": "conf-stats",
+    "other_cluster": "conf-stats-x",
+    "datasets": [{ "uuid": "conf-stats-deck", "name": "Conf Deck" }],
+    "xp_sources": [
+        { "source": "dictation_cue", "amounts": [400, 400, 200], "dataset_uuid": "conf-stats-deck" },
+        { "source": "read_aloud", "amounts": [300], "dataset_uuid": "app-local-uuid" }
+    ],
+    "other_xp_amount": 5000,
+    "dictation": [
+        { "status": "complete", "completed": "c1,c2,c3" },
+        { "status": "complete", "completed": "z" },
+        { "status": "in_progress", "completed": "" }
+    ],
+    "reviews": [
+        { "quality": 5, "dataset_uuid": "conf-stats-deck" },
+        { "quality": 5, "dataset_uuid": "" },
+        { "quality": 5, "dataset_uuid": "" },
+        { "quality": 1, "dataset_uuid": "" },
+        { "quality": 1, "dataset_uuid": "" },
+        { "quality": null, "dataset_uuid": "" }
+    ],
+    "attempts": { "good": 4, "pass_only": 2, "fail": 49 },
+    "expect": {
+        "lifetime_xp": 1300,
+        "level": { "level": 4, "current": 900, "next": 1600 },
+        "xp_by_source": [
+            { "source": "dictation_cue", "total": 1000, "count": 3 },
+            { "source": "read_aloud", "total": 300, "count": 1 }
+        ],
+        "dictation": { "total": 3, "complete": 2, "in_progress": 1 },
+        "reviews": {
+            "total": 6,
+            "avg_quality": 3.4,
+            "by_quality": [
+                { "quality": 1, "count": 2 },
+                { "quality": 5, "count": 3 }
+            ]
+        },
+        "attempts": { "total": 55, "pass": 6, "good": 4 },
+        "name_for_deck": "Conf Deck"
+    }
+}
