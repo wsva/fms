@@ -193,6 +193,26 @@ Like `app_lww`, `app_push_shape` is **not** in `DB_CHECKS` — it is pure and sy
 with no `DATABASE_URL`. Together the two vectors pin the now-live `@app` writeback leg end to
 end: `app_push_shape` the request coercion, `app_lww` the conflict resolution that follows.
 
+### `card_proposal_shape` — the website-UI inbox producer, §8.3 step 1 / §14 phase 5 (website-local)
+
+The phase-5 inbox shipped host-only: nothing wrote into it, so the app drainer had no
+producer to drain. `app_producer_card_proposal.json` drives the producer seam
+(`datasets.card_proposals.proposeCardSave` / `proposeCardDelete` → `ingestProposals`)
+against a scratch DB and reads the queued `app_inbox` rows back. It is in `DB_CHECKS`.
+
+| Asserts | detail |
+| --- | --- |
+| command parity | `card_save`→op `upsert`, `object_id = payload.uuid`, payload = the serialized `Card`; `card_delete`→op `delete`, `object_id = payload.card_uuid`, payload = `{card_uuid}` — byte-equal (key-sorted canon) to the app's own card command journal, because the drainer applies a proposal **through that command** (INV-18) |
+| `edit_time` (INV-6) | the save carries the row's `updated_at` verbatim; the delete stamps now; both must match the canonical fixed-width UTC form (the LWW compare is a string compare) |
+| ordering | `proposal_seq` is dense `1,2` across the scope's own counter — a separate number space from the journal's |
+| INV-3 dedup | re-proposing the same `change_id` ⇒ `{queued:0, deduped:1}`, `app_inbox_seq.next_seq` **unchanged** (a duplicate must not mint a seq, so no gaps) and the row count stays 2 |
+| INV-1 | zero `app_sync_log` rows for the cluster after proposing — the website mints no journal seq |
+| INV-17 | the `dataset` catalog row (`current_version`, `snapshot_seq`, `journal_role`, `deleted`) is byte-unchanged, fingerprinted before and after |
+
+Proposal-only by design: the seam never touches `live/<type>/<uuid>/data.sqlite3`, and
+authority datasets are out of scope (their edits ride `/api/v1/sync/changes`), so nothing
+here asserts a live-row change.
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The
@@ -235,7 +255,9 @@ docker rm -f fms_conf_pg
 The contract checks (`features`, `cluster_contract`, `registry_contract`) need no
 database and run regardless; every journal-backed check (the `page_shape` / `resync` /
 `prune_*` vectors, the three `sweep_*` vectors, `version_availability`, the two `handover`
-vectors, the `epoch` vector, and the two `blobstore` vectors) skips cleanly when `DATABASE_URL` is
+vectors, the `epoch` vector, the two `blobstore` vectors, the `@app` read-plane vectors
+`app_state_shape` and `stats`, and the inbox producer vector `card_proposal_shape`)
+skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector.
 
 `app_lww` is the deliberate hybrid: it is **not** in `DB_CHECKS`, so its pure half

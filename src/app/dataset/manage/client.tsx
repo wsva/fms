@@ -204,6 +204,15 @@ export default function Client({ email }: Props) {
                                 >
                                     Detail
                                 </Button>
+                                {row.dataset_type === 'card' && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onPress={() => router.push(`/dataset/card/${row.uuid}`)}
+                                    >
+                                        Edit cards
+                                    </Button>
+                                )}
                                 <Button
                                     size="sm"
                                     variant="ghost"

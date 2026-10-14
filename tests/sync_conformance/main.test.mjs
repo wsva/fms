@@ -787,6 +787,129 @@ async function checkStats(v, errs) {
     if (reviewDeckName !== e.name_for_deck) errs.push(`reviews.recent deck dataset_name ${JSON.stringify(reviewDeckName)} != ${JSON.stringify(e.name_for_deck)}`);
 }
 
+// ---- §8.3 step 1 inbox PRODUCER checks (the website-UI card editor) ----
+// Drives the producer seam (`card_proposals.ts` → `ingestProposals`) directly against the
+// scratch DB. The seam's whole contract is that a browser card edit becomes an inbox row
+// the desktop hub can apply VERBATIM through its own card command, so this pins
+// kind/op/object_id/payload parity with the app's journal, canonical `edit_time` (INV-6),
+// INV-3 change_id dedup burning no proposal_seq, INV-1 (proposing mints no journal row)
+// and INV-17 (the catalog stays byte-unchanged). Own cluster + own scope ⇒ isolated.
+async function cardProposalReset(client, cluster, scope, catalog) {
+    await client.$executeRaw`DELETE FROM app_inbox WHERE cluster_id = ${cluster}`;
+    await client.$executeRaw`DELETE FROM app_inbox_seq WHERE cluster_id = ${cluster}`;
+    await client.$executeRaw`DELETE FROM app_sync_log WHERE cluster_id = ${cluster}`;
+    await client.$executeRaw`DELETE FROM dataset WHERE uuid = ${scope}`;
+    await client.$executeRaw`
+        INSERT INTO dataset (uuid, user_id, name, dataset_type, format,
+                             current_version, snapshot_seq, journal_role, deleted)
+        VALUES (${scope}, 'conf-card-user', 'conf-card', 'cards', 'jsonl',
+                ${catalog.current_version}, ${BigInt(catalog.snapshot_seq)},
+                ${catalog.journal_role}, ${catalog.deleted})
+    `;
+}
+
+// The columns a proposal must never move, as one comparable string.
+async function cardCatalogFingerprint(client, scope) {
+    const rows = await client.$queryRaw`
+        SELECT current_version, snapshot_seq, journal_role, deleted
+        FROM dataset WHERE uuid = ${scope}
+    `;
+    const r = rows[0] ?? {};
+    return canon({
+        current_version: r.current_version ?? null,
+        snapshot_seq: String(r.snapshot_seq ?? null),
+        journal_role: r.journal_role ?? null,
+        deleted: r.deleted ?? null,
+    });
+}
+
+async function checkCardProposalShape(v, errs) {
+    const client = await db();
+    await cardProposalReset(client, v.cluster, v.scope, v.catalog);
+    const beforeFp = await cardCatalogFingerprint(client, v.scope);
+
+    const { proposeCardSave, proposeCardDelete } = await import('../../src/lib/datasets/card_proposals.ts');
+    const saved = await proposeCardSave(v.cluster, v.scope, v.save.change_id, v.save.card, client);
+    const deleted = await proposeCardDelete(v.cluster, v.scope, v.delete.change_id, v.delete.card_uuid, client);
+    if (saved.queued !== 1 || saved.deduped !== 0 || saved.refused.length) {
+        errs.push(`card_save propose result ${JSON.stringify(saved)} != {queued:1}`);
+    }
+    if (deleted.queued !== 1 || deleted.deduped !== 0 || deleted.refused.length) {
+        errs.push(`card_delete propose result ${JSON.stringify(deleted)} != {queued:1}`);
+    }
+
+    const rows = await client.app_inbox.findMany({
+        where: { cluster_id: v.cluster },
+        orderBy: { proposal_seq: 'asc' },
+    });
+    if (rows.length !== 2) {
+        errs.push(`inbox rows ${rows.length} != 2 (one save + one delete queued)`);
+        return;
+    }
+    const [save, del] = rows;
+    const e = v.expect;
+
+    // proposal_seq is the scope's own dense counter (INV-1: a separate number space).
+    if (Number(save.proposal_seq) !== 1 || Number(del.proposal_seq) !== 2) {
+        errs.push(`proposal_seq ${Number(save.proposal_seq)},${Number(del.proposal_seq)} != 1,2 (dense, no gap)`);
+    }
+    for (const [row, kind, op, objectId, status] of [
+        [save, e.save_kind, e.save_op, e.save_object_id, 'pending'],
+        [del, e.delete_kind, e.delete_op, e.delete_object_id, 'pending'],
+    ]) {
+        if (row.scope !== v.scope) errs.push(`${kind}: scope ${row.scope} != ${v.scope}`);
+        if (row.kind !== kind) errs.push(`${kind}: kind ${JSON.stringify(row.kind)} != ${JSON.stringify(kind)}`);
+        if (row.op !== op) errs.push(`${kind}: op ${JSON.stringify(row.op)} != ${JSON.stringify(op)}`);
+        if (row.object_id !== objectId) errs.push(`${kind}: object_id ${JSON.stringify(row.object_id)} != ${JSON.stringify(objectId)}`);
+        if (row.status !== status) errs.push(`${kind}: status ${row.status} != ${status}`);
+        if (row.author !== v.cluster) errs.push(`${kind}: author ${JSON.stringify(row.author)} != bearer principal ${JSON.stringify(v.cluster)}`);
+    }
+
+    // edit_time: the save carries the row's stamp verbatim; the delete stamps now.
+    // Both must be canonical fixed-width UTC (INV-6 — LWW compare is a string compare).
+    const CANON_STAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+    if (save.edit_time !== e.save_edit_time) {
+        errs.push(`card_save edit_time ${JSON.stringify(save.edit_time)} != the row's updated_at ${JSON.stringify(e.save_edit_time)}`);
+    }
+    if (!CANON_STAMP.test(del.edit_time)) {
+        errs.push(`card_delete edit_time ${JSON.stringify(del.edit_time)} is not canonical fixed-width UTC (INV-6)`);
+    }
+
+    // Payload byte-parity with the app's serialized Card / {card_uuid} — this object is
+    // the drainer's apply input, so a renamed or dropped field is a wire break.
+    if (canon(save.payload) !== canon(e.save_payload)) {
+        errs.push(`card_save payload ${canon(save.payload)} != app Card ${canon(e.save_payload)}`);
+    }
+    if (canon(del.payload) !== canon(e.delete_payload)) {
+        errs.push(`card_delete payload ${canon(del.payload)} != ${canon(e.delete_payload)}`);
+    }
+
+    // INV-3: re-proposing the same change_id dedups and burns NO proposal_seq (no gaps).
+    const seqBefore = await client.$queryRaw`
+        SELECT next_seq FROM app_inbox_seq WHERE cluster_id = ${v.cluster} AND scope = ${v.scope}
+    `;
+    const again = await proposeCardSave(v.cluster, v.scope, v.save.change_id, v.save.card, client);
+    if (again.queued !== 0 || again.deduped !== 1) {
+        errs.push(`re-propose same change_id => ${JSON.stringify(again)} (expected {queued:0, deduped:1}, INV-3)`);
+    }
+    const seqAfter = await client.$queryRaw`
+        SELECT next_seq FROM app_inbox_seq WHERE cluster_id = ${v.cluster} AND scope = ${v.scope}
+    `;
+    if (String(seqBefore[0]?.next_seq) !== String(seqAfter[0]?.next_seq)) {
+        errs.push(`dedup advanced app_inbox_seq ${seqBefore[0]?.next_seq} -> ${seqAfter[0]?.next_seq} (INV-3: a dup must not mint a seq)`);
+    }
+    const afterCount = await client.app_inbox.count({ where: { cluster_id: v.cluster } });
+    if (afterCount !== 2) errs.push(`inbox rows after dedup ${afterCount} != 2`);
+
+    // INV-1: proposing never journals. INV-17: it never moves the catalog.
+    const journalRows = await client.$queryRaw`
+        SELECT seq FROM app_sync_log WHERE cluster_id = ${v.cluster}
+    `;
+    if (journalRows.length) errs.push(`proposing minted ${journalRows.length} app_sync_log row(s) (INV-1)`);
+    const afterFp = await cardCatalogFingerprint(client, v.scope);
+    if (afterFp !== beforeFp) errs.push(`catalog changed by a proposal: ${afterFp} != ${beforeFp} (INV-17)`);
+}
+
 // ---- §9 flow 8 handover checks (website-local; the epoch+continuity primitive) ----
 // Drives `applyHandover` + `nextDatasetSeq` directly against the scratch journal — the
 // same advisory-lock transaction the route opens. These pin the two invariants handover
@@ -1129,6 +1252,7 @@ async function runVector(name) {
         case 'availability_write': await checkAvailabilityWrite(v, errs); break;
         case 'app_state_shape': await checkAppState(v, errs); break;
         case 'stats': await checkStats(v, errs); break;
+        case 'card_proposal_shape': await checkCardProposalShape(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
         case 'app_lww': await checkAppLww(v, errs); break;
@@ -1143,7 +1267,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'app_state_shape', 'stats', 'handover', 'epoch', 'blobstore']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'app_state_shape', 'stats', 'card_proposal_shape', 'handover', 'epoch', 'blobstore']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

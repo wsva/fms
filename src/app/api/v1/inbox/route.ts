@@ -23,9 +23,10 @@
  * The drain is **not** a follower upstream (INV-19) — the drainer is the desktop
  * authority, which the website does not and cannot reach into (§4).
  *
- * **Dormant until a website-UI producer and an app drainer both land** — there is no
- * dataset-card editor to propose and no app inbox client (`grep 'inbox'` = 0 in
- * `src-tauri/`), so today these run only via hand-rolled curl.
+ * **A producer exists; the drainer does not.** The website-UI card editor proposes through
+ * the same `ingestProposals` seam these routes wrap (`lib/datasets/card_proposals.ts`), and
+ * this REST surface is what a non-browser producer would use. No app inbox client exists yet
+ * (`grep 'inbox'` = 0 in `src-tauri/`), so proposals queue until the hub drains them.
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';

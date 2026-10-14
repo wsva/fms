@@ -1,0 +1,52 @@
+{
+    "check": "card_proposal_shape",
+    "_note": "sync-v2 §8.3 step 1 / §14 phase 5 producer. Drives the website's card-proposal seam (proposeCardSave/proposeCardDelete → ingestProposals) directly against a scratch DB and pins that a website-UI card edit becomes an inbox proposal that is byte-compatible with what the app's card command applies on drain: kind/op/object_id parity (card_save/upsert/object=payload.uuid; card_delete/delete/object=payload.card_uuid), payload == the serialized Card / {card_uuid}, edit_time canonical fixed-width UTC (INV-6). Also proves INV-3 change_id dedup burns no proposal_seq (no gap), INV-1 proposing mints NO journal row, and INV-17 the dataset catalog stays byte-unchanged. The producer is proposal-only — it never writes live/.",
+    "cluster": "conf-card@local",
+    "scope": "11111111-2222-3333-4444-555555555555",
+    "catalog": { "current_version": 7, "snapshot_seq": 3, "journal_role": "mirror", "deleted": "N" },
+    "save": {
+        "change_id": "chg-save-1",
+        "card": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000001",
+            "question": "Q?",
+            "suggestion": "hint",
+            "answer": "A",
+            "note": "n",
+            "familiarity": 3,
+            "question_hash": "deadbeef",
+            "source_card_uuid": null,
+            "source_dataset_uuid": null,
+            "deleted_at": null,
+            "created_at": "2026-01-01T00:00:00.000Z",
+            "updated_at": "2026-01-02T00:00:00.000Z"
+        }
+    },
+    "delete": {
+        "change_id": "chg-del-1",
+        "card_uuid": "bbbbbbbb-0000-0000-0000-000000000002"
+    },
+    "expect": {
+        "save_op": "upsert",
+        "save_kind": "card_save",
+        "save_object_id": "aaaaaaaa-0000-0000-0000-000000000001",
+        "save_edit_time": "2026-01-02T00:00:00.000Z",
+        "save_payload": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000001",
+            "question": "Q?",
+            "suggestion": "hint",
+            "answer": "A",
+            "note": "n",
+            "familiarity": 3,
+            "question_hash": "deadbeef",
+            "source_card_uuid": null,
+            "source_dataset_uuid": null,
+            "deleted_at": null,
+            "created_at": "2026-01-01T00:00:00.000Z",
+            "updated_at": "2026-01-02T00:00:00.000Z"
+        },
+        "delete_op": "delete",
+        "delete_kind": "card_delete",
+        "delete_object_id": "bbbbbbbb-0000-0000-0000-000000000002",
+        "delete_payload": { "card_uuid": "bbbbbbbb-0000-0000-0000-000000000002" }
+    }
+}

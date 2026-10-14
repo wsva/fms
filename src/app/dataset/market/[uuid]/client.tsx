@@ -156,6 +156,11 @@ export default function Client({ uuid }: Props) {
                             Manage
                         </Button>
                     )}
+                    {item.is_owner && item.dataset_type === 'card' && (
+                        <Button size="sm" variant="outline" onPress={() => router.push(`/dataset/card/${item.uuid}`)}>
+                            Edit cards
+                        </Button>
+                    )}
                 </div>
             </div>
 

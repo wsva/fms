@@ -18,10 +18,11 @@
  * authority and mirror-receiver primitives are untouched, so this host carries zero
  * regression risk for them.
  *
- * **Dormant until both a producer and a drainer exist** — there is no website-UI
- * dataset-card editor to propose and no app inbox client to drain
- * (`grep 'inbox'` = 0 in `src-tauri/`), so today these run only via hand-rolled
- * curl. Same posture the mirror receiver held after Phase 4.
+ * **A producer exists; the drainer does not.** The website-UI card editor
+ * (`lib/datasets/card_proposals.ts`, actions in `app/actions/card_editor.ts`) proposes
+ * `card_save`/`card_delete` here for `journal_role='mirror'` datasets. There is still no
+ * app inbox client (`grep 'inbox'` = 0 in `src-tauri/`), so proposals queue until the hub
+ * drains them — the same posture the mirror receiver held between its own two halves.
  */
 import type { Prisma } from '@/generated/prisma/client';
 import { APP_SCOPE, toNum, type DbClient } from '@/lib/sync/change_log';
