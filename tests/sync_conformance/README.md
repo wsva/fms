@@ -1,0 +1,96 @@
+# Website sync-v2 conformance harness
+
+Cross-host parity check for the sync wire contract in
+[`docs/design/sync-v2.md`](../../learning/fms-app/docs/design/sync-v2.md) §13.
+The desktop hub's conformance suite (`learning/fms-app/src-tauri/tests/sync_conformance/`)
+states its own phase-2 rule:
+
+> the same vectors must pass unchanged against the website routes … a vector that passes
+> on the desktop hub but fails on the website is a parity defect, not a vector to relax.
+
+That rule activated once the website grew the journal (phases 7a/7b). This directory is
+the website half: `main.test.mjs` replays `vectors/*.json` against the **real website
+modules** and asserts the same shapes the Rust runner asserts.
+
+## What it pins
+
+`vectors/` holds the six app-authored vectors, copied **byte-for-byte, unmodified** (the
+app tree is a read-only reference and is excluded from `tsconfig`). The runner drives
+`readChanges` — the exact function `GET /api/v1/datasets/{uuid}/changes` and
+`GET /api/v1/app/changes` serialize — plus `websiteClusterInfo` and
+`registryManifestBody`, so pinning those outputs pins the routes without opening a socket.
+
+| check                 | invariant                                       | website driver                        |
+| --------------------- | ----------------------------------------------- | ------------------------------------- |
+| `page_shape`          | §7 journal page shape (`hub_seq` kept frozen)   | `change_log.readChanges`              |
+| `resync`              | INV-11 NULL cursor below the mark forces resync | `readChanges` + prune mark            |
+| `prune_forces_resync` | INV-5 a delete is never lost to retention       | `change_log.pruneLog`                 |
+| `features`            | INV-20 scopes a host advertises                  | `cluster.websiteClusterInfo`          |
+| `cluster_contract`    | INV-12/INV-20 `/cluster` payload shape           | `cluster.websiteClusterInfo`          |
+| `registry_contract`   | INV-8/INV-20 versioned registry read shape       | `datasets.registry.registryManifestBody` |
+
+### `retention_logical_clock` — a website-side extension
+
+The sixth frozen vector `tombstone_survives_prune` uses `keep_days = 0`, which drops a
+just-inserted row under **either** retention clock, so it cannot distinguish the app's
+`edit_time` (logical) retention from a `created_at` (physical) one. This extra vector
+seeds a row stamped years ago but inserted now, and asserts it **is** pruned at
+`keep_days = 30`. It is the assertion that caught the website aging on `created_at`
+(`pruneLog`), now fixed to age on `edit_time` to match `sync/change_log.rs`. Run the
+suite before that fix and this vector goes red while the six frozen ones stay green —
+which is the whole point of §13. It is proposed for adoption into the desktop suite too.
+
+## Intentional cross-host differences
+
+The vectors were authored against the desktop hub; three encode desktop-only facts. The
+harness asserts the desktop-pinned contract is **still present** on the website and lists
+each addition against a documented allowlist — it never relaxes an invariant, and it
+never forces the website to *stop* serving a capability it genuinely has. A future
+reviewer should read this table before "fixing" one of these into a bug.
+
+| Vector               | Desktop hub pins                    | Website serves (correct by design)                                            |
+| -------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| `cluster_contract`   | `authority_kind: "desktop_hub"`     | `"cloud_hub"`                                                                  |
+| `cluster_contract`   | `features: [dataset_journal, app_journal]` | those two **plus** `registry_reads`; `dataset_journal` is *conditional* (7b — advertised only when the account actually hosts an authority dataset; the harness passes `hostsDatasetJournal=true` so it is present for the parity claim) |
+| `features`           | 2 features                          | superset: `app_journal` always, `registry_reads` (the desktop hub has no registry), `dataset_journal` conditional |
+| `registry_contract`  | keys `uuid,current_version,overall_hash,row_hash,files` | those five **plus** `file_count,total_bytes,dataset_type,updated_at` (the live route's shipped body; the app's `serde` read tolerates the extras). `row_hash` is `null` on the website — a logical row hash must be byte-parity with the app's recipe before any client compares it (deferred). |
+| `protocol_version`   | `6`                                 | `6` — already at parity (phase 7a); asserted equal                             |
+
+`page_shape`, the `SyncEntry` key set (7 keys on both hosts) and `resync` pass under
+**exact** equality — those are the true byte-parity claims.
+
+## Running
+
+Needs the journal tables. Scratch Postgres recipe (never point this at production):
+
+```sh
+docker run -d --name fms_conf_pg -e POSTGRES_PASSWORD=scratchpw -e POSTGRES_DB=fms_conf \
+  -p 5434:5432 postgres:16-alpine
+DATABASE_URL='postgresql://postgres:scratchpw@127.0.0.1:5434/fms_conf' npx prisma db push
+
+npm run test:conformance            # DATABASE_URL must be exported
+# equivalent explicit form:
+DATABASE_URL='postgresql://postgres:scratchpw@127.0.0.1:5434/fms_conf' \
+  node --experimental-strip-types --import ./tests/sync_conformance/register.mjs \
+  --test tests/sync_conformance/main.test.mjs
+
+docker rm -f fms_conf_pg
+```
+
+The four contract checks (`features`, `cluster_contract`, `registry_contract`) need no
+database and run regardless; the three journal checks skip cleanly when `DATABASE_URL` is
+unset, so a CI step without a database never turns red on an absent vector.
+
+## Why a loader is involved
+
+`register.mjs` + `tsresolve-loader.mjs` let Node's native `--experimental-strip-types`
+resolve the `@/` path alias and the Prisma client's extensionless relative imports — the
+two things Next compiles away but Node does not. It loads the **real** modules; nothing
+here reimplements journal logic, so a green run is a statement about the shipped code,
+not a fixture.
+
+## Adding a vector
+
+Drop a `vectors/<name>.json` mirroring the app's field set (`check`, `scope`, `seed`,
+`after`, `prune`/`prune_mark`, `expect`). If it pins a capability the website does **not**
+have, that is a defect to fix in the website — not a vector to special-case.

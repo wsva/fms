@@ -1,0 +1,22 @@
+{
+  "name": "retention_logical_clock",
+  "invariant": "INV-5 / §3.5 — retention ages the journal on the WIRE's logical clock (`edit_time`, fixed-width UTC per INV-6), not the row's physical arrival time",
+  "check": "prune_forces_resync",
+  "scope": "dataset",
+  "notes": "Website-side extension of the frozen `tombstone_survives_prune` vector. That vector uses `keep_days = 0`, which drops a just-inserted row under EITHER clock, so it cannot tell `edit_time`-based retention from `created_at`-based retention. The app's `prune_log` ages rows on `edit_time` (`sync/change_log.rs:424,444 — WHERE datetime(edit_time) < datetime('now', ?1)`); a website that instead aged on `created_at` would keep a freshly-arrived old edit forever and hand followers different usable history than the desktop hub for the same journal. This vector pins the difference: a row whose `edit_time` is decades old but which was inserted moments ago MUST be pruned at `keep_days = 30`, raising `pruned_up_to` so the cursor-below-the-mark follower is told `resync_required`. A row with no parsable `edit_time` is never pruned (the app's SQLite `datetime('')` = NULL semantics), which the companion harness guard checks.",
+  "seed": [
+    {
+      "object_id": "cue:1",
+      "kind": "cue_save",
+      "edit_time": "2000-01-01T00:00:00Z",
+      "user_key": "u1",
+      "payload": {}
+    }
+  ],
+  "prune": { "keep_days": 30 },
+  "after": 0,
+  "expect": {
+    "seed_op": "upsert",
+    "resync_required": true
+  }
+}

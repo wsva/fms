@@ -427,11 +427,24 @@ export async function latestForObject(
 }
 
 /**
- * Prune the journal to the last `keepDays` days (§3.5): delete rows older than the
- * cutoff, then raise the scope's `pruned_up_to` to the highest deleted seq. That
- * bump is what turns a prune into a correctness signal — a follower still
- * cursor-ing below it has a gap it can never be served, so its next pull is told
- * `resync_required`. Also expires the dedup ledger on the same clock.
+ * Prune the journal to the last `keepDays` days (§3.5): delete rows whose logical
+ * edit is older than the cutoff, then raise the scope's `pruned_up_to` to the highest
+ * deleted seq. That bump is what turns a prune into a correctness signal — a follower
+ * still cursor-ing below it has a gap it can never be served, so its next pull is told
+ * `resync_required`.
+ *
+ * RETENTION AGES ON `edit_time`, NOT `created_at` (cross-host parity, §13). `edit_time`
+ * is the wire's logical clock (INV-6 fixed-width UTC) — when the change happened at its
+ * author, independent of when it reached this host. The app ages on exactly this
+ * (`sync/change_log.rs — WHERE datetime(edit_time) < datetime('now', ?1)`); aging on
+ * physical arrival instead would keep a freshly-synced old edit forever and hand
+ * followers a different usable history than the desktop hub for the same journal. The
+ * conformance vector `retention_logical_clock` pins this. Rows are pruned only when
+ * `edit_time` matches the canonical `YYYY-MM-DDTHH:MM:SS` shape; a missing or malformed
+ * stamp (a `''`, a legacy row) is NEVER pruned — the Postgres analogue of the app's
+ * SQLite `datetime('') = NULL` predicate never matching, so an un-stamped row is
+ * retained rather than silently dropped. The dedup ledger, by contrast, ages on its own
+ * `applied_at` (physical — a replay guard, not author history; see its schema note).
  *
  * The practice-plane kinds (`card_review`, `read_attempt_save`,
  * `read_attempt_delete`) are NEVER pruned: a pre-v6 app build cannot backfill
@@ -449,12 +462,16 @@ export async function pruneLog(
     keepDays: number
 ): Promise<number> {
     const cutoff = new Date(Date.now() - keepDays * 24 * 60 * 60 * 1000);
-
+    // A journal row is retention-eligible only if it carries a canonical logical stamp
+    // that is old. The regex gate is what makes the `::timestamptz` cast total (a `''`
+    // or junk stamp would otherwise raise, not merely fail to match) and simultaneously
+    // protects un-stamped rows from ever being pruned.
     const maxRows = await tx.$queryRaw<{ m: unknown }[]>`
         SELECT COALESCE(MAX(seq), 0) AS m FROM app_sync_log
         WHERE cluster_id = ${clusterId} AND scope = ${scope}
           AND kind NOT IN ('card_review', 'read_attempt_save', 'read_attempt_delete')
-          AND created_at < ${cutoff}
+          AND edit_time ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}'
+          AND edit_time::timestamptz < ${cutoff}
     `;
     const maxDeleted = toNum(maxRows[0]?.m);
 
@@ -462,7 +479,8 @@ export async function pruneLog(
         DELETE FROM app_sync_log
         WHERE cluster_id = ${clusterId} AND scope = ${scope}
           AND kind NOT IN ('card_review', 'read_attempt_save', 'read_attempt_delete')
-          AND created_at < ${cutoff}
+          AND edit_time ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}'
+          AND edit_time::timestamptz < ${cutoff}
     `;
     await tx.$executeRaw`
         DELETE FROM app_applied_change

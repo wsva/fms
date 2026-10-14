@@ -10,7 +10,8 @@
     "lint:fix": "eslint --fix",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:conformance": "node --experimental-strip-types --import ./tests/sync_conformance/register.mjs --test tests/sync_conformance/main.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.33.0",
