@@ -1,0 +1,16 @@
+{
+    "check": "publish_write",
+    "_note": "sync-v2 §8.4 publish write plane. Drives publishDatasetVersionTx against a scratch catalog + the same seeded versions the read check uses. Pins INV-17: an explicit publish is the ONLY act that moves dataset.current_version — publish(2) pins 2, publish(null) resolves to the newest uploaded (3), publish(9) fails and leaves the pin where the last success left it. Pins INV-8: a publish never mutates the immutable version rows (bytes-bearing columns byte-equal after every step).",
+    "dataset_uuid": "ds-publish-write",
+    "catalog": { "current_version": null },
+    "versions": [
+        { "version": 1, "available": "Y" },
+        { "version": 2, "available": "Y" },
+        { "version": 3, "available": "Y" }
+    ],
+    "steps": [
+        { "version": 2, "expect": "ok", "expect_pin": 2 },
+        { "expect": "ok", "expect_pin": 3 },
+        { "version": 9, "expect": "error", "expect_error": "version 9 does not exist", "expect_pin_unchanged": 3 }
+    ]
+}

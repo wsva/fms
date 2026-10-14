@@ -8,6 +8,8 @@ import {
     getDatasetHubDetail,
     subscribeDataset,
     unsubscribeDataset,
+    publishDatasetVersion,
+    setDatasetVersionAvailability,
     type DatasetHubDetail,
 } from '@/app/actions/dataset_hub';
 import { formatBytes, formatStamp, shortHash } from '@/lib/datasets/format';
@@ -31,6 +33,8 @@ export default function Client({ uuid }: Props) {
     const [stateItem, setStateItem] = useState<DatasetHubDetail | null>(null);
     const [stateError, setStateError] = useState('');
     const [stateLoading, setStateLoading] = useState(true);
+    const [stateBusy, setStateBusy] = useState<Set<string>>(new Set());
+    const [stateConfirm, setStateConfirm] = useState('');
 
     useEffect(() => {
         const load = async () => {
@@ -56,6 +60,47 @@ export default function Client({ uuid }: Props) {
         } else {
             toast.danger(String(result.error ?? 'Action failed'));
         }
+    };
+
+    const withVersionBusy = async (key: string, fn: () => Promise<{ status: string; error?: unknown }>) => {
+        setStateBusy((prev) => new Set(prev).add(key));
+        const result = await fn();
+        setStateBusy((prev) => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+        });
+        return result;
+    };
+
+    const publish = async (version: number) => {
+        if (!stateItem) return;
+        const result = await withVersionBusy(`v${version}:publish`, () => publishDatasetVersion(stateItem.uuid, version));
+        if (result.status === 'success') {
+            setStateItem({ ...stateItem, current_version: version });
+            toast.success(`Published v${version}`);
+        } else {
+            toast.danger(String(result.error ?? 'Publish failed'));
+        }
+    };
+
+    const setAvailability = async (version: number, available: boolean) => {
+        if (!stateItem) return;
+        const op = available ? 'restore' : 'withdraw';
+        const result = await withVersionBusy(`v${version}:${op}`, () =>
+            setDatasetVersionAvailability(stateItem.uuid, version, available)
+        );
+        if (result.status === 'success') {
+            // INV-17: a takedown never moves the pin, so patch only this row's flag.
+            setStateItem({
+                ...stateItem,
+                versions: stateItem.versions.map((v) => (v.version === version ? { ...v, available: available ? 'Y' : 'N' } : v)),
+            });
+            toast.success(available ? `Restored v${version}` : `Withdrawn v${version}`);
+        } else {
+            toast.danger(String(result.error ?? 'Action failed'));
+        }
+        setStateConfirm('');
     };
 
     if (stateLoading) {
@@ -186,20 +231,87 @@ export default function Client({ uuid }: Props) {
             <div className="flex flex-col gap-2">
                 <h2 className="text-lg font-semibold text-foreground">Versions</h2>
                 <div className="flex flex-col gap-2">
-                    {item.versions.map((v) => (
-                        <div
-                            key={v.version}
-                            className="flex items-center gap-3 bg-sand-100 border border-sand-300 rounded-lg px-4 py-2 text-xs text-foreground-500 flex-wrap"
-                        >
-                            <span className="font-semibold text-foreground">v{v.version}</span>
-                            <span>{formatBytes(v.total_bytes)}</span>
-                            <span>{v.file_count} files</span>
-                            <span>{shortHash(v.overall_hash)}</span>
-                            <span>{formatStamp(v.info_updated_at)}</span>
-                            <span className="ml-auto">uploaded {formatStamp(v.created_at)}</span>
-                        </div>
-                    ))}
+                    {item.versions.map((v) => {
+                        const isCurrent = v.version === item.current_version;
+                        const withdrawn = v.available === 'N';
+                        const busy = (op: string) => stateBusy.has(`v${v.version}:${op}`);
+                        return (
+                            <div
+                                key={v.version}
+                                className="flex items-center gap-3 bg-sand-100 border border-sand-300 rounded-lg px-4 py-2 text-xs text-foreground-500 flex-wrap"
+                            >
+                                <span className="font-semibold text-foreground">v{v.version}</span>
+                                {isCurrent && (
+                                    <Chip size="sm" variant="primary">
+                                        current
+                                    </Chip>
+                                )}
+                                {withdrawn && (
+                                    <Chip size="sm" variant="tertiary" color="warning">
+                                        withdrawn
+                                    </Chip>
+                                )}
+                                <span>{formatBytes(v.total_bytes)}</span>
+                                <span>{v.file_count} files</span>
+                                <span>{shortHash(v.overall_hash)}</span>
+                                <span>{formatStamp(v.info_updated_at)}</span>
+                                <span className="ml-auto">uploaded {formatStamp(v.created_at)}</span>
+                                {item.is_owner && (
+                                    <div className="flex gap-2 items-center flex-wrap">
+                                        {!isCurrent && (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                isDisabled={busy('publish')}
+                                                isPending={busy('publish')}
+                                                onPress={() => publish(v.version)}
+                                            >
+                                                Publish v{v.version}
+                                            </Button>
+                                        )}
+                                        {withdrawn ? (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                isDisabled={busy('restore')}
+                                                isPending={busy('restore')}
+                                                onPress={() => setAvailability(v.version, true)}
+                                            >
+                                                Restore
+                                            </Button>
+                                        ) : stateConfirm === `withdraw:${v.version}` ? (
+                                            <Button
+                                                size="sm"
+                                                variant="danger"
+                                                isDisabled={busy('withdraw')}
+                                                isPending={busy('withdraw')}
+                                                onPress={() => setAvailability(v.version, false)}
+                                            >
+                                                Confirm withdraw
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-danger-500"
+                                                isDisabled={busy('withdraw')}
+                                                onPress={() => setStateConfirm(`withdraw:${v.version}`)}
+                                            >
+                                                Withdraw
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
+                {item.is_owner && (
+                    <p className="text-xs text-foreground-400">
+                        Publishing pins the version registry reads resolve to; withdrawing takes it down without
+                        rewriting its bytes and never moves the current pin — subscribers keep their installed copies.
+                    </p>
+                )}
             </div>
 
             <Button size="sm" variant="ghost" className="self-start" onPress={() => router.push('/dataset/market')}>

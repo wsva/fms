@@ -1,0 +1,17 @@
+{
+    "check": "availability_write",
+    "_note": "sync-v2 §11.5 takedown write plane. Drives setVersionAvailabilityTx against a scratch catalog pinned at 3 + the same seeded versions the read check uses. Pins INV-17: a takedown is metadata-only and NEVER re-pins — dataset.current_version is byte-equal to the seed after EVERY op, including a withdraw of the pinned version itself (the read side walks down at resolution, registry.ts::resolveVersionRow). Pins INV-8: only the `available` flag mutates; the bytes-bearing columns stay byte-identical. withdraw(9) fails, no flag/pin move.",
+    "dataset_uuid": "ds-availability-write",
+    "catalog": { "current_version": 3 },
+    "versions": [
+        { "version": 1, "available": "Y" },
+        { "version": 2, "available": "Y" },
+        { "version": 3, "available": "Y" }
+    ],
+    "steps": [
+        { "version": 3, "available": false, "expect": "ok" },
+        { "version": 2, "available": false, "expect": "ok" },
+        { "version": 3, "available": true, "expect": "ok" },
+        { "version": 9, "available": false, "expect": "error", "expect_error": "version 9 does not exist" }
+    ]
+}

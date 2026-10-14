@@ -27,6 +27,7 @@ import {
     type DatasetTagRef,
 } from '@/lib/datasets/access';
 import { applyHandover, type HandoverRole } from '@/lib/sync/handover';
+import { publishDatasetVersionTx, setVersionAvailabilityTx } from '@/lib/datasets/publish';
 import type { dataset_tag } from '@/generated/prisma/client';
 
 const HANDOVER_ROLES: readonly HandoverRole[] = ['authority', 'mirror'];
@@ -48,6 +49,7 @@ export type DatasetVersionInfo = {
     overall_hash: string | null;
     info_updated_at: string | null;
     created_at: string;
+    available: string;
 };
 
 export type DatasetHubDetail = DatasetListItem & {
@@ -195,6 +197,7 @@ export async function getDatasetHubDetail(uuid: string): Promise<ActionResult<Da
                     overall_hash: true,
                     info_updated_at: true,
                     created_at: true,
+                    available: true,
                 },
             }),
             prisma.dataset_tag_link.findMany({ where: { dataset_uuid: uuid } }),
@@ -232,6 +235,7 @@ export async function getDatasetHubDetail(uuid: string): Promise<ActionResult<Da
                     overall_hash: v.overall_hash,
                     info_updated_at: v.info_updated_at,
                     created_at: v.created_at.toISOString(),
+                    available: v.available,
                 })),
             },
         };
@@ -308,6 +312,93 @@ export async function setDatasetAuthority(
         });
         if (!result) return { status: 'error', error: 'Dataset not found' };
         return { status: 'success', data: { uuid, ...result } };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+/**
+ * The website UI's publish act (sync-v2 §8.4, INV-17): pin `current_version` to a
+ * chosen immutable version. Drives the same `publishDatasetVersionTx` seam as
+ * `POST /api/v1/publish`, so the UI cannot diverge on the only-invariant-that-moves-
+ * the-pin rule. `version` null/undefined promotes the newest uploaded; `visibility`
+ * and `tagUuids` are optional (a falsy visibility leaves the column untouched, a null
+ * tag list leaves links untouched) — mirrors the route's arg handling verbatim.
+ */
+export async function publishDatasetVersion(
+    uuid: string,
+    version?: number | null,
+    visibility?: string | null,
+    tagUuids?: string[] | null
+): Promise<ActionResult<{ dataset: DatasetJson; current_version: number }>> {
+    try {
+        const email = await currentEmail();
+        const owned = await requireOwned(uuid, email);
+        if ('error' in owned) return { status: 'error', error: owned.error };
+
+        let v: number | null = null;
+        if (version !== undefined && version !== null) {
+            const n = typeof version === 'number' ? version : Number(version);
+            if (!Number.isInteger(n) || n < 1) {
+                return { status: 'error', error: 'version must be a positive integer' };
+            }
+            v = n;
+        }
+
+        let vis: string | null = null;
+        if (visibility !== undefined && visibility !== null) {
+            const s = String(visibility).trim();
+            if (!(VISIBILITIES as readonly string[]).includes(s)) {
+                return { status: 'error', error: `visibility must be one of ${VISIBILITIES.join(', ')}` };
+            }
+            vis = s;
+        }
+
+        let tags: string[] | null = null;
+        if (tagUuids !== undefined && tagUuids !== null) {
+            if (!Array.isArray(tagUuids) || tagUuids.some((t) => typeof t !== 'string')) {
+                return { status: 'error', error: 'tag_uuids must be an array of strings' };
+            }
+            tags = (tagUuids as string[]).map((t) => t.trim()).filter(Boolean);
+        }
+
+        const result = await publishDatasetVersionTx({ uuid, version: v, visibility: vis, tagUuids: tags });
+        if (!result.ok) return { status: 'error', error: result.error };
+        return { status: 'success', data: { dataset: serializeDataset(result.dataset), current_version: result.current_version } };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+/**
+ * The §11.5 takedown / overturn (INV-8/INV-17): flip one version's `available` flag
+ * via the shared `setVersionAvailabilityTx` seam. Metadata-only and **never** moves
+ * the pin — that is the invariant the two DB vectors pin. `available` must be an
+ * explicit boolean so a malformed call can't accidentally take published work down.
+ */
+export async function setDatasetVersionAvailability(
+    uuid: string,
+    version: number,
+    available: boolean
+): Promise<ActionResult<{ uuid: string; version: number; available: boolean }>> {
+    try {
+        const email = await currentEmail();
+        const owned = await requireOwned(uuid, email);
+        if ('error' in owned) return { status: 'error', error: owned.error };
+
+        const n = typeof version === 'number' ? version : Number(version);
+        if (!Number.isInteger(n) || n < 1) {
+            return { status: 'error', error: 'version must be a positive integer' };
+        }
+        if (typeof available !== 'boolean') {
+            return { status: 'error', error: 'available must be an explicit boolean' };
+        }
+
+        const result = await setVersionAvailabilityTx({ uuid, version: n, available });
+        if (!result.ok) return { status: 'error', error: result.error };
+        return { status: 'success', data: { uuid, version: n, available } };
     } catch (error) {
         console.error(error);
         return { status: 'error', error: toErrorMessage(error) };

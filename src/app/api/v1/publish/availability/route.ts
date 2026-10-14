@@ -25,6 +25,7 @@ import { prisma } from '@/lib/prisma';
 import { toErrorMessage } from '@/lib/errors';
 import { resolveDatasetWriter } from '@/lib/datasets/auth';
 import { canManageDataset, datasetCatalogFields, type DatasetCatalog } from '@/lib/datasets/access';
+import { setVersionAvailabilityTx } from '@/lib/datasets/publish';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -74,20 +75,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'you do not own this dataset uuid' }, { status: 409 });
         }
 
-        const ver = await prisma.dataset_version.findUnique({
-            where: { dataset_uuid_version: { dataset_uuid: uuid, version: n } },
-            select: { version: true },
-        });
-        if (!ver) {
-            return NextResponse.json({ error: `version ${n} does not exist` }, { status: 404 });
+        // The existence check + metadata-only flag flip live in the shared
+        // `setVersionAvailabilityTx` seam, so the UI action cannot drift from this
+        // route on INV-8 (only the `available` flag mutates) or INV-17 (never re-pins).
+        const result = await setVersionAvailabilityTx({ uuid, version: n, available });
+        if (!result.ok) {
+            return NextResponse.json({ error: result.error }, { status: 404 });
         }
-
-        // Metadata-only (INV-8): flip `available` on the version row and nothing else.
-        // `dataset.current_version` is deliberately NOT written (INV-17).
-        await prisma.dataset_version.update({
-            where: { dataset_uuid_version: { dataset_uuid: uuid, version: n } },
-            data: { available: available ? 'Y' : 'N', updated_at: new Date() },
-        });
 
         return NextResponse.json({ uuid, version: n, available });
     } catch (error) {

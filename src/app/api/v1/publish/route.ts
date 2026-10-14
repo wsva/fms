@@ -15,10 +15,10 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUUID } from '@/lib/utils';
 import { toErrorMessage } from '@/lib/errors';
 import { resolveDatasetWriter } from '@/lib/datasets/auth';
 import { VISIBILITIES } from '@/lib/datasets/info';
+import { publishDatasetVersionTx } from '@/lib/datasets/publish';
 import {
     canManageDataset,
     datasetCatalogFields,
@@ -91,50 +91,18 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'you do not own this dataset uuid' }, { status: 409 });
         }
 
-        // Resolve the version to pin: the requested one, else the newest uploaded.
-        const target =
-            version ??
-            (
-                await prisma.dataset_version.findFirst({
-                    where: { dataset_uuid: uuid },
-                    orderBy: { version: 'desc' },
-                    select: { version: true },
-                })
-            )?.version ??
-            null;
-        if (target == null) {
-            return NextResponse.json({ error: 'no uploaded version to publish' }, { status: 404 });
-        }
-        const exists = await prisma.dataset_version.findUnique({
-            where: { dataset_uuid_version: { dataset_uuid: uuid, version: target } },
-            select: { version: true },
-        });
-        if (!exists) {
-            return NextResponse.json({ error: `version ${target} does not exist` }, { status: 404 });
+        // The version resolution, existence check and pin/visibility/tag transaction all
+        // live in the shared `publishDatasetVersionTx` seam, so the UI action drives the
+        // identical INV-17 publish path — never a second copy that could drift.
+        const result = await publishDatasetVersionTx({ uuid, version, visibility, tagUuids });
+        if (!result.ok) {
+            return NextResponse.json({ error: result.error }, { status: 404 });
         }
 
-        const row = await prisma.$transaction(async (tx) => {
-            await tx.dataset.update({
-                where: { uuid },
-                data: {
-                    current_version: target,
-                    ...(visibility ? { visibility } : {}),
-                    updated_at: new Date(),
-                },
-            });
-            if (tagUuids) {
-                await tx.dataset_tag_link.deleteMany({ where: { dataset_uuid: uuid } });
-                if (tagUuids.length > 0) {
-                    await tx.dataset_tag_link.createMany({
-                        data: tagUuids.map((tag_uuid) => ({ uuid: getUUID(), dataset_uuid: uuid, tag_uuid })),
-                        skipDuplicates: true,
-                    });
-                }
-            }
-            return await tx.dataset.findUniqueOrThrow({ where: { uuid }, select: datasetCatalogFields });
+        return NextResponse.json({
+            dataset: serializeDataset(result.dataset),
+            current_version: result.current_version,
         });
-
-        return NextResponse.json({ dataset: serializeDataset(row), current_version: target });
     } catch (error) {
         console.error('publish failed:', error);
         return NextResponse.json({ error: toErrorMessage(error) }, { status: 500 });

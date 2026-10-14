@@ -403,6 +403,127 @@ async function checkVersionAvailability(v, errs) {
     if (got !== want) errs.push(`resolveVersionRow mutated version rows (INV-8/INV-17): ${got} != seed ${want}`);
 }
 
+// ---- §8.4/§11.5 registry publish/withdraw WRITE-plane checks (website-local) ----
+// `version_availability` pins the read consequence of a takedown; these pin the write
+// seam the two POST routes and the UI action share (sync-v2.md §8.4/§11.5). They drive
+// `publishDatasetVersionTx` / `setVersionAvailabilityTx` directly against a scratch
+// catalog row + the same `seedVersions` the read check uses, so the two invariants the
+// seam carries hold regardless of caller:
+//   INV-17 — ONLY a publish moves `dataset.current_version`; a takedown never re-pins.
+//   INV-8  — a takedown flips the `available` flag and leaves every other column, and
+//            the pin, byte-for-byte untouched.
+async function pubReset(client, uuid, currentVersion) {
+    await client.$executeRaw`DELETE FROM dataset_version WHERE dataset_uuid = ${uuid}`;
+    await client.$executeRaw`DELETE FROM dataset_tag_link WHERE dataset_uuid = ${uuid}`;
+    await client.$executeRaw`DELETE FROM dataset WHERE uuid = ${uuid}`;
+    await client.$executeRaw`
+        INSERT INTO dataset (uuid, user_id, name, dataset_type, format, current_version, deleted)
+        VALUES (${uuid}, 'conf-write@local', 'conf-publish', 'cards', 'jsonl', ${currentVersion}, 'N')
+    `;
+}
+
+async function pubPin(client, uuid) {
+    const rows = await client.$queryRaw`SELECT current_version FROM dataset WHERE uuid = ${uuid}`;
+    return rows.length ? rows[0].current_version : null;
+}
+
+// Non-`available` columns of every seeded version row, as one comparable string — the
+// exact shape `seedVersions` writes, so both checks can diff against it to prove the
+// bytes-bearing columns never move (INV-8), only the flag / pin does.
+function seedFingerprint(v) {
+    return v.versions
+        .map((x) => `${x.version}|/x/${x.version}.tar.gz|${'0'.repeat(64)}`)
+        .sort()
+        .join(',');
+}
+
+async function readVersionRows(client, uuid) {
+    return client.$queryRaw`
+        SELECT version, archive_path, archive_sha256, available FROM dataset_version
+        WHERE dataset_uuid = ${uuid} ORDER BY version
+    `;
+}
+
+async function checkPublishWrite(v, errs) {
+    const client = await db();
+    await pubReset(client, v.dataset_uuid, v.catalog.current_version);
+    await seedVersions(v, client);
+    const { publishDatasetVersionTx } = await import('../../src/lib/datasets/publish.ts');
+    const wantFp = seedFingerprint(v);
+
+    for (const step of v.steps) {
+        const r = await publishDatasetVersionTx({ uuid: v.dataset_uuid, version: step.version ?? null });
+        if (step.expect === 'ok') {
+            if (!r.ok) {
+                errs.push(`publish(${step.version ?? 'null'}): expected ok, got ${JSON.stringify(r.error)}`);
+                continue;
+            }
+            if (r.current_version !== step.expect_pin) {
+                errs.push(`publish(${step.version ?? 'null'}): result pin ${r.current_version} != ${step.expect_pin}`);
+            }
+        } else {
+            if (r.ok) {
+                errs.push(`publish(${step.version ?? 'null'}): expected failure, got ok(pin ${r.current_version})`);
+                continue;
+            }
+            if (r.error !== step.expect_error) {
+                errs.push(`publish(${step.version ?? 'null'}): error ${JSON.stringify(r.error)} != ${JSON.stringify(step.expect_error)}`);
+            }
+        }
+        const pin = await pubPin(client, v.dataset_uuid);
+        const wantPin = step.expect === 'ok' ? step.expect_pin : step.expect_pin_unchanged;
+        if (pin !== wantPin) errs.push(`publish(${step.version ?? 'null'}): dataset.current_version ${pin} != ${wantPin}`);
+
+        // INV-8 write-side: publish never mutates version rows — it moves the pin/tags only.
+        const rows = await readVersionRows(client, v.dataset_uuid);
+        const gotFp = rows.map((x) => `${Number(x.version)}|${x.archive_path}|${x.archive_sha256}`).sort().join(',');
+        if (gotFp !== wantFp) errs.push(`publish mutated version rows (INV-8): ${gotFp} != seed ${wantFp}`);
+    }
+}
+
+async function checkAvailabilityWrite(v, errs) {
+    const client = await db();
+    await pubReset(client, v.dataset_uuid, v.catalog.current_version);
+    await seedVersions(v, client);
+    const { setVersionAvailabilityTx } = await import('../../src/lib/datasets/publish.ts');
+    const seedPin = v.catalog.current_version;
+    const wantFp = seedFingerprint(v);
+    const flags = Object.fromEntries(v.versions.map((x) => [x.version, x.available]));
+
+    for (const step of v.steps) {
+        const r = await setVersionAvailabilityTx({ uuid: v.dataset_uuid, version: step.version, available: step.available });
+        if (step.expect === 'ok') {
+            if (!r.ok) {
+                errs.push(`setAvail(${step.version},${step.available}): expected ok, got ${JSON.stringify(r.error)}`);
+                continue;
+            }
+            flags[step.version] = step.available ? 'Y' : 'N';
+        } else {
+            if (r.ok) {
+                errs.push(`setAvail(${step.version},${step.available}): expected failure, got ok`);
+                continue;
+            }
+            if (r.error !== step.expect_error) {
+                errs.push(`setAvail(${step.version}): error ${JSON.stringify(r.error)} != ${JSON.stringify(step.expect_error)}`);
+            }
+        }
+
+        // INV-17: after EVERY op the pin is byte-equal to the seed — a takedown never re-pins.
+        const pin = await pubPin(client, v.dataset_uuid);
+        if (pin !== seedPin) {
+            errs.push(`setAvail(${step.version},${step.available}) moved the pin (INV-17): ${pin} != ${seedPin}`);
+        }
+
+        // INV-8: only `available` differs from the seed; the bytes-bearing columns are untouched.
+        const rows = await readVersionRows(client, v.dataset_uuid);
+        const gotFp = rows.map((x) => `${Number(x.version)}|${x.archive_path}|${x.archive_sha256}`).sort().join(',');
+        if (gotFp !== wantFp) errs.push(`availability op mutated non-flag columns (INV-8): ${gotFp} != ${wantFp}`);
+        const gotFlags = rows.map((x) => `${Number(x.version)}:${x.available}`).sort().join(',');
+        const wantFlags = Object.entries(flags).map(([k, val]) => `${k}:${val}`).sort().join(',');
+        if (gotFlags !== wantFlags) errs.push(`after setAvail(${step.version}): flags ${gotFlags} != ${wantFlags}`);
+    }
+}
+
 // ---- §9 flow 8 handover checks (website-local; the epoch+continuity primitive) ----
 // Drives `applyHandover` + `nextDatasetSeq` directly against the scratch journal — the
 // same advisory-lock transaction the route opens. These pin the two invariants handover
@@ -741,6 +862,8 @@ async function runVector(name) {
         case 'sweep_forces_resync': await checkSweepForcesResync(v, errs); break;
         case 'sweep_skips_nonauthority': await checkSweepSkipsNonauthority(v, errs); break;
         case 'version_availability': await checkVersionAvailability(v, errs); break;
+        case 'publish_write': await checkPublishWrite(v, errs); break;
+        case 'availability_write': await checkAvailabilityWrite(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
         case 'app_lww': await checkAppLww(v, errs); break;
@@ -755,7 +878,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'handover', 'epoch', 'blobstore']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'handover', 'epoch', 'blobstore']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);
