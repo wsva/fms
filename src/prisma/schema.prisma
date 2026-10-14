@@ -154,8 +154,11 @@ model dataset {
   // (POST /api/v1/sync/changes) and a stale hub's mirror push into it is refused
   // (INV-1/INV-13). Flipped only by an operator/handover, never implicitly by a
   // push. journal_epoch is the per-scope handover epoch — minted 0, surfaced in
-  // mirror refusals, and bumped exactly once per real flip by POST /api/v1/handover
-  // (INV-13; §9 flow 8). A same-role handover is idempotent and leaves it alone.
+  // mirror refusals, emitted on every ChangesPage (`scopeAuthorityEpoch`, so a
+  // follower records it) and enforced on POST /api/v1/sync/changes (a write
+  // presenting less than this host's epoch is refused, INV-13), and bumped exactly
+  // once per real flip by POST /api/v1/handover (§9 flow 8). A same-role handover
+  // is idempotent and leaves it alone.
   journal_role    String   @default("mirror") @db.VarChar(10)
   journal_epoch   Int      @default(0)
   deleted         String   @default("N") @db.VarChar(1)

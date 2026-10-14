@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE } from '../../src/lib/sync/change_log.ts';
+import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE, scopeAuthorityEpoch, staleEpochReason, staleEpochRefused } from '../../src/lib/sync/change_log.ts';
 import { websiteClusterInfo, DATASET_JOURNAL_FEATURE, PROTOCOL_VERSION } from '../../src/lib/sync/cluster.ts';
 import { applyHandover } from '../../src/lib/sync/handover.ts';
 import { diffNeeded, swapLiveTree, readLiveTree } from '../../src/lib/sync/blobstore.ts';
@@ -135,6 +135,13 @@ async function checkPageShape(v, errs) {
 
     if (typeof exp.resync_required === 'boolean') {
         if (page.resync_required !== exp.resync_required) errs.push(`resync_required ${page.resync_required} != expected ${exp.resync_required}`);
+    }
+    // The page carries this scope's authority epoch (INV-13). This vector seeds no
+    // catalog row, so the dataset scope reads epoch 0 — the same value the desktop
+    // hub's `sync_scope_epoch` returns for an unhanded-over scope, closing the
+    // documented "two vectors differ on epoch" divergence.
+    if (typeof exp.epoch === 'number') {
+        if (page.epoch !== exp.epoch) errs.push(`epoch ${page.epoch} != expected ${exp.epoch}`);
     }
     const entries = page.entries ?? [];
     if (typeof exp.entry_count === 'number' && entries.length !== exp.entry_count) {
@@ -510,6 +517,64 @@ async function checkHandover(v, errs) {
     }
 }
 
+// ---- §7/§14 phase 7b epoch checks (website-local; ChangesPage carries + enforces) ----
+// Pins the two halves of INV-13 the website closed in 7b: (a) every `ChangesPage`
+// carries the scope's authority epoch, and a `POST /api/v1/handover` bump is reflected
+// on the very next page (the wiring that lets a stale writer self-heal via re-pull);
+// (b) the write gate refuses exactly a writer presenting less than the host's current
+// epoch, with the desktop hub's byte-identical reason string. `@app` is proven to stay
+// epoch 0, so the shipped cloud-authority leg never trips the gate (zero regression).
+// Reuses the handover helpers (`hoReset`/`hoCatalog`/`hoSeedJournal`) so it drives the
+// same catalog + journal the flip mutates, under its OWN cluster like the sweep vectors.
+async function checkEpoch(v, errs) {
+    const cluster = v.cluster;
+    const scope = v.dataset_uuid;
+    const exp = v.expect;
+    const d = await db();
+
+    await hoReset(cluster);
+    await hoCatalog(v, cluster, scope);
+    await hoSeedJournal(cluster, scope, [1]);
+
+    // (a1) mirror scope at minted epoch 0 → the page carries 0.
+    const before = await readChanges(d, cluster, scope, 0, PAGE_LIMIT);
+    if (before.epoch !== exp.epoch_before_handover) {
+        errs.push(`page epoch ${before.epoch} != expected ${exp.epoch_before_handover} (mirror, pre-handover)`);
+    }
+
+    // (a2) handover to authority bumps journal_epoch; the next page must carry the bump.
+    await d.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cluster}))`;
+        await applyHandover(tx, cluster, scope, 'authority');
+    });
+    const after = await readChanges(d, cluster, scope, 0, PAGE_LIMIT);
+    if (after.epoch !== exp.epoch_after_handover) {
+        errs.push(`page epoch ${after.epoch} != expected ${exp.epoch_after_handover} after handover (page must carry the bump)`);
+    }
+
+    // (b) the write gate: refusal text is byte-exact, and the comparison refuses only a
+    // strictly-lower presented epoch. This is the `presented < authority` the route runs.
+    if (typeof exp.stale_string === 'string') {
+        const got = staleEpochReason(0, exp.epoch_after_handover, scope);
+        if (got !== exp.stale_string) errs.push(`staleEpochReason mismatch:\n  got  ${JSON.stringify(got)}\n  want ${JSON.stringify(exp.stale_string)}`);
+    }
+    for (const r of exp.refused ?? []) {
+        const got = staleEpochRefused(r.presented, r.authority);
+        if (got !== r.expect) {
+            errs.push(`staleEpochRefused(presented=${r.presented}, authority=${r.authority}) = ${got} != expected ${r.expect}`);
+        }
+    }
+
+    // (c) `@app` is the website's native authority → constant epoch 0 (no catalog row,
+    // no handover applies), so the live cloud-authority push leg is never gated.
+    const appEpoch = await scopeAuthorityEpoch(d, cluster, APP_SCOPE);
+    if (appEpoch !== exp.app_scope_epoch) {
+        errs.push(`scopeAuthorityEpoch(@app) = ${appEpoch} != expected ${exp.app_scope_epoch}`);
+    }
+
+    await hoReset(cluster);
+}
+
 // The blob-store check drives the real `swapLiveTree` / `diffNeeded` / `readLiveTree`
 // from `lib/sync/blobstore.ts` directly — these are DB-only (the fs/verify layer lives
 // in the route, not the swap), so the vectors pin the dedup + refcount invariants
@@ -576,6 +641,7 @@ async function runVector(name) {
         case 'sweep_skips_nonauthority': await checkSweepSkipsNonauthority(v, errs); break;
         case 'version_availability': await checkVersionAvailability(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
+        case 'epoch': await checkEpoch(v, errs); break;
         case 'blobstore': await checkBlobstore(v, errs); break;
         case 'features': checkFeatures(v, errs); break;
         case 'cluster_contract': checkClusterContract(v, errs); break;
@@ -586,7 +652,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'handover', 'blobstore']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'handover', 'epoch', 'blobstore']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

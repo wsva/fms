@@ -45,6 +45,8 @@ import {
     appendJournal,
     latestForObject,
     parseEditTime,
+    scopeAuthorityEpoch,
+    staleEpochReason,
 } from '@/lib/sync/change_log';
 import { applyAppChange } from '@/lib/sync/appstate';
 import { applyDatasetChange, isJournalWritableKind, JOURNAL_WRITABLE_KINDS } from '@/lib/sync/datasetjournal';
@@ -62,6 +64,14 @@ interface Change {
     payload?: unknown;
     edit_time?: unknown;
     queued_at?: unknown;
+    /**
+     * The authority epoch the follower last recorded for this scope (INV-13), from
+     * the `ChangesPage` it pulled. Mirrors the app's `#[serde(default)] epoch: i64`
+     * — absent ⇒ 0. The host refuses a write presenting less than its current
+     * epoch, so a follower that missed a handover re-pulls to learn the new number
+     * before retrying.
+     */
+    epoch?: unknown;
 }
 
 /** Per-change outcome (mirrors the app's `ChangeResult`). */
@@ -127,6 +137,27 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
+                const datasetUuid = typeof ch.dataset_uuid === 'string' ? ch.dataset_uuid : '';
+                const scope = scopeFor(kind, datasetUuid);
+                // The follower's recorded epoch for this scope (INV-13); the app's
+                // `#[serde(default)] epoch: i64` ⇒ absent/invalid is 0. Truncated like a
+                // seq cursor, so a float or junk never sneaks past the `<` comparison.
+                const parsedEpoch = Number(ch.epoch);
+                const presentedEpoch = Number.isFinite(parsedEpoch) ? Math.trunc(parsedEpoch) : 0;
+
+                // INV-13 stale-authority gate — runs FIRST, before dedup/apply/journal,
+                // for BOTH @app and dataset scopes (parity with `rest.rs::sync_changes`).
+                // A scope whose authority was handed over since this writer last pulled
+                // presents an epoch below this host's current one; refuse it so the change
+                // stays queued and the writer re-pulls to learn the new epoch, then retries.
+                // @app never trips this (the website is its native authority, epoch 0 both
+                // sides ⇒ `0 < 0` false), so the shipped cloud-authority leg is unaffected.
+                const authority = await scopeAuthorityEpoch(tx, clusterId, scope);
+                if (presentedEpoch < authority) {
+                    out.push(failed(id, staleEpochReason(presentedEpoch, authority, scope)));
+                    continue;
+                }
+
                 // INV-3 idempotency: a re-sent change_id is acked without re-applying.
                 const seen = await tx.app_applied_change.findUnique({
                     where: { cluster_id_change_id: { cluster_id: clusterId, change_id: id } },
@@ -136,8 +167,6 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
-                const datasetUuid = typeof ch.dataset_uuid === 'string' ? ch.dataset_uuid : '';
-                const scope = scopeFor(kind, datasetUuid);
                 const editTime = typeof ch.edit_time === 'string' ? ch.edit_time : '';
                 const objectId = objectIdFor(kind, ch.payload, userKey);
 

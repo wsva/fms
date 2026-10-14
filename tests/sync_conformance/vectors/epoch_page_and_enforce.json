@@ -1,0 +1,18 @@
+{
+  "comment": "Website-local (not a desktop vector): sync-v2.md §7/§14 phase 7b — the website emits `epoch` on its ChangesPage and enforces it on POST /api/v1/sync/changes (INV-13). Seed a MIRROR scope at the minted epoch 0 with one journal row; the page must carry epoch 0. A handover flip to authority bumps dataset.journal_epoch, and the very NEXT page must carry that bump (epoch 1) — this is the wiring that lets a writer that missed the handover re-pull, record the new epoch, and retry. `staleEpochReason` is pinned to the desktop hub's byte-identical refusal (learning/fms-app sync/rest.rs sync_changes), and `staleEpochRefused` proves the gate is strictly `presented < authority`: a lower writer is refused (change stays queued), an at-or-ahead writer is accepted. scopeAuthorityEpoch(@app) === 0 shows the shipped cloud-authority leg never trips the gate (the website is @app's native authority; no handover applies) — zero regression.",
+  "check": "epoch",
+  "cluster": "cluster-epoch-page",
+  "dataset_uuid": "66666666-6666-4666-8666-666666666666",
+  "catalog": { "journal_role": "mirror", "journal_epoch": 0 },
+  "expect": {
+    "epoch_before_handover": 0,
+    "epoch_after_handover": 1,
+    "stale_string": "stale_epoch: presented 0 < authority 1 for scope '66666666-6666-4666-8666-666666666666'; re-pull this scope to learn the new epoch, then retry (INV-13/INV-20)",
+    "refused": [
+      { "presented": 0, "authority": 1, "expect": true },
+      { "presented": 1, "authority": 1, "expect": false },
+      { "presented": 5, "authority": 1, "expect": false }
+    ],
+    "app_scope_epoch": 0
+  }
+}

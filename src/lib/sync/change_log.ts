@@ -182,6 +182,16 @@ export interface ChangesPage {
     pruned_up_to: number;
     /** The hub's current high-water seq for this scope. */
     hub_seq: number;
+    /**
+     * This scope's authority handover epoch (INV-13). Mirrors the app's
+     * `ChangesPage.epoch` — a sibling of `hub_seq`, read from `sync_scope_epoch`
+     * there and from `dataset.journal_epoch` here (see {@link scopeAuthorityEpoch}).
+     * A follower records the epoch a page carries and replays it on its next write;
+     * `POST /api/v1/sync/changes` refuses a write presenting a lower epoch than this
+     * host now holds. `0` until a handover bumps the scope; `@app` is always `0`
+     * (the website never hands over its native `@app` authority).
+     */
+    epoch: number;
     resync_required: boolean;
 }
 
@@ -336,6 +346,49 @@ export async function journalHighWater(db: DbClient, clusterId: string, scope: s
 }
 
 /**
+ * This host's authority epoch for a scope (INV-13). Mirrors the app's
+ * `sync_scope_epoch(scope)`: a dataset scope's epoch is its catalog
+ * `journal_epoch` (bumped once per real handover by `POST /api/v1/handover`),
+ * and an absent row reads `0` — the same "no handover yet" value a fresh scope
+ * starts at. `@app` is the website's native cloud authority and never handed
+ * over, so its epoch is a constant `0` (no catalog row to consult).
+ *
+ * One source of truth: `readChanges` stamps every page's `epoch` from here, and
+ * `POST /api/v1/sync/changes` compares a writer's presented epoch against it
+ * before touching dedup/apply/journal. A follower records the epoch a page
+ * carries, so a handover heals itself on the follower's next pull→retry.
+ */
+export async function scopeAuthorityEpoch(db: DbClient, clusterId: string, scope: string): Promise<number> {
+    if (scope === APP_SCOPE) return 0;
+    const row = await db.dataset.findFirst({
+        where: { uuid: scope, user_id: clusterId, deleted: 'N' },
+        select: { journal_epoch: true },
+    });
+    return row?.journal_epoch ?? 0;
+}
+
+/**
+ * Whether a write presenting `presented` must be refused against the host's
+ * current `authority` epoch (INV-13). Strictly-less: a writer at-or-ahead of the
+ * authority is accepted, so a re-sent change after a bump (presented == authority)
+ * lands, and `@app` never refuses (both sides 0). Exported so the conformance
+ * vector pins the comparison itself, not just the refusal text.
+ */
+export function staleEpochRefused(presented: number, authority: number): boolean {
+    return presented < authority;
+}
+
+/**
+ * The stale-epoch refusal text, byte-identical to the desktop hub's
+ * (`sync/rest.rs::sync_changes`) so both hosts answer a stale writer with the same
+ * actionable line. `POST /api/v1/sync/changes` returns it as a per-change
+ * `ok:false` failure (HTTP stays 200), leaving the change queued for a re-pull.
+ */
+export function staleEpochReason(presented: number, authority: number, scope: string): string {
+    return `stale_epoch: presented ${presented} < authority ${authority} for scope '${scope}'; re-pull this scope to learn the new epoch, then retry (INV-13/INV-20)`;
+}
+
+/**
  * Read journal rows for a (cluster, scope) with `seq > after`, oldest first.
  * Sets `resync_required` when the follower's cursor predates a prune (or is the
  * negative unknown-cursor sentinel), so it takes one fresh snapshot instead of
@@ -394,11 +447,17 @@ export async function readChanges(
             ? entries[entries.length - 1].seq
             : await hubSeqFor(db, clusterId, scope);
 
+    // The page always carries this scope's authority epoch (INV-13), even when
+    // resync or truncation suppressed rows — a follower records it so its next
+    // write presents the current number rather than a stale one.
+    const epoch = await scopeAuthorityEpoch(db, clusterId, scope);
+
     return {
         dataset_uuid: scope,
         entries,
         pruned_up_to: prunedUpTo,
         hub_seq: hubSeq,
+        epoch,
         resync_required: resyncRequired,
     };
 }

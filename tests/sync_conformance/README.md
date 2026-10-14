@@ -125,6 +125,28 @@ The on-disk layer (stream-to-tmp + **digest re-verification** + atomic rename + 
 covered by the phase-4 e2e probe rather than a vector — it writes to a scratch `BLOB_ROOT`,
 not to the shared journal tables.
 
+### `epoch` — ChangesPage carries + write enforces it, §7/§14 7b (website-local)
+
+Phase 7b's last website-side wire gap. The desktop hub already emits `epoch` on every
+`ChangesPage` (`sync/change_log.rs`) and refuses a stale writer on `POST /sync/changes`
+(`sync/rest.rs::sync_changes`); §14 named the two vectors diverging on `epoch` "until that
+lands." This vector closes the website's half, so the page shape and the write gate now match
+the hub. `epoch_page_and_enforce` drives `readChanges` / `scopeAuthorityEpoch` /
+`staleEpochReason` / `staleEpochRefused` / `applyHandover` directly:
+
+| Asserts | detail |
+| --- | --- |
+| page carries the epoch | a mirror scope at the minted epoch 0 → `page.epoch === 0`; after `applyHandover` flips it to `authority` (bumping `dataset.journal_epoch` to 1) the **very next page** carries `epoch === 1` — the wiring that lets a writer that missed a handover re-pull, record the new epoch, and retry |
+| refusal text is byte-exact | `staleEpochReason(0, 1, scope)` equals the hub's `sync/rest.rs` line verbatim, so both hosts answer a stale writer with the same actionable string |
+| gate is strictly `presented < authority` | `staleEpochRefused`: `(0,1)`→refused, `(1,1)` and `(5,1)`→accepted — an at-or-ahead writer lands, a lower one stays queued |
+| `@app` never gated | `scopeAuthorityEpoch(cluster, APP_SCOPE) === 0` (the website is `@app`'s native authority, no handover applies), so the shipped cloud-authority push leg has zero regression |
+
+The route (`POST /api/v1/sync/changes`) runs the same `presented < authority` gate as its
+**first** per-change check, before dedup/apply/journal — exactly the hub's ordering. This
+ships dormant for dataset scopes: the app client still hard-errors a dataset-scope push to a
+Website origin, so no live follower reaches that branch yet (host-before-client, as phases
+4/5 did).
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The
@@ -142,7 +164,9 @@ reviewer should read this table before "fixing" one of these into a bug.
 | `protocol_version`   | `6`                                 | `6` — already at parity (phase 7a); asserted equal                             |
 
 `page_shape`, the `SyncEntry` key set (7 keys on both hosts) and `resync` pass under
-**exact** equality — those are the true byte-parity claims.
+**exact** equality — those are the true byte-parity claims. The `epoch` key §14 once listed as
+a legitimate divergence is now emitted by both hosts, so `page_shape`'s key set (six keys,
+`epoch` included) is exact on both sides too.
 
 ## Running
 
@@ -164,8 +188,8 @@ docker rm -f fms_conf_pg
 
 The contract checks (`features`, `cluster_contract`, `registry_contract`) need no
 database and run regardless; every journal-backed check (the `page_shape` / `resync` /
-`prune_*` vectors, the three `sweep_*` vectors, `version_availability`, the two
-`handover` vectors, and the two `blobstore` vectors) skips cleanly when `DATABASE_URL` is
+`prune_*` vectors, the three `sweep_*` vectors, `version_availability`, the two `handover`
+vectors, the `epoch` vector, and the two `blobstore` vectors) skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector.
 
 ## Why a loader is involved

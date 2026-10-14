@@ -169,7 +169,10 @@ export async function ingestMirrorEntries(
         // INV-13: refuse to mirror-fill a scope this account HOSTS as authority —
         // the cloud is that scope's single seq writer now, and a stale hub's verbatim
         // rows would collide with (and predate) the minted journal. The message names
-        // the current journal_epoch so the hub learns it has been superseded.
+        // the current journal_epoch so the hub learns it has been superseded. That
+        // per-scope epoch now feeds THREE surfaces (all via `scopeAuthorityEpoch` /
+        // `dataset.journal_epoch`): this mirror refusal, the `epoch` every ChangesPage
+        // carries, and the stale-writer gate on POST /api/v1/sync/changes.
         const role = await roleOf(scope);
         if (role && role.role === 'authority') {
             refuse(

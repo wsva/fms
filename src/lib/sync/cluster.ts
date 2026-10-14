@@ -61,8 +61,10 @@ export interface ClusterInfo {
      * Cluster-level authority epoch — a placeholder `0`. Handover (§9 flow 8) is a
      * PER-SCOPE operation: it bumps `dataset.journal_epoch` on the catalog (via
      * `POST /api/v1/handover`), never this cluster-level field, so the advertisement
-     * stays `0` and a follower detects a per-scope supersession from the epoch named in
-     * a mirror-vs-authority refusal (`POST /api/v1/changes`, `POST /api/v1/sync/changes`).
+     * stays `0`. A follower learns a scope's live epoch from the `epoch` each
+     * `ChangesPage` carries (`scopeAuthorityEpoch`) and replays it on its next write,
+     * which `POST /api/v1/sync/changes` compares against this host's epoch (INV-13);
+     * the mirror-vs-authority refusal at `POST /api/v1/changes` names it too.
      */
     epoch: number;
     /** Wire protocol version, mirrored from `/status` so one read suffices. */
