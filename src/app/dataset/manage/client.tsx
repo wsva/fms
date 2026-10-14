@@ -9,6 +9,7 @@ import {
     listMyDatasets,
     setDatasetTags,
     setDatasetVisibility,
+    setDatasetAuthority,
     deleteDatasetHub,
 } from '@/app/actions/dataset_hub';
 import type { DatasetJson, DatasetTagRef } from '@/lib/datasets/access';
@@ -19,7 +20,7 @@ import type { dataset_tag } from '@/generated/prisma/client';
 
 type Props = { email: string };
 
-type Row = DatasetJson & { tags: DatasetTagRef[] };
+type Row = DatasetJson & { journal_role: string; journal_epoch: number; tags: DatasetTagRef[] };
 
 const LINK_BUTTON =
     'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-sand-300 bg-sand-100 hover:bg-sand-200';
@@ -32,6 +33,7 @@ export default function Client({ email }: Props) {
     const [stateBusy, setStateBusy] = useState<Set<string>>(new Set());
     const [stateEditing, setStateEditing] = useState('');
     const [stateConfirm, setStateConfirm] = useState('');
+    const [stateAuthorityConfirm, setStateAuthorityConfirm] = useState('');
 
     useEffect(() => {
         if (!email) return;
@@ -77,6 +79,28 @@ export default function Client({ email }: Props) {
             )
         ) {
             setStateRows((prev) => prev.map((r) => (r.uuid === row.uuid ? { ...r, tags: next } : r)));
+        }
+    };
+
+    const handover = async (row: Row, role: 'authority' | 'mirror') => {
+        setStateBusy((prev) => new Set(prev).add(row.uuid));
+        const result = await setDatasetAuthority(row.uuid, role);
+        setStateBusy((prev) => {
+            const next = new Set(prev);
+            next.delete(row.uuid);
+            return next;
+        });
+        setStateAuthorityConfirm('');
+        if (result.status === 'success') {
+            const d = result.data;
+            setStateRows((prev) =>
+                prev.map((r) =>
+                    r.uuid === row.uuid ? { ...r, journal_role: d.journal_role, journal_epoch: d.journal_epoch } : r
+                )
+            );
+            toast.success(d.changed ? `Authority → ${d.journal_role} · epoch ${d.journal_epoch}` : `Already ${d.journal_role}`);
+        } else {
+            toast.danger(String(result.error ?? 'Handover failed'));
         }
     };
 
@@ -131,6 +155,14 @@ export default function Client({ email }: Props) {
                                     </Chip>
                                     <Chip size="sm" variant="tertiary">
                                         {row.visibility}
+                                    </Chip>
+                                    <Chip
+                                        size="sm"
+                                        variant={row.journal_role === 'authority' ? 'primary' : 'tertiary'}
+                                        color={row.journal_role === 'authority' ? 'success' : 'default'}
+                                    >
+                                        {row.journal_role === 'authority' ? 'cloud authority' : 'mirror'} · e
+                                        {row.journal_epoch}
                                     </Chip>
                                     {row.status !== 'ready' && (
                                         <Chip size="sm" variant="tertiary" color="warning">
@@ -219,6 +251,38 @@ export default function Client({ email }: Props) {
                                     {v}
                                 </Chip>
                             ))}
+                        </div>
+
+                        <div className="flex gap-1.5 flex-wrap items-center">
+                            <span className="text-xs text-foreground-400">journal authority:</span>
+                            {stateAuthorityConfirm === row.uuid ? (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    isPending={stateBusy.has(row.uuid)}
+                                    onPress={() =>
+                                        handover(row, row.journal_role === 'authority' ? 'mirror' : 'authority')
+                                    }
+                                >
+                                    Confirm hand {row.journal_role === 'authority' ? 'back to hub' : 'to cloud'}
+                                </Button>
+                            ) : (
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    isDisabled={stateBusy.has(row.uuid)}
+                                    onPress={() => setStateAuthorityConfirm(row.uuid)}
+                                >
+                                    {row.journal_role === 'authority' ? 'Hand back to hub' : 'Hand to cloud'}
+                                </Button>
+                            )}
+                            {stateAuthorityConfirm === row.uuid && (
+                                <span className="text-xs text-foreground-400">
+                                    moves this dataset&apos;s journal between the desktop hub and the cloud; the
+                                    epoch bumps to {row.journal_epoch + 1} on a real change, so a stale hub write is
+                                    then refused — manual only, never automatic.
+                                </span>
+                            )}
                         </div>
 
                         {stateConfirm === row.uuid && (

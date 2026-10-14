@@ -26,7 +26,17 @@ import {
     type DatasetListItem,
     type DatasetTagRef,
 } from '@/lib/datasets/access';
+import { applyHandover, type HandoverRole } from '@/lib/sync/handover';
 import type { dataset_tag } from '@/generated/prisma/client';
+
+const HANDOVER_ROLES: readonly HandoverRole[] = ['authority', 'mirror'];
+
+/** The owner's dataset row plus the sync-authority state only they may see. */
+export type ManagedDatasetRow = DatasetJson & {
+    journal_role: string;
+    journal_epoch: number;
+    tags: DatasetTagRef[];
+};
 
 /** One immutable upload of a dataset, newest first. */
 export type DatasetVersionInfo = {
@@ -135,20 +145,28 @@ export async function listMarketDatasets(
     }
 }
 
-/** Everything the signed-in user uploaded. */
-export async function listMyDatasets(): Promise<ActionResult<(DatasetJson & { tags: DatasetTagRef[] })[]>> {
+/** Everything the signed-in user uploaded, with their sync-authority state. */
+export async function listMyDatasets(): Promise<ActionResult<ManagedDatasetRow[]>> {
     try {
         const email = await currentEmail();
         if (!email) return { status: 'error', error: 'Unauthorized' };
+        // journal_role/journal_epoch are withheld from the shared catalog/serialize path
+        // (they leak authority into the app mirror + public REST shapes); they surface
+        // only here, on the owner's own manage payload.
         const rows = await prisma.dataset.findMany({
             where: { user_id: email, deleted: 'N' },
-            select: datasetCatalogFields,
+            select: { ...datasetCatalogFields, journal_role: true, journal_epoch: true },
             orderBy: { updated_at: 'desc' },
         });
         const tags = await tagsByDataset(rows.map((r) => r.uuid));
         return {
             status: 'success',
-            data: rows.map((r) => ({ ...serializeDataset(r), tags: tags.get(r.uuid) ?? [] })),
+            data: rows.map((r) => ({
+                ...serializeDataset(r),
+                journal_role: r.journal_role,
+                journal_epoch: r.journal_epoch,
+                tags: tags.get(r.uuid) ?? [],
+            })),
         };
     } catch (error) {
         console.error(error);
@@ -253,6 +271,43 @@ export async function setDatasetVisibility(uuid: string, visibility: string): Pr
             select: datasetCatalogFields,
         });
         return { status: 'success', data: serializeDataset(row) };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+/**
+ * Hand a dataset's journal authority between the desktop hub and this cloud
+ * (sync-v2 §9 flow 8, §14 7b, INV-13). This is the website UI's surface for the
+ * already-shipped `applyHandover` primitive — the same role flip + single
+ * epoch increment on a real change that `POST /api/v1/handover` performs for a
+ * Bearer client, called in-process with the session email as cluster id
+ * (cluster id == account email, one cloud cluster per account).
+ *
+ * Guard and lock mirror the route verbatim (owner-only, explicit role, the same
+ * `pg_advisory_xact_lock(hashtext(email))` commit-point the push path takes so
+ * the flip lands where exactly one writer owns the scope). A same-role call is a
+ * no-op that does NOT bump the epoch (INV-13 / §15 q4) — the primitive enforces
+ * that; the response just reports `changed: false`.
+ */
+export async function setDatasetAuthority(
+    uuid: string,
+    role: unknown
+): Promise<ActionResult<{ uuid: string; changed: boolean; journal_role: string; journal_epoch: number }>> {
+    try {
+        const email = await currentEmail();
+        const owned = await requireOwned(uuid, email);
+        if ('error' in owned) return { status: 'error', error: owned.error };
+        if (typeof role !== 'string' || !(HANDOVER_ROLES as readonly string[]).includes(role)) {
+            return { status: 'error', error: `role must be one of ${HANDOVER_ROLES.join(' | ')}` };
+        }
+        const result = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${email}))`;
+            return applyHandover(tx, email as string, uuid, role as HandoverRole);
+        });
+        if (!result) return { status: 'error', error: 'Dataset not found' };
+        return { status: 'success', data: { uuid, ...result } };
     } catch (error) {
         console.error(error);
         return { status: 'error', error: toErrorMessage(error) };
