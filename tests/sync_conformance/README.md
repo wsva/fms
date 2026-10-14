@@ -209,9 +209,51 @@ against a scratch DB and reads the queued `app_inbox` rows back. It is in `DB_CH
 | INV-1 | zero `app_sync_log` rows for the cluster after proposing — the website mints no journal seq |
 | INV-17 | the `dataset` catalog row (`current_version`, `snapshot_seq`, `journal_role`, `deleted`) is byte-unchanged, fingerprinted before and after |
 
-Proposal-only by design: the seam never touches `live/<type>/<uuid>/data.sqlite3`, and
-authority datasets are out of scope (their edits ride `/api/v1/sync/changes`), so nothing
-here asserts a live-row change.
+The seam never fabricates a live directory: a proposal is queued in PG and the optimistic
+`live/` write is a separate, guarded, post-commit step (see `ack_rollback_decision` below for
+the decision half). Authority datasets are out of scope (their edits ride
+`/api/v1/sync/changes`), so nothing in the producer vectors asserts a live-row change.
+
+### `ack_rollback_decision` — naming the winner of a rejected proposal, §8.3 step 3 (website-local, PURE)
+
+`app_ack_rollback_decision.json` drives `datasets.ack_rollback.winnerToApply` — the function
+that decides what a rejection writes into `live/` — over the whole ambiguity table. It is
+**not** in `DB_CHECKS`: the decision is pure (no fs, no DB), which is exactly why it lives
+beside `app_lww` rather than beside the producer vectors, and it runs on a database-less CI
+step.
+
+| Asserts | detail |
+| --- | --- |
+| the shared-`object_id` trap | `card_save` / `card_delete` / `card_set_tags` all key on the **card** uuid, so the winner's *shape* (and, when the hub sends it, its `winner_kind`) is the only disambiguator; both directions are pinned, named and unnamed |
+| named-kind precedence | a `winner_kind` that names a writable kind **in the proposal's family** wins over shape detection — but only with a payload coherent with that name: `card_delete` over a full-Card payload is **refused**, and a cross-family name is refused |
+| tombstone drop | `winner_seq: 0` with `winner_payload: null` (and the `NULL` `recordAck` stores for it, since `asIntGE1` accepts only ≥ 1) resolves to the family delete, keyed by the proposal's `object_id` — leaving a phantom instead is the defect this pins shut |
+| shape order | `tag_uuids[]`→`card_set_tags`; `question`+`answer`→`card_save` (payload verbatim); `name`+`uuid`→`card_tag_save` in the tag family; a single locator key→the family delete; anything else → `null` |
+| `null` is safe by construction | a seq with no payload, junk/array/multi-key payloads and an unknown proposal kind all yield `null` — "verdict recorded, live row untouched". A mis-detected **delete** is the one unrecoverable mistake, so an unrecognized shape is refused, never guessed |
+| stamp (INV-6) | the winner's own `updated_at` when it carries a canonical one, else the rejected proposal's `edit_time`, else now; every emitted stamp is re-checked against the canonical fixed-width UTC form (a wrong `winner.updated_at` must not poison the guard's string compare) |
+| writable kinds | every emitted `kind` ∈ `JOURNAL_WRITABLE_KINDS`, and the **coverage pin**: across all cases the decided set must equal the card-family writable kinds exactly — a new writable kind with no case here turns this red |
+| coalescing units | `verdictUnit` pins, including the hard one: `card_save` and `card_set_tags` on the same uuid are **different** units (different rows), so a consumer that dedups by unit must not skip one of them |
+
+The filesystem half — the guarded apply itself — is out of this harness's reach (it never opens
+a `data.sqlite3`) and was proven by a throwaway script on a temp `DATASET_ROOT`, deleted after
+the run, the same way `getCardTagLinks` was.
+
+### `inbox_ack` — the ack round and its flips, §8.3 steps 2–3 (website-local, DB)
+
+`app_producer_ack.json` drives `sync.inbox.recordAck` inside a transaction, exactly as
+`POST /api/v1/inbox/ack` does, over four queued proposals (`card_save`, `card_delete`,
+`card_tag_save`, and a second `card_save`). In `DB_CHECKS`.
+
+| Asserts | detail |
+| --- | --- |
+| `flipped` is exact | it carries **only** the rows this round transitioned from `pending`, matched per `change_id` with the expected `{status, scope, kind, object_id, edit_time, winner_seq, winner_payload}` |
+| exactly-once | an identical re-ack counts the same verdicts but returns `flipped: []` — the consumer's input, and why a re-ack rolls back nothing. Widening the flip lookup past the `status='pending'` guard turns this red (verified as a bite test) |
+| re-verdict | an already-`accepted` row acked again as rejected keeps its stored verdict: counts move, `flipped` and the stored columns do not |
+| `unknown` | a `change_id` not in this cluster is reported, not silently dropped; the shipped shape pushes the placeholder once per leg, which the vector pins rather than "fixes" |
+| winner threading | `winner_seq` survives a stringified number (`"13"` → 13) and `0` is stored as NULL; `flipped` carries the request's `winner_kind`, and the row **must not** — a pin that `app_inbox` has no `winner_kind` column, so giving it one is a visible migration decision |
+| INV-6 | every flip's `edit_time` is canonical fixed-width UTC, because the stale guard string-compares it |
+| reads | `readInbox` (pending-only) is empty afterwards; `readOutcomes` returns the terminal verdicts newest-ack-first with a non-empty `acked_at` — the read that answers "did my edit land?" |
+| INV-1 / INV-17 | zero `app_sync_log` rows minted by an ack; the catalog fingerprint (`current_version`, `snapshot_seq`, `journal_role`, `deleted`) byte-unchanged — an ack must not move `snapshot_seq` either |
+
 
 ### `tag_proposal_shape` — the producer's tag half, §8.3 step 1 / §14 phase 5 (website-local)
 
@@ -267,7 +309,8 @@ Needs the journal tables. Scratch Postgres recipe (never point this at productio
 ```sh
 docker run -d --name fms_conf_pg -e POSTGRES_PASSWORD=scratchpw -e POSTGRES_DB=fms_conf \
   -p 5434:5432 postgres:16-alpine
-DATABASE_URL='postgresql://postgres:scratchpw@127.0.0.1:5434/fms_conf' npx prisma db push
+DATABASE_URL='postgresql://postgres:scratchpw@127.0.0.1:5434/fms_conf' \
+  npx prisma db push --force-reset --accept-data-loss
 
 npm run test:conformance            # DATABASE_URL must be exported
 # equivalent explicit form:
@@ -278,14 +321,22 @@ DATABASE_URL='postgresql://postgres:scratchpw@127.0.0.1:5434/fms_conf' \
 docker rm -f fms_conf_pg
 ```
 
+Reset every time, not just once: `dataset.uuid` is the catalog's primary key while the
+per-vector reset cleans by `user_id`, and the `epoch` / `handover_a2m` vectors share one
+fixture uuid — a second run against an un-reset database fails `epoch_page_and_enforce` on a
+`dataset_pkey` collision. That is pre-existing and unrelated to the inbox vectors; the reset is
+the workaround, and it is why the recipe above carries `--force-reset`.
+
 The contract checks (`features`, `cluster_contract`, `registry_contract`) need no
 database and run regardless; every journal-backed check (the `page_shape` / `resync` /
 `prune_*` vectors, the three `sweep_*` vectors, `version_availability`, the two `handover`
 vectors, the `epoch` vector, the two `blobstore` vectors, the `@app` read-plane vectors
-`app_state_shape` and `stats`, and the two inbox producer vectors `card_proposal_shape` and
-`tag_proposal_shape`)
+`app_state_shape` and `stats`, the two inbox producer vectors `card_proposal_shape` and
+`tag_proposal_shape`, and the ack-round vector `inbox_ack`)
 skips cleanly when `DATABASE_URL` is
-unset, so a CI step without a database never turns red on an absent vector.
+unset, so a CI step without a database never turns red on an absent vector. The decision
+vector `ack_rollback_decision` is the other deliberate hybrid in that direction: it is **not**
+in `DB_CHECKS` because `winnerToApply` is pure, so a database-less run executes it in full.
 
 `app_lww` is the deliberate hybrid: it is **not** in `DB_CHECKS`, so its pure half
 (classes / clamp / later-wins truth table) always runs, and only its `appendJournal`+

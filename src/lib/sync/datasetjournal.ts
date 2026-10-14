@@ -29,12 +29,20 @@
  * Every mutation is serialized behind `cardstore.withDatasetLock` (single Next
  * instance, one writer per DB file) and stamps go through `canonicalStamp`, so a
  * peer's timestamp spelling never lands in a text-ordered column.
+ *
+ * `applyDatasetChangeIfStale` is the OTHER consumer of these same writers: the inbox
+ * planes (§8.3 steps 1–3) — an accepted website proposal applied optimistically, and a
+ * rejected one rolled back to the hub's winner. Those paths mutate a `mirror` dataset's
+ * live rows, which the website does NOT own, so every one of them carries a stale guard:
+ * the write only lands while the stored row is still the one that was proposed over.
+ * See `lib/datasets/ack_rollback.ts` for how a rejection names the row to write.
  */
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 import Database from 'better-sqlite3';
-import { cardDbPath, openCardDb, tableExists, withDatasetLock } from '@/lib/datasets/cardstore';
-import { canonicalStamp } from '@/lib/datasets/stamps';
+import { cardDbPath, countLiveCards, openCardDb, tableExists, withDatasetLock } from '@/lib/datasets/cardstore';
+import { canonicalStamp, stampsCmp } from '@/lib/datasets/stamps';
+import type { DbClient } from '@/lib/sync/change_log';
 
 /** The seven dataset-scope kinds this host can apply. Everything else has no writer. */
 export const JOURNAL_WRITABLE_KINDS = [
@@ -178,12 +186,45 @@ function applySetCardTags(db: Database.Database, p: Record<string, unknown>, sta
 
 // --- dispatch ------------------------------------------------------------------
 
+/** The card-family writers, run on an open handle. Shared by both apply paths below. */
+function applyCardKind(
+    db: Database.Database,
+    kind: string,
+    p: Record<string, unknown>,
+    canonical: string
+): void {
+    switch (kind) {
+        case 'card_save':
+            applyCardSave(db, p, canonical);
+            break;
+        case 'card_delete':
+            applyCardDelete(db, p, canonical);
+            break;
+        case 'card_tag_save':
+            applyTagSave(db, p, canonical);
+            break;
+        case 'card_tag_delete':
+            applyTagDelete(db, p, canonical);
+            break;
+        case 'card_set_tags':
+            applySetCardTags(db, p, canonical);
+            break;
+        default:
+            throw new Error(`no cloud writer for kind '${kind}'`);
+    }
+}
+
 /**
  * Apply one accepted dataset-scope change to the dataset's live `data.sqlite3`.
  * `dir` is the dataset directory (`datasetDir(type, uuid)`), `stamp` is the
  * change's canonicalized (clamped) edit_time used for tombstone/whole-set rows.
  * Throws on a malformed payload or a DB that is not ready — the caller turns a
  * throw into a per-change refusal and does NOT journal the change.
+ *
+ * UNCONDITIONAL by design: this is the cloud-authority path, where the route's journal
+ * LWW has already decided this change wins, so re-checking a row stamp here would
+ * recreate §3 fact 3 (two conflict engines for the same rows). The inbox plane's writes
+ * are the guarded ones — see `applyDatasetChangeIfStale`.
  */
 export async function applyDatasetChange(
     dir: string,
@@ -246,27 +287,102 @@ export async function applyDatasetChange(
     await withDatasetLock(dir, () => {
         const db = openCardDb(dir);
         try {
-            switch (kind) {
-                case 'card_save':
-                    applyCardSave(db, p, canonical);
-                    break;
-                case 'card_delete':
-                    applyCardDelete(db, p, canonical);
-                    break;
-                case 'card_tag_save':
-                    applyTagSave(db, p, canonical);
-                    break;
-                case 'card_tag_delete':
-                    applyTagDelete(db, p, canonical);
-                    break;
-                case 'card_set_tags':
-                    applySetCardTags(db, p, canonical);
-                    break;
-                default:
-                    throw new Error(`no cloud writer for kind '${kind}'`);
-            }
+            applyCardKind(db, kind, p, canonical);
         } finally {
             db.close();
         }
+    });
+}
+
+// --- the stale-guarded apply (the inbox plane: optimistic write + INV-4 rollback) ---
+
+/**
+ * Which live row a guarded apply must inspect first, per kind. `card_set_tags` guards on
+ * the CARD row (its object_id and its whole-set unit), not on `card_tag`; the tag kinds
+ * guard on `tag`. Table names are literals from this fixed map — never interpolated input.
+ */
+function guardTarget(kind: string, p: Record<string, unknown>): { table: 'card' | 'tag'; uuid: string } | null {
+    switch (kind) {
+        case 'card_save':
+            return { table: 'card', uuid: str(p, 'uuid') };
+        case 'card_delete':
+            return { table: 'card', uuid: str(p, 'card_uuid') || str(p, 'uuid') };
+        case 'card_set_tags':
+            return { table: 'card', uuid: str(p, 'card_uuid') };
+        case 'card_tag_save':
+            return { table: 'tag', uuid: str(p, 'uuid') };
+        case 'card_tag_delete':
+            return { table: 'tag', uuid: str(p, 'tag_uuid') || str(p, 'uuid') };
+        default:
+            return null;
+    }
+}
+
+/**
+ * Apply a card-family change to `live/` ONLY while the stored row is still the one this
+ * change was written against — the guard that makes the inbox plane safe to mutate rows
+ * this host does not own (sync-v2.md §8.3 steps 1–3).
+ *
+ * `guardEditTime` is the proposal's `edit_time`: the instant the edit was made. The apply
+ * runs when either
+ *   - the row does not exist yet (a new card/tag, or a never-reconciled mirror), or
+ *   - the stored `updated_at` is ≤ `guardEditTime` ("nobody has touched this row since").
+ * Anything newer means a later accepted change (or a hub row that arrived through
+ * `/api/card/sync/push`) already owns the row, and rewriting it would clobber the winner —
+ * so the write is skipped, not queued. An unreadable stored stamp is treated the same way:
+ * conservative in the direction that never destroys authoritative data.
+ *
+ * The guard read and the write share ONE `withDatasetLock` scope, so no interleaved edit
+ * can slip between them (and no reliance on the lock being re-entrant).
+ *
+ * `not-ready` refuses a dataset whose live dir was never reconciled: writing here would
+ * `openCardDb` a fabricated schema into a mirror that has no rows to edit.
+ */
+export async function applyDatasetChangeIfStale(
+    dir: string,
+    kind: string,
+    payload: unknown,
+    stamp: string,
+    guardEditTime: string
+): Promise<'applied' | 'superseded' | 'not-ready'> {
+    const p = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
+    if (!fs.existsSync(cardDbPath(dir))) return 'not-ready';
+
+    const target = guardTarget(kind, p);
+    if (!target || !target.uuid) {
+        throw new Error(`no stale-guard row for kind '${kind}' (payload is missing its row uuid)`);
+    }
+    const canonical = canonicalStamp(stamp);
+
+    return withDatasetLock(dir, () => {
+        const db = openCardDb(dir);
+        try {
+            const row = db
+                .prepare(`SELECT updated_at FROM ${target.table} WHERE uuid = ?`)
+                .get(target.uuid) as { updated_at: string } | undefined;
+            if (row) {
+                const cmp = stampsCmp(String(row.updated_at ?? ''), guardEditTime);
+                if (cmp === null || cmp > 0) return 'superseded';
+            }
+            applyCardKind(db, kind, p, canonical);
+            return 'applied';
+        } finally {
+            db.close();
+        }
+    });
+}
+
+/**
+ * Refresh the catalog's denormalized card count after a live-row mutation, and NOTHING
+ * else. Deliberately no `snapshot_seq` bump: for a hosted/mirrored scope the honest
+ * subscriber cursor is the hub's journal seq, and counting both a catalog counter and the
+ * journal would recreate §3 fact 2 — the exact rule `/api/v1/sync/changes` applies to its
+ * own applies. Idempotent (a full recompute), so a retry after a partial failure lands the
+ * same number.
+ */
+export async function refreshCardCounts(db: DbClient, datasetUuid: string, dir: string): Promise<void> {
+    await db.dataset.update({
+        where: { uuid: datasetUuid },
+        data: { card_count: countLiveCards(dir), updated_at: new Date() },
     });
 }

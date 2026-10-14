@@ -5,24 +5,28 @@
  * optionally an offline follower) *propose* row edits here; the desktop authority
  * *drains* them, applies each through its own command path (INV-18, minting the
  * real journal seq THERE), and *acks* with the winner. The website is **not** the
- * dataset-scope authority, so it never applies a proposal and never mints a journal
+ * dataset-scope authority, so it never *journals* a proposal and never mints a journal
  * seq — `proposal_seq` is an inbox-ordering counter per `(cluster, scope)`, a
- * separate number space from `app_sync_seq` (INV-1).
+ * separate number space from `app_sync_seq` (INV-1). What it may do is write its OWN
+ * `live/` copy optimistically after the queue commits, which is precisely what a verdict
+ * then confirms or rolls back (§8.3 steps 1–3, INV-4).
  *
  * These paths write **only** `app_inbox` + `app_inbox_seq`. They never touch
  * `app_sync_log`, the `dataset` catalog, `current_version`, `snapshot_seq`, or
  * `versions/` (INV-2: the inbox is a queue, not the append-only journal; INV-17:
- * proposals are queued, not published).
+ * proposals are queued, not published). Nothing here writes files either: the
+ * rollback's `live/` mutation belongs to the ack ROUTE, which consumes `flipped` only
+ * after this transaction commits.
  *
  * Deliberately isolated from `change_log.ts` / `mirror.ts`: the shipped `@app`
  * authority and mirror-receiver primitives are untouched, so this host carries zero
  * regression risk for them.
  *
- * **A producer exists; the drainer does not.** The website-UI card editor
- * (`lib/datasets/card_proposals.ts`, actions in `app/actions/card_editor.ts`) proposes
- * `card_save`/`card_delete` here for `journal_role='mirror'` datasets. There is still no
- * app inbox client (`grep 'inbox'` = 0 in `src-tauri/`), so proposals queue until the hub
- * drains them — the same posture the mirror receiver held between its own two halves.
+ * **The loop is closed.** The website-UI card editor (`lib/datasets/card_proposals.ts`,
+ * actions in `app/actions/card_editor.ts`) proposes the five dataset-scope card-family
+ * kinds here for `journal_role='mirror'` datasets; the desktop hub drains them every sync
+ * round (`src-tauri/src/sync/inbox.rs`) and acks them via `POST /api/v1/inbox/ack`, whose
+ * consumer applies the winner back to `live/` when the proposal lost (INV-4).
  */
 import type { Prisma } from '@/generated/prisma/client';
 import { APP_SCOPE, toNum, type DbClient } from '@/lib/sync/change_log';
@@ -113,13 +117,67 @@ export interface AckRejectedIn {
     change_id?: unknown;
     winner_seq?: unknown;
     winner_payload?: unknown;
+    /**
+     * The winner journal entry's kind — the disambiguator the rollback needs, because
+     * `card_save`/`card_delete`/`card_set_tags` all key on the card uuid. Additive on the
+     * wire and ABSENT for a tombstone-dropped rejection, so it narrows the shape detector in
+     * `datasets/ack_rollback.ts` rather than replacing it.
+     */
+    winner_kind?: unknown;
 }
 
-/** The ack round result: counts plus the change_ids not found in this cluster. */
+/**
+ * One proposal whose status THIS ack round actually transitioned (`pending` →
+ * `accepted`/`rejected`), with everything the INV-4 rollback consumer needs to mutate
+ * `live/` afterwards. A re-acked verdict is NOT here, which is what makes the consumer
+ * exactly-once rather than "once per ack round".
+ */
+export interface AckFlip {
+    change_id: string;
+    scope: string;
+    object_id: string;
+    kind: string;
+    edit_time: string;
+    status: string;
+    /** The journal seq the authority reported (accepted: traceability; rejected: the winner's). */
+    winner_seq: number | null;
+    /** The winner payload; NULL on an accepted ack and on a tombstone-dropped rejection. */
+    winner_payload: unknown;
+    /**
+     * The wire's winner kind, threaded straight from the request: `app_inbox` has no column
+     * for it (no migration this phase), so it exists for THIS round's consumer only. NULL on
+     * an accepted flip and whenever the hub omitted it, which is when the rollback falls back
+     * to shape detection.
+     */
+    winner_kind: string | null;
+}
+
+/** The ack round result: counts, the change_ids not found in this cluster, and the flips. */
 export interface AckResult {
     accepted: number;
     rejected: number;
     unknown: string[];
+    /** @internal the consumer input; stripped from the route's JSON response. */
+    flipped: AckFlip[];
+}
+
+/** One terminal (accepted/rejected) verdict, newest ack first — the outcomes read. */
+export interface InboxOutcome {
+    change_id: string;
+    proposal_seq: number;
+    object_id: string;
+    kind: string;
+    op: string;
+    edit_time: string;
+    author: string;
+    status: string;
+    /** The proposal's own payload — an accepted ack re-applies THIS, not the winner. */
+    payload: unknown;
+    winner_seq: number | null;
+    /** The winner payload; NULL on an accepted ack and on a tombstone-dropped rejection. */
+    winner_payload: unknown;
+    /** ISO instant of the ack ('' when absent). */
+    acked_at: string;
 }
 
 function asString(v: unknown): string | null {
@@ -400,9 +458,21 @@ export async function readInbox(
  * the authoritative row (§8.3 step 3). An accepted one stores the journal seq the
  * authority minted (traceability only — never minted here, INV-1).
  *
+ * The request's `winner_kind` is NOT stored — `app_inbox` has no column for it and this
+ * phase adds no migration — it is threaded onto the flip it belongs to, which is exactly
+ * once-per-ack-round. A later read-path sweep therefore decides the winner by payload shape
+ * alone (`datasets/ack_rollback.ts`), which is the same answer whenever the shape is
+ * distinguishable and a refusal when it is not.
+ *
  * Idempotent and lock-free: the `status='pending'` guard makes the transition
  * atomic, so a re-ack (or two concurrent acks) is a no-op on the loser. A change_id
  * not in this cluster is reported in `unknown` rather than silently dropped.
+ *
+ * The same `UPDATE` that flips the row `RETURNING`s it, so `flipped` is EXACTLY the set
+ * this round transitioned: the rollback consumer's input, and why it needs no separate
+ * "was this already applied" flag. Reading the row back in the same statement the flip
+ * happens in is also what keeps `flipped` honest under a concurrent ack — the loser of
+ * the `status='pending'` race returns no row.
  */
 export async function recordAck(
     tx: Prisma.TransactionClient,
@@ -413,11 +483,39 @@ export async function recordAck(
     let acceptedCount = 0;
     let rejectedCount = 0;
     const unknown: string[] = [];
+    const flipped: AckFlip[] = [];
 
     const findRow = (changeId: string) =>
         tx.app_inbox.findUnique({
             where: { cluster_id_change_id: { cluster_id: clusterId, change_id: changeId } },
         });
+
+    /** The columns a flip must be read back with, as one typed raw row. */
+    type FlipRow = {
+        change_id: string;
+        scope: string;
+        object_id: string;
+        kind: string;
+        edit_time: string;
+        status: string;
+        winner_seq: unknown;
+        winner_payload: unknown;
+    };
+    const collectFlip = (rows: FlipRow[], winnerKind: string | null) => {
+        for (const r of rows) {
+            flipped.push({
+                change_id: r.change_id,
+                scope: r.scope,
+                object_id: r.object_id,
+                kind: r.kind,
+                edit_time: r.edit_time,
+                status: r.status,
+                winner_seq: r.winner_seq === null || r.winner_seq === undefined ? null : toNum(r.winner_seq),
+                winner_payload: r.winner_payload,
+                winner_kind: winnerKind,
+            });
+        }
+    };
 
     for (const a of accepted) {
         const changeId = asString(a?.change_id);
@@ -427,16 +525,18 @@ export async function recordAck(
         }
         const seq = asIntGE1(a?.seq);
         const seqParam = seq === null ? null : BigInt(seq);
-        const affected = await tx.$executeRaw`
+        const rows = await tx.$queryRaw<FlipRow[]>`
             UPDATE app_inbox
             SET status = 'accepted', winner_seq = ${seqParam}, acked_at = now()
             WHERE cluster_id = ${clusterId} AND change_id = ${changeId} AND status = 'pending'
+            RETURNING change_id, scope, object_id, kind, edit_time, status, winner_seq, winner_payload
         `;
-        if (affected === 1) {
+        collectFlip(rows, null);
+        if (rows.length === 1) {
             acceptedCount++;
             continue;
         }
-        // 0 affected → unknown change_id, or already terminal (idempotent no-op).
+        // No row returned → unknown change_id, or already terminal (idempotent no-op).
         if (await findRow(changeId)) acceptedCount++;
         else unknown.push(changeId);
     }
@@ -451,13 +551,20 @@ export async function recordAck(
         const wseqParam = wseq === null ? null : BigInt(wseq);
         const wp = r?.winner_payload;
         const wpParam = wp === undefined || wp === null ? null : JSON.stringify(wp);
-        const affected = await tx.$executeRaw`
+        // Normalized but NOT validated against the writable-kind list: the inbox stays
+        // type-agnostic (§15 q1), so an unknown kind travels unchanged and the rollback
+        // decision is what refuses it.
+        const wkindRaw = asString(r?.winner_kind);
+        const wkind = wkindRaw === null || wkindRaw === '' ? null : wkindRaw;
+        const rows = await tx.$queryRaw<FlipRow[]>`
             UPDATE app_inbox
             SET status = 'rejected', winner_seq = ${wseqParam},
                 winner_payload = ${wpParam}::jsonb, acked_at = now()
             WHERE cluster_id = ${clusterId} AND change_id = ${changeId} AND status = 'pending'
+            RETURNING change_id, scope, object_id, kind, edit_time, status, winner_seq, winner_payload
         `;
-        if (affected === 1) {
+        collectFlip(rows, wkind);
+        if (rows.length === 1) {
             rejectedCount++;
             continue;
         }
@@ -465,5 +572,61 @@ export async function recordAck(
         else unknown.push(changeId);
     }
 
-    return { accepted: acceptedCount, rejected: rejectedCount, unknown };
+    return { accepted: acceptedCount, rejected: rejectedCount, unknown, flipped };
+}
+
+/**
+ * The owner's TERMINAL verdicts for one scope, newest ack first — the read `readInbox`
+ * deliberately cannot serve (it filters `status='pending'`), which is why an editor that
+ * only reads the inbox sees a queued edit vanish on ack with no answer given.
+ *
+ * Carries both payloads because the two consumers need different ones: an accepted
+ * outcome re-applies the proposal's own `payload` (the optimistic write may have been lost
+ * to an fs failure), a rejected one rolls back to `winner_payload`. The caller decides what
+ * reaches the browser (`card_editor.ts` strips both).
+ */
+export async function readOutcomes(
+    db: DbClient,
+    clusterId: string,
+    scope: string,
+    limit: number
+): Promise<InboxOutcome[]> {
+    const rows = await db.$queryRaw<
+        {
+            change_id: string;
+            proposal_seq: unknown;
+            object_id: string;
+            kind: string;
+            op: string;
+            edit_time: string;
+            author: string;
+            status: string;
+            payload: unknown;
+            winner_seq: unknown;
+            winner_payload: unknown;
+            acked_at: Date | null;
+        }[]
+    >`
+        SELECT change_id, proposal_seq, object_id, kind, op, edit_time, author, status,
+               payload, winner_seq, winner_payload, acked_at
+        FROM app_inbox
+        WHERE cluster_id = ${clusterId} AND scope = ${scope}
+          AND status IN ('accepted', 'rejected')
+        ORDER BY acked_at DESC, proposal_seq DESC
+        LIMIT ${limit}
+    `;
+    return rows.map((r) => ({
+        change_id: r.change_id,
+        proposal_seq: toNum(r.proposal_seq),
+        object_id: r.object_id,
+        kind: r.kind,
+        op: r.op,
+        edit_time: r.edit_time,
+        author: r.author,
+        status: r.status,
+        payload: r.payload,
+        winner_seq: r.winner_seq === null || r.winner_seq === undefined ? null : toNum(r.winner_seq),
+        winner_payload: r.winner_payload,
+        acked_at: r.acked_at ? r.acked_at.toISOString() : '',
+    }));
 }

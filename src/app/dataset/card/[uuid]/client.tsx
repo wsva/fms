@@ -1,22 +1,26 @@
 'use client'
 
 /**
- * `/dataset/card/[uuid]` — the website's dataset-card editor (sync-v2.md §8.3 step 1,
+ * `/dataset/card/[uuid]` — the website's dataset-card editor (sync-v2.md §8.3 steps 1–3,
  * §14 phase 5). An owner of a **mirror** card dataset adds / edits / deletes cards and
- * manages tags; each mutation is proposed into the inbox (`propose*` → `ingestProposals`),
- * never written to the live `data.sqlite3` and never journalled. The desktop hub drains +
- * applies + acks later; until then the edit sits in the "pending proposals" panel below.
- * An authority dataset disables the editor and points the user at the journal path instead.
+ * manages tags; each mutation is proposed into the inbox (`propose*` → `ingestProposals`) and
+ * the same proposal is written to this host's live `data.sqlite3` copy optimistically, so the
+ * edit is visible on refresh rather than one hub round later. Nothing here is claimed as
+ * published: the desktop hub remains the authority, it drains + applies + acks, and a rejected
+ * verdict rolls the row back to the hub's winner — which is what the "Recent outcomes" panel
+ * reports. An authority dataset disables the editor and points the user at the journal path.
  * The tag controls live in `tags.tsx` — they share this page's draft/reload lifecycle.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Chip, Input, ProgressCircle, TextArea, toast } from '@heroui/react'
 import {
     getCardEditor,
+    getProposalOutcomes,
     proposeSaveCard,
     proposeDeleteCard,
     getPendingProposals,
     type CardEditorState,
+    type ProposalOutcomeView,
 } from '@/app/actions/card_editor'
 import type { InboxEntry } from '@/lib/sync/inbox'
 import { TagAssign, TagChips, TagPanel } from './tags'
@@ -36,30 +40,62 @@ function shortUuid(u: string): string {
     return u && u.length > 12 ? `${u.slice(0, 8)}…` : u
 }
 
+/**
+ * What one verdict means for the row the user is looking at. `live` is what this page's own
+ * read did (§8.3 step 3's heal), so the wording describes the website's copy — never the
+ * hub's dataset or any subscriber's, which is why no label says "published".
+ */
+function outcomeLabel(o: ProposalOutcomeView): {
+    text: string;
+    color: 'success' | 'danger' | 'warning';
+    variant: 'secondary' | 'soft';
+} {
+    if (o.status === 'accepted') {
+        return o.live === 'applied'
+            ? { text: 'accepted by the hub', color: 'success', variant: 'secondary' }
+            : { text: `accepted · live copy ${o.live}`, color: 'success', variant: 'secondary' }
+    }
+    if (o.live === 'applied') return { text: 'overwritten by the hub', color: 'danger', variant: 'secondary' }
+    if (o.live === 'superseded') return { text: 'rejected · your newer edit kept', color: 'warning', variant: 'soft' }
+    if (o.live === 'unknown-shape') return { text: 'verdict recorded; live row unchanged', color: 'warning', variant: 'soft' }
+    return { text: `rejected · live row ${o.live}`, color: 'warning', variant: 'soft' }
+}
+
 export default function Client({ uuid }: Props) {
     const [stateEditor, setStateEditor] = useState<CardEditorState | null>(null)
     const [statePending, setStatePending] = useState<InboxEntry[]>([])
+    const [stateOutcomes, setStateOutcomes] = useState<ProposalOutcomeView[]>([])
     const [stateLoading, setStateLoading] = useState(true)
     const [stateBusy, setStateBusy] = useState(false)
     const [stateDraft, setStateDraft] = useState<Draft>(BLANK)
     const [stateEditing, setStateEditing] = useState(false)
 
     const reload = useCallback(async () => {
-        const [ed, pend] = await Promise.all([getCardEditor(uuid), getPendingProposals(uuid)])
+        const [ed, pend, out] = await Promise.all([
+            getCardEditor(uuid),
+            getPendingProposals(uuid),
+            getProposalOutcomes(uuid),
+        ])
         if (ed.status === 'success') setStateEditor(ed.data)
         else toast.danger(errStr(ed.error))
         if (pend.status === 'success') setStatePending(pend.data)
+        if (out.status === 'success') setStateOutcomes(out.data)
     }, [uuid])
 
     useEffect(() => {
         let cancelled = false
         ;(async () => {
             setStateLoading(true)
-            const [ed, pend] = await Promise.all([getCardEditor(uuid), getPendingProposals(uuid)])
+            const [ed, pend, out] = await Promise.all([
+                getCardEditor(uuid),
+                getPendingProposals(uuid),
+                getProposalOutcomes(uuid),
+            ])
             if (cancelled) return
             if (ed.status === 'success') setStateEditor(ed.data)
             else toast.danger(errStr(ed.error))
             if (pend.status === 'success') setStatePending(pend.data)
+            if (out.status === 'success') setStateOutcomes(out.data)
             setStateLoading(false)
         })()
         return () => { cancelled = true }
@@ -73,7 +109,8 @@ export default function Client({ uuid }: Props) {
         const res = await proposeSaveCard(uuid, stateDraft, crypto.randomUUID())
         setStateBusy(false)
         if (res.status === 'success') {
-            toast.success(`card proposed (${res.data.queued} queued${res.data.deduped ? `, ${res.data.deduped} deduped` : ''})`)
+            const d = res.data
+            toast.success(`card proposed (${d.queued} queued${d.deduped ? `, ${d.deduped} deduped` : ''})${d.appliedLocally ? ' · shown locally' : ''}`)
             cancel()
             await reload()
         } else {
@@ -86,7 +123,7 @@ export default function Client({ uuid }: Props) {
         const res = await proposeDeleteCard(uuid, cardUuid, crypto.randomUUID())
         setStateBusy(false)
         if (res.status === 'success') {
-            toast.success('delete proposed')
+            toast.success(res.data.appliedLocally ? 'delete proposed · shown locally' : 'delete proposed')
             await reload()
         } else {
             toast.danger(errStr(res.error))
@@ -202,6 +239,33 @@ export default function Client({ uuid }: Props) {
                         </div>
                     ))}
             </div>
+
+            {editable && (
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-sm font-bold opacity-80">Recent outcomes ({stateOutcomes.length})</h2>
+                    <p className="text-xs opacity-60">
+                        Verdicts the hub returned on proposals you already sent. A row marked
+                        overwritten lost the contest, so this copy now shows the authoritative row;
+                        neither label claims a published snapshot.
+                    </p>
+                    {stateOutcomes.length === 0
+                        ? <div className="text-sm opacity-60 py-4 text-center">no verdicts yet</div>
+                        : stateOutcomes.map((o) => {
+                            const l = outcomeLabel(o)
+                            return (
+                                <div key={o.change_id} className="flex flex-row items-center gap-3 bg-sand-100 rounded-md px-3 py-1.5 text-sm">
+                                    <Chip size="sm" color={l.color} variant={l.variant}>{l.text}</Chip>
+                                    <Chip size="sm" variant="tertiary">{o.kind}</Chip>
+                                    <span className="font-mono text-xs opacity-70">{shortUuid(o.object_id)}</span>
+                                    {o.winner_seq !== null && (
+                                        <span className="text-xs opacity-50 shrink-0">hub seq {o.winner_seq}</span>
+                                    )}
+                                    <span className="text-xs opacity-50 ml-auto shrink-0">{o.acked_at}</span>
+                                </div>
+                            )
+                        })}
+                </div>
+            )}
         </div>
     )
 }

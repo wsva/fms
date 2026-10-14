@@ -1053,6 +1053,224 @@ async function checkTagProposalShape(v, errs) {
     if (afterFp !== beforeFp) errs.push(`catalog changed by a proposal: ${afterFp} != ${beforeFp} (INV-17)`);
 }
 
+// ---- §8.3 step 3 rollback DECISION (website-local, PURE — no fs, no DB) ----
+// The hub's rejection names the winner only by PAYLOAD plus an additive `winner_kind`
+// (`rest.rs::ChangeResult`), and the journal's conflict lookup is per (scope, object_id)
+// while card_save / card_delete / card_set_tags all key on the CARD uuid. So this pins the
+// decision the ack consumer and the read-path sweep both run: which single live-row write
+// undoes the website's own optimistic edit. Refusal (`null`) is asserted as a first-class
+// outcome, because a mis-detected DELETE is the one rollback mistake no later ack can undo.
+const CANON_STAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+async function checkAckRollbackDecision(v, errs) {
+    const { winnerToApply, verdictUnit, isCardFamilyKind } =
+        await import('../../src/lib/datasets/ack_rollback.ts');
+    const { JOURNAL_WRITABLE_KINDS } = await import('../../src/lib/sync/datasetjournal.ts');
+
+    const emitted = new Set();
+    for (const c of v.cases ?? []) {
+        let wp;
+        if ('winner_from_fixture' in c) {
+            if (!(c.winner_from_fixture in v.fixtures)) {
+                errs.push(`${c.name}: unknown fixture ${JSON.stringify(c.winner_from_fixture)}`);
+                continue;
+            }
+            wp = v.fixtures[c.winner_from_fixture];
+        } else {
+            wp = 'winner' in c ? c.winner : null;
+        }
+        const got = winnerToApply(
+            c.proposal_kind,
+            c.proposal_object_id ?? v.proposal_object_id,
+            c.proposal_edit_time ?? v.proposal_edit_time,
+            wp,
+            c.winner_seq ?? null,
+            c.winner_kind ?? null
+        );
+        const e = c.expect;
+        if (e === null) {
+            // `undefined` would mean a missing return path, which is a different bug than
+            // the refusal this case asks for.
+            if (got !== null) errs.push(`${c.name}: expected the refusal null, got ${JSON.stringify(got)}`);
+            continue;
+        }
+        if (got === null || got === undefined) {
+            errs.push(`${c.name}: expected ${e.kind}, got ${JSON.stringify(got)}`);
+            continue;
+        }
+        if (got.kind !== e.kind) {
+            errs.push(`${c.name}: kind ${JSON.stringify(got.kind)} != ${JSON.stringify(e.kind)}`);
+        }
+        const wantPayload = 'payload_from_fixture' in e ? v.fixtures[e.payload_from_fixture] : e.payload;
+        if (canon(got.payload) !== canon(wantPayload)) {
+            errs.push(`${c.name}: payload ${canon(got.payload)} != ${canon(wantPayload)}`);
+        }
+        if (e.stamp === '@canonical') {
+            if (!CANON_STAMP.test(got.stamp)) {
+                errs.push(`${c.name}: stamp ${JSON.stringify(got.stamp)} is not canonical fixed-width UTC (INV-6)`);
+            }
+        } else if (got.stamp !== e.stamp) {
+            errs.push(`${c.name}: stamp ${JSON.stringify(got.stamp)} != ${JSON.stringify(e.stamp)}`);
+        }
+        // INV-18: whatever this decides, it must be a kind THIS host's applier accepts.
+        if (!JOURNAL_WRITABLE_KINDS.includes(got.kind)) {
+            errs.push(`${c.name}: decided kind ${JSON.stringify(got.kind)} is not in JOURNAL_WRITABLE_KINDS`);
+        }
+        emitted.add(got.kind);
+    }
+
+    // Coverage: every writable card-family kind is decided by SOME case, and nothing outside
+    // that family is ever decided. A narrowed detector (or a widened one) goes red here.
+    const family = JOURNAL_WRITABLE_KINDS.filter((k) => isCardFamilyKind(k)).sort();
+    if (JSON.stringify([...emitted].sort()) !== JSON.stringify(family)) {
+        errs.push(`decided kinds ${JSON.stringify([...emitted].sort())} != the writable card-family kinds ${JSON.stringify(family)}`);
+    }
+
+    // The coalescing unit each consumer dedups on: `card_save` and `card_set_tags` share an
+    // object_id but mutate different rows, so they must NOT fold into one unit — otherwise
+    // healing the newest verdict per unit could re-apply a stale set over a newer one.
+    for (const u of v.units ?? []) {
+        const unit = verdictUnit(u.kind, u.object_id);
+        if (unit !== u.expect_unit) errs.push(`verdictUnit(${u.kind}) = ${JSON.stringify(unit)} != ${JSON.stringify(u.expect_unit)}`);
+        if (isCardFamilyKind(u.kind) !== u.expect_card_family) {
+            errs.push(`isCardFamilyKind(${u.kind}) != ${u.expect_card_family}`);
+        }
+    }
+    const id = v.proposal_object_id;
+    if (verdictUnit('card_save', id) === verdictUnit('card_set_tags', id)) {
+        errs.push('card_save and card_set_tags share a coalescing unit (they mutate different rows)');
+    }
+}
+
+// ---- §8.3 step 2-3 ack CONSUMER input: the flips `recordAck` returns ----
+// Drives the real `recordAck` (through the same `$transaction` the ack route opens) against
+// proposals queued by the producer seam, and pins the property the rollback is exactly-once
+// on: `flipped` is EXACTLY the rows this round transitioned, so a re-acked verdict returns an
+// empty list and rolls nothing back a second time. Also pins the counts' meaning (a known but
+// already-terminal verdict still counts), `unknown` for a change_id this cluster never queued,
+// how the winner pair is STORED (`winner_seq: 0` → NULL, the payload as jsonb), that
+// `winner_kind` is threaded to the consumer but never persisted (no column this phase), and
+// INV-1 / INV-17: an ack mints no journal row and moves no catalog column — including
+// `snapshot_seq`, which a rollback must never bump for a hosted scope.
+async function checkInboxAck(v, errs) {
+    const client = await db();
+    await cardProposalReset(client, v.cluster, v.scope, v.catalog);
+    const beforeFp = await cardCatalogFingerprint(client, v.scope);
+
+    const { proposeCardDelete, proposeCardSave, proposeTagSave } =
+        await import('../../src/lib/datasets/card_proposals.ts');
+    const { recordAck, readInbox, readOutcomes } = await import('../../src/lib/sync/inbox.ts');
+
+    for (const p of v.propose ?? []) {
+        const r = p.kind === 'card_save'
+            ? await proposeCardSave(v.cluster, v.scope, p.change_id, p.card, client)
+            : p.kind === 'card_delete'
+                ? await proposeCardDelete(v.cluster, v.scope, p.change_id, p.card_uuid, client)
+                : p.kind === 'card_tag_save'
+                    ? await proposeTagSave(v.cluster, v.scope, p.change_id, p.tag, client)
+                    : null;
+        if (!r) {
+            errs.push(`unknown propose kind ${JSON.stringify(p.kind)}`);
+            continue;
+        }
+        if (r.queued !== 1 || r.deduped !== 0 || r.refused.length) {
+            errs.push(`propose ${p.change_id} => ${JSON.stringify(r)} (expected {queued:1})`);
+        }
+    }
+
+    for (const [i, rd] of (v.rounds ?? []).entries()) {
+        const res = await client.$transaction((tx) =>
+            recordAck(tx, v.cluster, rd.accepted ?? [], rd.rejected ?? []));
+        const e = rd.expect;
+        if (res.accepted !== e.accepted) errs.push(`round ${i}: accepted ${res.accepted} != ${e.accepted}`);
+        if (res.rejected !== e.rejected) errs.push(`round ${i}: rejected ${res.rejected} != ${e.rejected}`);
+        const gotUnknown = [...res.unknown].sort().join('|');
+        const wantUnknown = [...(e.unknown ?? [])].sort().join('|');
+        if (gotUnknown !== wantUnknown) {
+            errs.push(`round ${i}: unknown ${JSON.stringify(gotUnknown)} != ${JSON.stringify(wantUnknown)}`);
+        }
+        const byId = new Map(res.flipped.map((f) => [f.change_id, f]));
+        if (byId.size !== res.flipped.length) {
+            errs.push(`round ${i}: flipped repeats a change_id (one verdict must flip once)`);
+        }
+        for (const f of res.flipped) {
+            if (!CANON_STAMP.test(f.edit_time)) {
+                errs.push(`round ${i}: flip ${f.change_id} edit_time ${JSON.stringify(f.edit_time)} is not canonical fixed-width UTC (INV-6 — the stale guard string-compares it)`);
+            }
+            if (f.scope !== v.scope) errs.push(`round ${i}: flip ${f.change_id} scope ${f.scope} != ${v.scope}`);
+        }
+        const want = e.flipped ?? [];
+        if (want.length !== res.flipped.length) {
+            errs.push(`round ${i}: flipped ${JSON.stringify(res.flipped.map((f) => f.change_id))} != the ${want.length} newly-transitioned verdict(s) ${JSON.stringify(want.map((f) => f.change_id))}`);
+        }
+        for (const w of want) {
+            const f = byId.get(w.change_id);
+            if (!f) {
+                errs.push(`round ${i}: flip ${w.change_id} missing from ${JSON.stringify([...byId.keys()])}`);
+                continue;
+            }
+            for (const k of ['scope', 'kind', 'object_id', 'edit_time', 'status', 'winner_seq', 'winner_kind']) {
+                if (k in w && f[k] !== w[k]) errs.push(`round ${i} ${w.change_id}: ${k} = ${JSON.stringify(f[k])} != ${JSON.stringify(w[k])}`);
+            }
+            if ('winner_payload' in w) {
+                const got = f.winner_payload === null || f.winner_payload === undefined ? null : canon(f.winner_payload);
+                const want2 = w.winner_payload === null ? null : canon(w.winner_payload);
+                if (got !== want2) errs.push(`round ${i} ${w.change_id}: winner_payload ${got} != ${want2}`);
+            }
+        }
+    }
+
+    // What the rows look like AFTER the rounds: the terminal status, the stored winner pair,
+    // and that a verdict re-acked with a DIFFERENT status never moved (the `pending` guard is
+    // the only concurrency control here).
+    for (const s of v.expect_status ?? []) {
+        const row = await client.app_inbox.findUnique({
+            where: { cluster_id_change_id: { cluster_id: v.cluster, change_id: s.change_id } },
+        });
+        if (!row) {
+            errs.push(`row ${s.change_id} is gone (an ack must never delete a verdict)`);
+            continue;
+        }
+        if (row.status !== s.status) errs.push(`${s.change_id}: status ${row.status} != ${s.status}`);
+        if ('winner_kind' in row) {
+            errs.push(`${s.change_id}: app_inbox now carries winner_kind — this phase THREADS it from the request instead of persisting it (no migration), so the pin must move with the schema on purpose`);
+        }
+        const gotSeq = row.winner_seq === null ? null : Number(row.winner_seq);
+        if (gotSeq !== s.winner_seq) errs.push(`${s.change_id}: stored winner_seq ${gotSeq} != ${s.winner_seq}`);
+        if ('winner_payload' in s) {
+            const got = row.winner_payload === null || row.winner_payload === undefined ? null : canon(row.winner_payload);
+            const want = s.winner_payload === null ? null : canon(s.winner_payload);
+            if (got !== want) errs.push(`${s.change_id}: stored winner_payload ${got} != ${want}`);
+        }
+        if ('acked' in s && (row.acked_at ? true : false) !== s.acked) {
+            errs.push(`${s.change_id}: acked_at present ${!!row.acked_at} != ${s.acked}`);
+        }
+    }
+
+    // `readInbox` is pending-only, which is exactly why the outcomes read exists: a verdict
+    // must leave the drainer's page and still be answerable to the owner.
+    const pending = await readInbox(client, v.cluster, v.scope, 0, 50);
+    const gotPending = pending.entries.map((e) => e.change_id).sort().join('|');
+    if (gotPending !== (v.expect_pending ?? []).sort().join('|')) {
+        errs.push(`pending page ${JSON.stringify(gotPending)} != ${JSON.stringify([...(v.expect_pending ?? [])].sort().join('|'))}`);
+    }
+    const outcomes = await readOutcomes(client, v.cluster, v.scope, v.outcome_limit ?? 20);
+    const outcomeIds = outcomes.map((o) => o.change_id).join('|');
+    if (outcomeIds !== (v.expect_outcome_order ?? []).join('|')) {
+        errs.push(`outcomes ${JSON.stringify(outcomeIds)} != acked_at DESC, proposal_seq DESC ${JSON.stringify((v.expect_outcome_order ?? []).join('|'))}`);
+    }
+    for (const o of outcomes) {
+        if (!o.acked_at) errs.push(`outcome ${o.change_id} has no acked_at (the read orders on it)`);
+    }
+
+    // INV-1: an ack mints no journal row. INV-17: it moves no catalog column, `snapshot_seq`
+    // included — a mirror's honest cursor is the hub's seq, never a second counter.
+    const journalRows = await client.app_sync_log.count({ where: { cluster_id: v.cluster } });
+    if (journalRows !== 0) errs.push(`acking minted ${journalRows} app_sync_log row(s) (INV-1)`);
+    const afterFp = await cardCatalogFingerprint(client, v.scope);
+    if (afterFp !== beforeFp) errs.push(`catalog changed by an ack: ${afterFp} != ${beforeFp} (INV-17, no snapshot_seq bump)`);
+}
+
 // ---- §9 flow 8 handover checks (website-local; the epoch+continuity primitive) ----
 // Drives `applyHandover` + `nextDatasetSeq` directly against the scratch journal — the
 // same advisory-lock transaction the route opens. These pin the two invariants handover
@@ -1397,6 +1615,8 @@ async function runVector(name) {
         case 'stats': await checkStats(v, errs); break;
         case 'card_proposal_shape': await checkCardProposalShape(v, errs); break;
         case 'tag_proposal_shape': await checkTagProposalShape(v, errs); break;
+        case 'ack_rollback_decision': await checkAckRollbackDecision(v, errs); break;
+        case 'inbox_ack': await checkInboxAck(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
         case 'app_lww': await checkAppLww(v, errs); break;
@@ -1411,7 +1631,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'app_state_shape', 'stats', 'card_proposal_shape', 'tag_proposal_shape', 'handover', 'epoch', 'blobstore']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'app_state_shape', 'stats', 'card_proposal_shape', 'tag_proposal_shape', 'inbox_ack', 'handover', 'epoch', 'blobstore']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

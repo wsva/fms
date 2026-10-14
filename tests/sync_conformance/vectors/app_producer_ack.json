@@ -1,0 +1,257 @@
+{
+    "check": "inbox_ack",
+    "_comment": "Website-local (not a desktop vector): sync-v2.md §8.3 steps 2-3, the ack half. The desktop hub drains this host's inbox and POSTs verdicts to /api/v1/inbox/ack; recordAck is the only thing that decides whether the website's optimistic live/ edit stands or rolls back. This drives the REAL recordAck through the same $transaction the route opens, over proposals queued by the producer seam, and pins: `flipped` is EXACTLY the rows this round transitioned (a re-acked verdict yields [], which is what makes the consumer exactly-once rather than once-per-round), the counts' meaning is unchanged by that (a known-but-already-terminal verdict still counts and still never flips), a change_id this cluster never queued lands in `unknown`, a verdict re-acked with the OTHER status cannot move the row (the status='pending' guard is the only concurrency control), winner_seq 0 is STORED as NULL (which is how the tombstone drop reaches the rollback decision), the winner payload round-trips through jsonb, and winner_kind is threaded to the consumer but never persisted (app_inbox has no column for it and this phase adds no migration). INV-1 and INV-17 close it: an ack mints no app_sync_log row and moves no catalog column — snapshot_seq included. A malformed verdict is refused once per leg, so the entry with no change_id shows up TWICE in `unknown` (once from accepted, once from rejected) — that is the shipped shape, not a duplicate bug.",
+    "cluster": "conf-ack@local",
+    "scope": "11111111-2222-3333-4444-777777777777",
+    "catalog": { "current_version": 11, "snapshot_seq": 5, "journal_role": "mirror", "deleted": "N" },
+    "propose": [
+        {
+            "kind": "card_save",
+            "change_id": "chg-a",
+            "card": {
+                "uuid": "aaaaaaaa-0000-0000-0000-000000000001",
+                "question": "Q a?",
+                "suggestion": "",
+                "answer": "A a",
+                "note": "",
+                "familiarity": 2,
+                "question_hash": "aaaa",
+                "source_card_uuid": null,
+                "source_dataset_uuid": null,
+                "deleted_at": null,
+                "created_at": "2026-01-01T00:00:00.000Z",
+                "updated_at": "2026-05-01T00:00:00.000Z"
+            }
+        },
+        { "kind": "card_delete", "change_id": "chg-b", "card_uuid": "aaaaaaaa-0000-0000-0000-000000000002" },
+        {
+            "kind": "card_tag_save",
+            "change_id": "chg-c",
+            "tag": {
+                "uuid": "bbbbbbbb-0000-0000-0000-000000000011",
+                "name": "grammar",
+                "color": "#2f9e44",
+                "deleted_at": null,
+                "created_at": "2026-01-01T00:00:00.000Z",
+                "updated_at": "2026-05-03T00:00:00.000Z"
+            }
+        },
+        {
+            "kind": "card_save",
+            "change_id": "chg-d",
+            "card": {
+                "uuid": "aaaaaaaa-0000-0000-0000-000000000003",
+                "question": "Q d?",
+                "suggestion": "",
+                "answer": "A d",
+                "note": "",
+                "familiarity": 0,
+                "question_hash": "dddd",
+                "source_card_uuid": null,
+                "source_dataset_uuid": null,
+                "deleted_at": null,
+                "created_at": "2026-01-01T00:00:00.000Z",
+                "updated_at": "2026-05-05T00:00:00.000Z"
+            }
+        }
+    ],
+    "rounds": [
+        {
+            "accepted": [
+                { "change_id": "chg-a", "seq": 41 },
+                { "change_id": "chg-nope", "seq": 99 },
+                { "seq": 5 }
+            ],
+            "rejected": [
+                { "change_id": "chg-b", "winner_seq": 0, "winner_payload": null },
+                {}
+            ],
+            "expect": {
+                "accepted": 1,
+                "rejected": 1,
+                "unknown": ["chg-nope", "(missing change_id)", "(missing change_id)"],
+                "flipped": [
+                    {
+                        "change_id": "chg-a",
+                        "status": "accepted",
+                        "kind": "card_save",
+                        "object_id": "aaaaaaaa-0000-0000-0000-000000000001",
+                        "edit_time": "2026-05-01T00:00:00.000Z",
+                        "winner_seq": 41,
+                        "winner_payload": null,
+                        "winner_kind": null
+                    },
+                    {
+                        "change_id": "chg-b",
+                        "status": "rejected",
+                        "kind": "card_delete",
+                        "object_id": "aaaaaaaa-0000-0000-0000-000000000002",
+                        "winner_seq": null,
+                        "winner_payload": null,
+                        "winner_kind": null
+                    }
+                ]
+            }
+        },
+        {
+            "_note": "The hub retries the SAME verdict list (its cursor had not advanced). Counts keep their meaning — the verdicts are still known — but nothing transitions, so the rollback consumer gets an empty list and cannot roll back twice.",
+            "accepted": [
+                { "change_id": "chg-a", "seq": 41 },
+                { "change_id": "chg-nope", "seq": 99 },
+                { "seq": 5 }
+            ],
+            "rejected": [
+                { "change_id": "chg-b", "winner_seq": 0, "winner_payload": null },
+                {}
+            ],
+            "expect": {
+                "accepted": 1,
+                "rejected": 1,
+                "unknown": ["chg-nope", "(missing change_id)", "(missing change_id)"],
+                "flipped": []
+            }
+        },
+        {
+            "_note": "A later round: chg-c loses to a Tag row (named), chg-d loses to a Card row with a stringified seq (the wire coerces like a cursor), and chg-a is re-presented as REJECTED even though it is already ACCEPTED — it counts, but it must not flip and must not move the stored verdict.",
+            "accepted": [],
+            "rejected": [
+                {
+                    "change_id": "chg-c",
+                    "winner_seq": 12,
+                    "winner_kind": "card_tag_save",
+                    "winner_payload": {
+                        "uuid": "bbbbbbbb-0000-0000-0000-000000000011",
+                        "name": "grammar (hub)",
+                        "color": "#0b7285",
+                        "deleted_at": null,
+                        "created_at": "2026-01-01T00:00:00.000Z",
+                        "updated_at": "2026-05-04T00:00:00.000Z"
+                    }
+                },
+                {
+                    "change_id": "chg-a",
+                    "winner_seq": 77,
+                    "winner_kind": "card_save",
+                    "winner_payload": {
+                        "uuid": "aaaaaaaa-0000-0000-0000-000000000001",
+                        "question": "Q a? (hub)",
+                        "answer": "A a (hub)"
+                    }
+                },
+                {
+                    "change_id": "chg-d",
+                    "winner_seq": "13",
+                    "winner_kind": "card_save",
+                    "winner_payload": {
+                        "uuid": "aaaaaaaa-0000-0000-0000-000000000003",
+                        "question": "Q d? (hub)",
+                        "suggestion": "",
+                        "answer": "A d (hub)",
+                        "note": "",
+                        "familiarity": 1,
+                        "question_hash": "dddd",
+                        "source_card_uuid": null,
+                        "source_dataset_uuid": null,
+                        "deleted_at": null,
+                        "created_at": "2026-01-01T00:00:00.000Z",
+                        "updated_at": "2026-05-06T00:00:00.000Z"
+                    }
+                }
+            ],
+            "expect": {
+                "accepted": 0,
+                "rejected": 3,
+                "unknown": [],
+                "flipped": [
+                    {
+                        "change_id": "chg-c",
+                        "status": "rejected",
+                        "kind": "card_tag_save",
+                        "object_id": "bbbbbbbb-0000-0000-0000-000000000011",
+                        "edit_time": "2026-05-03T00:00:00.000Z",
+                        "winner_seq": 12,
+                        "winner_kind": "card_tag_save",
+                        "winner_payload": {
+                            "uuid": "bbbbbbbb-0000-0000-0000-000000000011",
+                            "name": "grammar (hub)",
+                            "color": "#0b7285",
+                            "deleted_at": null,
+                            "created_at": "2026-01-01T00:00:00.000Z",
+                            "updated_at": "2026-05-04T00:00:00.000Z"
+                        }
+                    },
+                    {
+                        "change_id": "chg-d",
+                        "status": "rejected",
+                        "kind": "card_save",
+                        "object_id": "aaaaaaaa-0000-0000-0000-000000000003",
+                        "edit_time": "2026-05-05T00:00:00.000Z",
+                        "winner_seq": 13,
+                        "winner_kind": "card_save",
+                        "winner_payload": {
+                            "uuid": "aaaaaaaa-0000-0000-0000-000000000003",
+                            "question": "Q d? (hub)",
+                            "suggestion": "",
+                            "answer": "A d (hub)",
+                            "note": "",
+                            "familiarity": 1,
+                            "question_hash": "dddd",
+                            "source_card_uuid": null,
+                            "source_dataset_uuid": null,
+                            "deleted_at": null,
+                            "created_at": "2026-01-01T00:00:00.000Z",
+                            "updated_at": "2026-05-06T00:00:00.000Z"
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "expect_status": [
+        {
+            "change_id": "chg-a",
+            "status": "accepted",
+            "winner_seq": 41,
+            "winner_payload": null,
+            "acked": true
+        },
+        { "change_id": "chg-b", "status": "rejected", "winner_seq": null, "winner_payload": null, "acked": true },
+        {
+            "change_id": "chg-c",
+            "status": "rejected",
+            "winner_seq": 12,
+            "winner_payload": {
+                "uuid": "bbbbbbbb-0000-0000-0000-000000000011",
+                "name": "grammar (hub)",
+                "color": "#0b7285",
+                "deleted_at": null,
+                "created_at": "2026-01-01T00:00:00.000Z",
+                "updated_at": "2026-05-04T00:00:00.000Z"
+            },
+            "acked": true
+        },
+        {
+            "change_id": "chg-d",
+            "status": "rejected",
+            "winner_seq": 13,
+            "winner_payload": {
+                "uuid": "aaaaaaaa-0000-0000-0000-000000000003",
+                "question": "Q d? (hub)",
+                "suggestion": "",
+                "answer": "A d (hub)",
+                "note": "",
+                "familiarity": 1,
+                "question_hash": "dddd",
+                "source_card_uuid": null,
+                "source_dataset_uuid": null,
+                "deleted_at": null,
+                "created_at": "2026-01-01T00:00:00.000Z",
+                "updated_at": "2026-05-06T00:00:00.000Z"
+            },
+            "acked": true
+        }
+    ],
+    "expect_pending": [],
+    "expect_outcome_order": ["chg-d", "chg-c", "chg-b", "chg-a"],
+    "outcome_limit": 20
+}

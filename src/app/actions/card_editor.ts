@@ -1,12 +1,34 @@
 'use server';
 /**
- * The website's dataset-card editor actions (sync-v2.md §8.3 step 1, §14 phase 5).
+ * The website's dataset-card editor actions (sync-v2.md §8.3 steps 1–3, §14 phase 5).
  *
  * Owner-only edits to a **mirror** card dataset — its cards AND its tags — become inbox
- * *proposals* via `card_proposals.ts`; the browser never writes `live/data.sqlite3` here and
- * never journals (INV-1/INV-17). That covers the five dataset-scope card-family kinds §14
- * phase 5 targets (`card_save`, `card_delete`, `card_tag_save`, `card_tag_delete`,
- * `card_set_tags`); `card_review` is `@app`-scope and rides the journal, not the inbox.
+ * *proposals* via `card_proposals.ts`; and, step 1, the SAME proposal is then written to
+ * this host's `live/data.sqlite3` **optimistically, after the queue commits**, so the owner
+ * sees the edit at once instead of one hub round later. The browser still never writes the
+ * DB: the write happens here, and it reuses the proposal object the seam already built —
+ * re-deriving a second payload is exactly how the two planes would drift.
+ *
+ * Why post-commit, and why guarded:
+ *  - a live write that fails AFTER the queue committed is the SAFE direction: `live/` keeps
+ *    the authoritative row, which is what a rejection produces anyway, and `sweepOutcomes`
+ *    below heals it;
+ *  - a live write BEFORE the queue would strand a mutation no ack will ever correct;
+ *  - `applyDatasetChangeIfStale` writes only while the stored row is still the one proposed
+ *    over, so a hub row that arrived meanwhile is never clobbered;
+ *  - a `deduped` re-submit (INV-3) writes nothing, because the first submit already did.
+ *
+ * The other half of the loop is the ack: `POST /api/v1/inbox/ack` rolls a rejected row back
+ * to the hub's winner (INV-4), and `getProposalOutcomes` re-derives both directions on read
+ * for any verdict whose file write did not happen.
+ *
+ * Nothing here publishes. `live/data.sqlite3` stays the hub's authoritative dataset copy, so
+ * a saved edit is reported as *shown locally*, never as applied-everywhere (INV-17), and no
+ * path here mints a journal seq or writes `app_sync_log` (INV-1).
+ *
+ * The five dataset-scope card-family kinds §14 phase 5 targets are all covered:
+ * `card_save`, `card_delete`, `card_tag_save`, `card_tag_delete`, `card_set_tags`;
+ * `card_review` is `@app`-scope and rides the journal, not the inbox.
  * Authority datasets are refused with an actionable message: their row edits ride
  * `POST /api/v1/sync/changes`, not the inbox.
  *
@@ -24,13 +46,22 @@ import { toErrorMessage } from '@/lib/errors';
 import { datasetDir } from '@/lib/datasets/paths';
 import { getCardTagLinks, getChangesSince, type SyncCard, type SyncTag } from '@/lib/datasets/cardstore';
 import { nowRowStamp } from '@/lib/datasets/stamps';
-import { readInbox, type InboxEntry } from '@/lib/sync/inbox';
+import { isCardFamilyKind, verdictUnit, winnerToApply } from '@/lib/datasets/ack_rollback';
+import { applyDatasetChangeIfStale, refreshCardCounts } from '@/lib/sync/datasetjournal';
 import {
-    proposeCardSave,
-    proposeCardDelete,
-    proposeSetCardTags as proposeSetCardTagsProposal,
-    proposeTagDelete,
-    proposeTagSave,
+    readInbox,
+    readOutcomes,
+    type InboxEntry,
+    type InboxOutcome,
+    type ProposalIn,
+} from '@/lib/sync/inbox';
+import {
+    buildCardDeleteProposal,
+    buildCardSaveProposal,
+    buildSetCardTagsProposal,
+    buildTagDeleteProposal,
+    buildTagSaveProposal,
+    proposeCardEdits,
     type CardProposalRow,
     type TagProposalRow,
 } from '@/lib/datasets/card_proposals';
@@ -49,7 +80,38 @@ export interface CardEditorState {
     cardTags: Record<string, string[]>;
 }
 
+/** What one propose did: the queue counters, plus whether the optimistic write landed. */
+export interface ProposeResultView {
+    queued: number;
+    deduped: number;
+    refused: number;
+    /** True when `live/` now carries this edit — i.e. it is VISIBLE, not yet authoritative. */
+    appliedLocally: boolean;
+}
+
+/** One terminal verdict, with what the read-path heal did to the live row. */
+export interface ProposalOutcomeView {
+    change_id: string;
+    kind: string;
+    op: string;
+    object_id: string;
+    edit_time: string;
+    /** `accepted` | `rejected` — the authority's verdict. */
+    status: string;
+    winner_seq: number | null;
+    acked_at: string;
+    /**
+     * The outcome of applying this verdict to `live/`: `applied` / `superseded` (a newer row
+     * owns it) / `not-ready` / `unknown-shape` (this host cannot name the winner's shape) /
+     * `skipped` / `failed` / `already-handled` (a newer verdict covered the same unit).
+     */
+    live: string;
+}
+
 const CHANGE_ID_MAX = 128;
+
+/** Terminal verdicts one editor read reconsiders. Bounded: this runs on every read. */
+const OUTCOME_LIMIT = 20;
 
 async function currentEmail(): Promise<string | null> {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -114,6 +176,48 @@ export async function getCardEditor(uuid: string): Promise<ActionResult<CardEdit
     }
 }
 
+// --- the optimistic write (§8.3 step 1) ---------------------------------------
+
+/**
+ * Write the just-queued proposal to `live/` — the optimistic half of step 1.
+ *
+ * Never fails a save: the proposal is already durably queued, so a filesystem problem costs
+ * the owner a later-visible edit, not their work, and `sweepOutcomes` re-derives the same
+ * write on the next read. `stamp` and `guardEditTime` are the proposal's own `edit_time`, so
+ * the row is written with the instant the hub will compare against.
+ */
+async function writeOptimistically(
+    dir: string | null,
+    datasetUuid: string,
+    proposal: ProposalIn
+): Promise<'applied' | 'superseded' | 'not-ready' | 'skipped' | 'failed'> {
+    if (!dir) return 'skipped';
+    const kind = typeof proposal.kind === 'string' ? proposal.kind : '';
+    const editTime = typeof proposal.edit_time === 'string' ? proposal.edit_time : '';
+    try {
+        const outcome = await applyDatasetChangeIfStale(dir, kind, proposal.payload, editTime, editTime);
+        if (outcome === 'applied') await refreshCardCounts(prisma, datasetUuid, dir);
+        return outcome;
+    } catch (error) {
+        console.error(`optimistic live write failed (${datasetUuid}/${kind}):`, toErrorMessage(error));
+        return 'failed';
+    }
+}
+
+/** Queue one proposal, then apply it to `live/` only if this round actually queued it. */
+async function proposeAndWrite(
+    cluster: string,
+    datasetUuid: string,
+    dir: string | null,
+    proposal: ProposalIn
+): Promise<ProposeResultView> {
+    const r = await proposeCardEdits(cluster, [proposal]);
+    const live = r.queued === 1 ? await writeOptimistically(dir, datasetUuid, proposal) : 'skipped';
+    return { queued: r.queued, deduped: r.deduped, refused: r.refused.length, appliedLocally: live === 'applied' };
+}
+
+// --- the five produce actions --------------------------------------------------
+
 /**
  * Queue a `card_save` proposal. `changeId` is the client idempotency token; the server
  * stamps `updated_at` (canonical now) and, for a new card, mints `uuid` + `created_at`.
@@ -122,7 +226,7 @@ export async function proposeSaveCard(
     uuid: string,
     card: { uuid?: string; question: string; suggestion: string; answer: string; note: string; familiarity: number },
     changeId: string
-): Promise<ActionResult<{ queued: number; deduped: number; refused: number }>> {
+): Promise<ActionResult<ProposeResultView>> {
     try {
         if (typeof changeId !== 'string' || changeId === '' || changeId.length > CHANGE_ID_MAX) {
             return { status: 'error', error: 'change_id is required and must be ≤ 128 characters' };
@@ -151,8 +255,13 @@ export async function proposeSaveCard(
             created_at: existing?.created_at ?? now,
             updated_at: now,
         };
-        const r = await proposeCardSave(email as string, uuid, changeId, row);
-        return { status: 'success', data: { queued: r.queued, deduped: r.deduped, refused: r.refused.length } };
+        const data = await proposeAndWrite(
+            email as string,
+            uuid,
+            loaded.dir,
+            buildCardSaveProposal(uuid, changeId, email as string, row)
+        );
+        return { status: 'success', data };
     } catch (error) {
         console.error('card save proposal failed:', error);
         return { status: 'error', error: toErrorMessage(error) };
@@ -164,7 +273,7 @@ export async function proposeDeleteCard(
     uuid: string,
     cardUuid: string,
     changeId: string
-): Promise<ActionResult<{ queued: number; deduped: number; refused: number }>> {
+): Promise<ActionResult<ProposeResultView>> {
     try {
         if (typeof changeId !== 'string' || changeId === '' || changeId.length > CHANGE_ID_MAX) {
             return { status: 'error', error: 'change_id is required and must be ≤ 128 characters' };
@@ -177,8 +286,13 @@ export async function proposeDeleteCard(
         if ('error' in loaded) return { status: 'error', error: loaded.error };
         if (loaded.ds.journal_role !== 'mirror') return { status: 'error', error: NOT_EDITABLE };
 
-        const r = await proposeCardDelete(email as string, uuid, changeId, cardUuid);
-        return { status: 'success', data: { queued: r.queued, deduped: r.deduped, refused: r.refused.length } };
+        const data = await proposeAndWrite(
+            email as string,
+            uuid,
+            loaded.dir,
+            buildCardDeleteProposal(uuid, changeId, email as string, cardUuid)
+        );
+        return { status: 'success', data };
     } catch (error) {
         console.error('card delete proposal failed:', error);
         return { status: 'error', error: toErrorMessage(error) };
@@ -193,7 +307,7 @@ export async function proposeSaveTag(
     uuid: string,
     tag: { uuid?: string; name: string; color?: string | null },
     changeId: string
-): Promise<ActionResult<{ queued: number; deduped: number; refused: number }>> {
+): Promise<ActionResult<ProposeResultView>> {
     try {
         if (typeof changeId !== 'string' || changeId === '' || changeId.length > CHANGE_ID_MAX) {
             return { status: 'error', error: 'change_id is required and must be ≤ 128 characters' };
@@ -218,8 +332,13 @@ export async function proposeSaveTag(
             created_at: existing?.created_at ?? now,
             updated_at: now,
         };
-        const r = await proposeTagSave(email as string, uuid, changeId, row);
-        return { status: 'success', data: { queued: r.queued, deduped: r.deduped, refused: r.refused.length } };
+        const data = await proposeAndWrite(
+            email as string,
+            uuid,
+            loaded.dir,
+            buildTagSaveProposal(uuid, changeId, email as string, row)
+        );
+        return { status: 'success', data };
     } catch (error) {
         console.error('tag save proposal failed:', error);
         return { status: 'error', error: toErrorMessage(error) };
@@ -231,7 +350,7 @@ export async function proposeDeleteTag(
     uuid: string,
     tagUuid: string,
     changeId: string
-): Promise<ActionResult<{ queued: number; deduped: number; refused: number }>> {
+): Promise<ActionResult<ProposeResultView>> {
     try {
         if (typeof changeId !== 'string' || changeId === '' || changeId.length > CHANGE_ID_MAX) {
             return { status: 'error', error: 'change_id is required and must be ≤ 128 characters' };
@@ -244,8 +363,13 @@ export async function proposeDeleteTag(
         if ('error' in loaded) return { status: 'error', error: loaded.error };
         if (loaded.ds.journal_role !== 'mirror') return { status: 'error', error: NOT_EDITABLE };
 
-        const r = await proposeTagDelete(email as string, uuid, changeId, tagUuid);
-        return { status: 'success', data: { queued: r.queued, deduped: r.deduped, refused: r.refused.length } };
+        const data = await proposeAndWrite(
+            email as string,
+            uuid,
+            loaded.dir,
+            buildTagDeleteProposal(uuid, changeId, email as string, tagUuid)
+        );
+        return { status: 'success', data };
     } catch (error) {
         console.error('tag delete proposal failed:', error);
         return { status: 'error', error: toErrorMessage(error) };
@@ -266,7 +390,7 @@ export async function proposeSetCardTags(
     cardUuid: string,
     tagUuids: string[],
     changeId: string
-): Promise<ActionResult<{ queued: number; deduped: number; refused: number }>> {
+): Promise<ActionResult<ProposeResultView>> {
     try {
         if (typeof changeId !== 'string' || changeId === '' || changeId.length > CHANGE_ID_MAX) {
             return { status: 'error', error: 'change_id is required and must be ≤ 128 characters' };
@@ -289,13 +413,20 @@ export async function proposeSetCardTags(
             return { status: 'error', error: `tag no longer exists — refresh (${stale.length} of ${tagUuids.length})` };
         }
 
-        const r = await proposeSetCardTagsProposal(email as string, uuid, changeId, cardUuid, tagUuids);
-        return { status: 'success', data: { queued: r.queued, deduped: r.deduped, refused: r.refused.length } };
+        const data = await proposeAndWrite(
+            email as string,
+            uuid,
+            loaded.dir,
+            buildSetCardTagsProposal(uuid, changeId, email as string, cardUuid, tagUuids)
+        );
+        return { status: 'success', data };
     } catch (error) {
         console.error('tag assign proposal failed:', error);
         return { status: 'error', error: toErrorMessage(error) };
     }
 }
+
+// --- verdict reads: the drain queue, and what the acks did --------------------
 
 /** The owner's still-queued (pending) proposals for this scope, newest drain order. */
 export async function getPendingProposals(uuid: string): Promise<ActionResult<InboxEntry[]>> {
@@ -308,6 +439,114 @@ export async function getPendingProposals(uuid: string): Promise<ActionResult<In
         return { status: 'success', data: page.entries };
     } catch (error) {
         console.error('pending proposals read failed:', error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+/**
+ * §8.3 step 3's self-heal, run from the read path.
+ *
+ * Why this must exist at all: an fs failure AFTER a verdict is terminal can never be
+ * re-acked — the hub already got its answer and `recordAck`'s `status='pending'` guard makes
+ * a repeat ack return no flips — so without this sweep a lost optimistic write or a failed
+ * rollback would be permanent. Newest verdict per coalescing unit is reconsidered (an older
+ * verdict for the same row is already answered by the newer one, and re-applying it is
+ * precisely the clobber this skips), and `applyDatasetChangeIfStale`'s guard makes an
+ * already-healed row a no-op. So this is a heal, not a replay engine: no "was this applied"
+ * column is needed, because the live row's own stamp answers it.
+ */
+async function sweepOutcomes(
+    dir: string | null,
+    datasetUuid: string,
+    outcomes: InboxOutcome[]
+): Promise<Map<string, string>> {
+    const states = new Map<string, string>();
+    if (!dir) return states;
+    const seen = new Set<string>();
+    let wroteAny = false;
+
+    for (const o of outcomes) {
+        const unit = verdictUnit(o.kind, o.object_id);
+        if (seen.has(unit)) {
+            states.set(o.change_id, 'already-handled');
+            continue;
+        }
+        seen.add(unit);
+        if (!isCardFamilyKind(o.kind)) {
+            // The inbox is type-agnostic (§15 q1); this host only heals card-family rows.
+            states.set(o.change_id, 'not-applicable');
+            continue;
+        }
+        try {
+            if (o.status === 'rejected') {
+                // No `winner_kind` here: the ack's wire field is not stored (no column this
+                // phase), so a heal decides from the winner payload's shape alone — the same
+                // answer when the shape is distinguishable, a refusal when it is not.
+                const decision = winnerToApply(o.kind, o.object_id, o.edit_time, o.winner_payload, o.winner_seq);
+                if (!decision) {
+                    states.set(o.change_id, 'unknown-shape');
+                    continue;
+                }
+                const outcome = await applyDatasetChangeIfStale(
+                    dir, decision.kind, decision.payload, decision.stamp, o.edit_time
+                );
+                states.set(o.change_id, outcome);
+                wroteAny = wroteAny || outcome === 'applied';
+            } else if (o.status === 'accepted') {
+                // An accepted verdict re-applies the proposal's OWN payload: that is the row
+                // the authority confirmed, and the optimistic write that should have landed.
+                const outcome = await applyDatasetChangeIfStale(dir, o.kind, o.payload, o.edit_time, o.edit_time);
+                states.set(o.change_id, outcome);
+                wroteAny = wroteAny || outcome === 'applied';
+            } else {
+                states.set(o.change_id, 'pending');
+            }
+        } catch (error) {
+            console.error(`proposal outcome sweep failed for ${o.change_id}:`, toErrorMessage(error));
+            states.set(o.change_id, 'failed');
+        }
+    }
+    if (wroteAny) await refreshCardCounts(prisma, datasetUuid, dir);
+    return states;
+}
+
+/**
+ * The owner's recent verdicts for this scope — the answer to "did my edit land?", which
+ * `getPendingProposals` structurally cannot give (`readInbox` filters `status='pending'`, so
+ * an acked proposal simply disappears). Sweeps first, so the returned `live` field describes
+ * what this read did to the row, not what some earlier attempt may have failed to do.
+ *
+ * Neither payload leaves the server: the browser gets the verdict, the winner's seq and the
+ * heal outcome — enough to explain the row it can already see, never the hub's row contents.
+ */
+export async function getProposalOutcomes(uuid: string): Promise<ActionResult<ProposalOutcomeView[]>> {
+    try {
+        const email = await currentEmail();
+        const loaded = await loadOwnedCardDataset(uuid, email);
+        if ('error' in loaded) return { status: 'error', error: loaded.error };
+        const outcomes = await readOutcomes(prisma, email as string, uuid, OUTCOME_LIMIT);
+        // Only a mirror's own live copy is healed: an authority dataset has no inbox rows, and
+        // a dir that does not exist yet must never be created by a read.
+        const states =
+            loaded.ds.journal_role === 'mirror'
+                ? await sweepOutcomes(loaded.dir, uuid, outcomes)
+                : new Map<string, string>();
+        return {
+            status: 'success',
+            data: outcomes.map((o) => ({
+                change_id: o.change_id,
+                kind: o.kind,
+                op: o.op,
+                object_id: o.object_id,
+                edit_time: o.edit_time,
+                status: o.status,
+                winner_seq: o.winner_seq,
+                acked_at: o.acked_at,
+                live: states.get(o.change_id) ?? 'skipped',
+            })),
+        };
+    } catch (error) {
+        console.error('proposal outcomes read failed:', error);
         return { status: 'error', error: toErrorMessage(error) };
     }
 }

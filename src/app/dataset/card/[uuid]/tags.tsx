@@ -5,10 +5,12 @@
  * target set): the tag catalog (`card_tag_save` / `card_tag_delete`) and the per-card assign
  * control (`card_set_tags`).
  *
- * Every control here PROPOSES into the inbox — the live `data.sqlite3` is the desktop hub's
- * to write, so nothing shown is confirmed until the hub drains, applies and acks. The assign
- * control sends the card's WHOLE desired tag set, because `card_set_tags` is a whole-set
- * replace on both hosts: a tag left out of the list is a tag removed.
+ * Every control here PROPOSES into the inbox AND writes this host's own `data.sqlite3` copy
+ * optimistically (§8.3 step 1), so the edit shows up on refresh — but nothing shown is
+ * *confirmed* until the hub drains, applies and acks, and a rejection rolls the row back to
+ * the hub's winner (§8.3 step 3, INV-4). The assign control sends the card's WHOLE desired tag
+ * set, because `card_set_tags` is a whole-set replace on both hosts: a tag left out of the
+ * list is a tag removed.
  */
 import { useState } from 'react'
 import { Button, Checkbox, CheckboxGroup, Chip, Input, Label, toast } from '@heroui/react'
@@ -24,12 +26,17 @@ function errStr(e: string | unknown[] | undefined): string {
     return typeof e === 'string' ? e : 'request failed'
 }
 
-type ProposeResult = { status: string; error?: string | unknown[]; data?: { queued: number } };
+type ProposeResult = {
+    status: string;
+    error?: string | unknown[];
+    data?: { queued: number; appliedLocally?: boolean };
+};
 
-/** Report a queued proposal the way the card draft does, so nothing reads as applied. */
+/** Report a queued proposal: queued is the durable fact, shown-locally is not confirmation. */
 function describe(res: ProposeResult, what: string): boolean {
     if (res.status === 'success') {
-        toast.success(`${what} proposed (${res.data?.queued ?? 0} queued)`)
+        const shown = res.data?.appliedLocally ? ' · shown locally' : ''
+        toast.success(`${what} proposed (${res.data?.queued ?? 0} queued)${shown}`)
         return true
     }
     toast.danger(errStr(res.error))
