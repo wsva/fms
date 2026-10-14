@@ -1,0 +1,63 @@
+{
+    "check": "live_edit_gate",
+    "_comment": "Website-local (not a desktop vector): sync-v2.md §14 phase 8's landmine, INV-1. A dataset scope's live rows may be written DIRECTLY by this host only while the scope's journal_role is 'authority'. The three dormant row editors (dictation cues, book sentences, book audio) are the only website writers of a live data.sqlite3 outside the journal/authority route and the mirror card inbox, and `journal_role` defaults to 'mirror' — so before this gate the sole thing between an owner's cue/book edit and a corrupted hub authority was a UI flag (EDIT_ENABLED=false). Default-deny is the point: anything that is not exactly 'authority' is refused, including the empty string and any value no code has ever written. PURE — no fs, no DB, no socket; the source-shape half reads the three action files because a 'use server' action cannot be imported here.",
+    "allow": ["authority"],
+    "refuse": [
+        "mirror",
+        "",
+        "AUTHORITY",
+        "authority ",
+        " authority",
+        "authority\n",
+        "none",
+        "hub",
+        "cloud_hub"
+    ],
+    "sites": [
+        {
+            "file": "src/app/actions/dataset_dictation.ts",
+            "fn": "saveDatasetDictationCues",
+            "writer": "saveCues(",
+            "gate": "liveEditRefusal("
+        },
+        {
+            "file": "src/app/actions/dataset_read.ts",
+            "fn": "saveDatasetBookSentences",
+            "writer": "saveSentences(",
+            "gate": "liveEditRefusal("
+        },
+        {
+            "file": "src/app/actions/dataset_read.ts",
+            "fn": "writeDatasetSentenceAudio",
+            "writer": "writeAudio(",
+            "gate": "liveEditRefusal("
+        }
+    ],
+    "expect_sites": [
+        "src/app/actions/dataset_dictation.ts::saveDatasetDictationCues",
+        "src/app/actions/dataset_read.ts::saveDatasetBookSentences",
+        "src/app/actions/dataset_read.ts::writeDatasetSentenceAudio"
+    ],
+    "catalog": [
+        {
+            "file": "src/lib/datasets/access.ts",
+            "requires": "journal_role: true,",
+            "why": "gateDatasetRead must hand the role to the live-row gates (its row is a cast, so this is the only pin that catches the column dropping out of the shared select)"
+        },
+        {
+            "file": "src/lib/datasets/access.ts",
+            "requires": "journal_role: string;",
+            "why": "the catalog type must carry the role the gates read"
+        }
+    ],
+    "serialize_must_not_leak": "INV-17: the catalog wire JSON is an EXPLICIT field list, which is what keeps widening the shared select from adding journal_role to any response. If serializeDataset ever becomes a spread, this must be re-reviewed as a wire change, not re-passed.",
+    "no_wire_leak": [
+        {
+            "file": "src/lib/datasets/access.ts",
+            "fn_marker": "export function serializeDataset(",
+            "field": "journal_role",
+            "reason": "the catalog wire shape must not gain an internal sync field (INV-17)"
+        }
+    ],
+    "expect_sites_comment": "expect_sites is a deliberate second list of the same three sites: dropping one from `sites` alone goes red, so a gate cannot be quietly un-pinned."
+}

@@ -19,6 +19,7 @@ import {
     type DatasetJson,
     type DatasetListItem,
 } from '@/lib/datasets/access';
+import { liveEditRefusal } from '@/lib/sync/handover';
 import {
     listCurrentCues,
     listMediaAndSubtitles,
@@ -86,7 +87,10 @@ export async function getDatasetDictationCues(
 
 /**
  * Replace the current cues of one dataset subtitle. Owner/push gate
- * (`canPushDataset`); the UI keeps this path dormant behind its edit flag.
+ * (`canPushDataset`) PLUS the live-row role gate (`liveEditRefusal`): a mirror
+ * scope's cues belong to its desktop hub, and this host's live copy is both
+ * subscriber-served and pullable back into that hub, so writing it there would
+ * corrupt the authority. The UI keeps this path dormant behind its edit flag.
  */
 export async function saveDatasetDictationCues(
     datasetUuid: string,
@@ -100,6 +104,8 @@ export async function saveDatasetDictationCues(
         if (!(await canPushDataset(gated.ds, email))) {
             return { status: 'error', error: 'Only the owner or a subscriber may change this dataset' };
         }
+        const refused = liveEditRefusal(gated.ds.journal_role);
+        if (refused) return { status: 'error', error: refused };
         const saved = await saveCues(gated.dir, subtitleUuid, cues);
         return { status: 'success', data: saved };
     } catch (error) {

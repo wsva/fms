@@ -255,6 +255,29 @@ the run, the same way `getCardTagLinks` was.
 | INV-1 / INV-17 | zero `app_sync_log` rows minted by an ack; the catalog fingerprint (`current_version`, `snapshot_seq`, `journal_role`, `deleted`) byte-unchanged — an ack must not move `snapshot_seq` either |
 
 
+### `live_edit_gate` — the live-row role gate, §14 phase 8 (website-local, PURE)
+
+`app_live_edit_gate.json` drives `sync.handover.liveEditRefusal` — the predicate that decides
+whether this host may write a dataset scope's `live/data.sqlite3` rows directly. It is **not** in
+`DB_CHECKS`: the predicate is pure (no fs, no DB), so a database-less CI step runs it in full.
+
+| Asserts | detail |
+| --- | --- |
+| decision table | `v.allow` roles (only `'authority'`) → `null`; `v.refuse` → a refusal. `''`, `'AUTHORITY'`, `'authority '`, `' authority'`, `'authority\n'`, `'none'`, `'hub'`, `'cloud_hub'` are all refused: the rule is **default-deny**, so anything that is not exactly `'authority'` cannot write |
+| one shared message | every refusal is `=== LIVE_EDIT_NOT_AUTHORITY` (identity, not truthiness), and that constant must be a non-empty string — the three editors cannot drift into three wordings, and a falsy message cannot silently permit a write |
+| call-site coverage | for each `v.sites` entry the harness reads the action source, bounds `export async function <fn>` at the next exported function, and requires the gate token **before** the store-writer token (`saveCues(` / `saveSentences(` / `writeAudio(`) — ordering matters, a gate that sits after the write has already let a refused role mutate the live copy |
+| coverage is exact | the sorted `file::fn` list must equal `expect_sites` — an editor added without the gate, or one of the three removed, turns this red rather than being caught in review |
+| the gate's input exists | `journal_role` is in both `datasetCatalogFields` and the `DatasetCatalog` interface, so `gated.ds.journal_role` is a select-backed read, not a second per-request query |
+| INV-17 | `serializeDataset` must **not** contain `journal_role`: the catalog wire shape stays exactly as shipped, whatever the shared select gains |
+
+The call-site half is a deliberate **source-shape** pin, not laziness. The three gates live in
+`'use server'` actions, which need `next/headers` and a better-auth session and therefore cannot
+be imported by a Node harness that never boots HTTP. Reading the file is the only way to make
+"someone deleted the gate" fail a vector instead of pass a review. It does mean renaming
+`liveEditRefusal` or reformatting a function boundary requires a conscious vector update — that
+friction is the point. Behaviour beyond the predicate (that the actions really call it in a
+request) was verified by `tsc` plus the bite tests, not by this harness.
+
 ### `tag_proposal_shape` — the producer's tag half, §8.3 step 1 / §14 phase 5 (website-local)
 
 Phase 5's target set is **cards and tags**, so `app_producer_tag_proposal.json` drives the
@@ -335,8 +358,10 @@ vectors, the `epoch` vector, the two `blobstore` vectors, the `@app` read-plane 
 `tag_proposal_shape`, and the ack-round vector `inbox_ack`)
 skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector. The decision
-vector `ack_rollback_decision` is the other deliberate hybrid in that direction: it is **not**
-in `DB_CHECKS` because `winnerToApply` is pure, so a database-less run executes it in full.
+vectors `ack_rollback_decision` and `live_edit_gate` are the deliberate hybrids in that
+direction: neither is in `DB_CHECKS` because `winnerToApply` and `liveEditRefusal` are pure, so a
+database-less run executes both in full (a DB-less run therefore passes 7 and skips 21 of the
+28).
 
 `app_lww` is the deliberate hybrid: it is **not** in `DB_CHECKS`, so its pure half
 (classes / clamp / later-wins truth table) always runs, and only its `appendJournal`+

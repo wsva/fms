@@ -5,9 +5,11 @@
  * A dataset scope is hosted (`dataset.journal_role='authority'`) or mirrored
  * (`'mirror'`) — the role decides which of two opposite writers owns the scope's
  * journal (INV-1: exactly one writer per number space). Everything downstream of
- * the role already re-reads it live per request, so this module only performs the
- * one missing mutation: flip `journal_role` and, on a *real* change, bump the
- * per-scope `journal_epoch`. It is LIVE: the hub's export half shipped app-side
+ * the role already re-reads it live per request, so this module holds the role's
+ * two decisions: the one mutation that flips `journal_role` (and, on a *real*
+ * change, bumps the per-scope `journal_epoch`), and the pure
+ * {@link liveEditRefusal} gate that reads it back to answer whether this host may
+ * write the scope's `live/` rows directly. It is LIVE: the hub's export half shipped app-side
  * (`sync/mirror.rs::sync_handover_to_cloud`, which POSTs this route with Bearer after
  * draining the scope), and this website-side flip is what makes a handed-over scope
  * actually writable here.
@@ -80,4 +82,34 @@ export async function applyHandover(
     }
 
     return { changed: true, journal_role: role, journal_epoch: nextEpoch };
+}
+
+/**
+ * The ONE refusal every live-row editor shares, so the three dormant row editors cannot drift into
+ * three differently-worded answers to the same refusal (pinned referentially by `live_edit_gate`).
+ */
+export const LIVE_EDIT_NOT_AUTHORITY =
+    "this dataset is mirrored (journal_role='mirror'): its journal authority is a desktop hub, so this host must not write its live rows. Edit them in the app, or hand the scope over to the cloud first.";
+
+/**
+ * The live-row edit gate (INV-1 — exactly one writer per number space).
+ *
+ * The handover flips {@link applyHandover}'s role, and this is the rule it exists to make
+ * enforceable: this host may write a scope's `live/data.sqlite3` rows directly ONLY while it holds
+ * the `authority` role for it. On a mirror the desktop hub owns both the rows and the journal seq,
+ * and the website's live copy is not a harmless private draft — it is served to subscribers and is
+ * handed back to that hub through the frozen pull wire (`cardstore.getChangesSince` →
+ * `/api/card/sync/pull`), so an unauthorized direct write here propagates INTO the authority and
+ * corrupts it.
+ *
+ * Default-deny: anything that is not exactly `'authority'` — `'mirror'`, the column default, an
+ * empty or unknown value — is refused. Returns the operator-facing refusal, or `null` when the
+ * write is allowed. The two ways forward are named in the message: edit the rows on the hub, or
+ * hand the scope over first.
+ *
+ * Prisma-free by design (this module imports only types): the pure conformance check
+ * `live_edit_gate` drives this table without a database.
+ */
+export function liveEditRefusal(role: string): string | null {
+    return role === 'authority' ? null : LIVE_EDIT_NOT_AUTHORITY;
 }

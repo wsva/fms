@@ -9,8 +9,9 @@
  * `read_chapter_progress` — the dataset's own `book_chapter.status` is shared
  * content and is never written from the web.
  *
- * The record/edit writes are gated additionally by `canPushDataset`; the UI
- * keeps them dormant behind its edit flag.
+ * The record/edit writes are gated additionally by `canPushDataset` AND the live-row
+ * role gate (`liveEditRefusal` — a mirror scope's rows belong to its desktop hub);
+ * the UI keeps them dormant behind its edit flag.
  */
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
@@ -25,6 +26,7 @@ import {
     type DatasetJson,
     type DatasetListItem,
 } from '@/lib/datasets/access';
+import { liveEditRefusal } from '@/lib/sync/handover';
 import {
     listChapters,
     listSentences,
@@ -141,8 +143,8 @@ export async function setDatasetChapterProgress(
 }
 
 /**
- * Replace the sentences of one dataset chapter (owner/push gate). Dormant in the
- * UI behind the edit flag. Returns the stored list.
+ * Replace the sentences of one dataset chapter (owner/push gate + live-row role
+ * gate). Dormant in the UI behind the edit flag. Returns the stored list.
  */
 export async function saveDatasetBookSentences(
     datasetUuid: string,
@@ -156,6 +158,8 @@ export async function saveDatasetBookSentences(
         if (!(await canPushDataset(gated.ds, email))) {
             return { status: 'error', error: 'Only the owner or a subscriber may change this dataset' };
         }
+        const refused = liveEditRefusal(gated.ds.journal_role);
+        if (refused) return { status: 'error', error: refused };
         const saved = await saveSentences(gated.dir, chapterUuid, drafts);
         return { status: 'success', data: saved };
     } catch (error) {
@@ -165,10 +169,12 @@ export async function saveDatasetBookSentences(
 }
 
 /**
- * Persist a recorded WAV into the book's `media/` (owner/push gate) and point the
- * sentence at it. Unlike DB-only writes, this adds a non-DB file, so the manifest
- * and catalog counters are refreshed afterwards (mirroring the upload route's
- * commit) to keep snapshot hashes honest. Dormant behind the edit flag.
+ * Persist a recorded WAV into the book's `media/` (owner/push gate + live-row role
+ * gate) and point the sentence at it. Unlike DB-only writes, this adds a non-DB file,
+ * so the manifest and catalog counters are refreshed afterwards (mirroring the upload
+ * route's commit) to keep snapshot hashes honest — which is the second reason the role
+ * gate sits ahead of the write: on a mirror it would also move `snapshot_seq`, a
+ * counter the hub's own pushes own. Dormant behind the edit flag.
  */
 export async function writeDatasetSentenceAudio(
     datasetUuid: string,
@@ -183,6 +189,8 @@ export async function writeDatasetSentenceAudio(
         if (!(await canPushDataset(gated.ds, email))) {
             return { status: 'error', error: 'Only the owner or a subscriber may change this dataset' };
         }
+        const refused = liveEditRefusal(gated.ds.journal_role);
+        if (refused) return { status: 'error', error: refused };
         const bytes = new Uint8Array(await blob.arrayBuffer());
         const { rel_path } = await writeAudio(gated.dir, sentenceUuid, bytes, recognized);
 

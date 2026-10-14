@@ -1599,6 +1599,101 @@ async function checkBlobstore(v, errs) {
     }
 }
 
+// ---- §14 phase 8 live-row role gate (website-local, PURE — no fs, no DB, no socket) ----
+// `dictstore.saveCues` / `bookstore.saveSentences` / `bookstore.writeAudio` write a dataset's
+// `live/data.sqlite3` (and `media/`) directly, which INV-1 permits ONLY while this host holds the
+// scope's `authority` role: on a mirror the desktop hub owns the rows AND the journal seq, and this
+// host's live copy is served to subscribers and pulled back into that hub through the frozen
+// `getChangesSince` → `/api/card/sync/pull` wire — so an unguarded write propagates INTO the
+// authority. Claim 1 drives the decision table. Claim 2 is a deliberate SOURCE-shape pin: the
+// harness cannot import a `'use server'` action (`next/headers` + better-auth), so the only way to
+// make "someone deleted the gate" fail a vector instead of a review is to read the three action
+// files and require the gate token to sit before the writer call inside each function. Renaming the
+// helper therefore forces a conscious vector edit — that brittleness is the feature.
+async function checkLiveEditGate(v, errs) {
+    const { liveEditRefusal, LIVE_EDIT_NOT_AUTHORITY } = await import('../../src/lib/sync/handover.ts');
+
+    if (typeof LIVE_EDIT_NOT_AUTHORITY !== 'string' || LIVE_EDIT_NOT_AUTHORITY.length === 0) {
+        errs.push('the shared refusal must be a non-empty string');
+    }
+    for (const role of v.allow ?? []) {
+        const got = liveEditRefusal(role);
+        if (got !== null) errs.push(`liveEditRefusal(${JSON.stringify(role)}) = ${JSON.stringify(got)}, expected null (allowed)`);
+    }
+    for (const role of v.refuse ?? []) {
+        const got = liveEditRefusal(role);
+        // Identity, not just truthiness: one shared message or the three editors drift apart.
+        if (got !== LIVE_EDIT_NOT_AUTHORITY) {
+            errs.push(`liveEditRefusal(${JSON.stringify(role)}) = ${JSON.stringify(got)}, expected the shared refusal`);
+        }
+    }
+
+    for (const s of v.sites ?? []) {
+        const file = path.join(HERE, '..', '..', s.file);
+        let src;
+        try {
+            src = fs.readFileSync(file, 'utf8');
+        } catch {
+            errs.push(`${s.file}: unreadable — the gate site moved or was renamed`);
+            continue;
+        }
+        const marker = `export async function ${s.fn}(`;
+        const start = src.indexOf(marker);
+        if (start < 0) {
+            errs.push(`${s.file}: no ${marker}`);
+            continue;
+        }
+        // Bound the region at the NEXT exported action, so a later function's gate can never
+        // satisfy an earlier one.
+        const next = src.indexOf('\nexport async function', start + marker.length);
+        const body = src.slice(start, next < 0 ? src.length : next);
+        const gate = body.indexOf(s.gate ?? 'liveEditRefusal(');
+        const writer = body.indexOf(s.writer);
+        if (gate < 0) errs.push(`${s.file}::${s.fn}: no liveEditRefusal gate before ${s.writer}`);
+        if (writer < 0) errs.push(`${s.file}::${s.fn}: writer ${s.writer} not found (renamed? update this vector)`);
+        else if (gate >= 0 && gate > writer) {
+            errs.push(`${s.file}::${s.fn}: the gate sits AFTER ${s.writer} — a refused role already wrote`);
+        }
+    }
+    // Coverage: the three dormant live-row writers this host has, exactly. A fourth live writer
+    // must be added here, not slipped past the gate.
+    const want = (v.sites ?? []).map((s) => `${s.file}::${s.fn}`).sort();
+    const seen = [...new Set(want)];
+    if (seen.length !== want.length) errs.push(`duplicate gate site in the vector: ${JSON.stringify(want)}`);
+    if (want.join('|') !== (v.expect_sites ?? []).join('|')) {
+        errs.push(`gate sites ${JSON.stringify(want)} != ${JSON.stringify(v.expect_sites)}`);
+    }
+
+    // The gate reads the role off the row `gateDatasetRead` hands back, which is a
+    // `select: datasetCatalogFields` CAST — so dropping the column from that select is NOT a
+    // `tsc` error, it silently yields `undefined` at runtime. That direction happens to fail
+    // closed (`liveEditRefusal(undefined)` refuses), but the gate would then refuse every legal
+    // authority edit, so the pair is pinned here rather than by the compiler.
+    for (const c of v.catalog ?? []) {
+        const src = fs.readFileSync(path.join(HERE, '..', '..', c.file), 'utf8');
+        if (!src.includes(c.requires)) {
+            errs.push(`${c.file}: missing ${JSON.stringify(c.requires)} — ${c.why}`);
+        }
+    }
+
+    // Widening the shared select must not widen the WIRE. `serializeDataset` is an explicit field
+    // list today; if it ever becomes `{ ...ds }`, journal_role (an internal sync fact) would ship
+    // in every catalog response — a §13/INV-17 wire change nobody asked for.
+    for (const w of v.no_wire_leak ?? []) {
+        const src = fs.readFileSync(path.join(HERE, '..', '..', w.file), 'utf8');
+        const start = src.indexOf(w.fn_marker);
+        if (start < 0) {
+            errs.push(`${w.file}: no ${w.fn_marker} — the explicit serializer moved (${w.reason})`);
+            continue;
+        }
+        const next = src.indexOf('\nexport ', start + w.fn_marker.length);
+        const body = src.slice(start, next < 0 ? src.length : next);
+        if (body.includes(w.field)) {
+            errs.push(`${w.file}: ${w.fn_marker} now emits ${w.field} — ${w.reason}`);
+        }
+    }
+}
+
 async function runVector(name) {
     const v = readVector(name);
     const errs = [];
@@ -1617,6 +1712,7 @@ async function runVector(name) {
         case 'tag_proposal_shape': await checkTagProposalShape(v, errs); break;
         case 'ack_rollback_decision': await checkAckRollbackDecision(v, errs); break;
         case 'inbox_ack': await checkInboxAck(v, errs); break;
+        case 'live_edit_gate': await checkLiveEditGate(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
         case 'app_lww': await checkAppLww(v, errs); break;

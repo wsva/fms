@@ -34,6 +34,12 @@ export interface DatasetCatalog {
     media_count: number;
     card_count: number;
     deleted: string;
+    /**
+     * Whichever writer owns this scope's journal: `'authority'` = this host, `'mirror'` = a desktop
+     * hub (the column default). Decide with `liveEditRefusal` in `src/lib/sync/handover.ts` rather
+     * than comparing inline, so the live-row rule stays one table in one module.
+     */
+    journal_role: string;
 }
 
 export function isOwner(ds: DatasetCatalog, email: string | null): boolean {
@@ -125,6 +131,9 @@ export const datasetCatalogFields = {
     media_count: true,
     card_count: true,
     deleted: true,
+    // The gate needs the journal role at every write site; a second per-request read of it is
+    // what `api/card/sync/push` used to have to do.
+    journal_role: true,
 } as const;
 
 /** Catalog view for one dataset, with the caller's ownership/subscription flags. */
