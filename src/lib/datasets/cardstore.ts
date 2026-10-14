@@ -206,6 +206,41 @@ export function getChangesSince(dir: string, since: string): { cards: SyncCard[]
     }
 }
 
+/** One live card↔tag join. */
+export interface CardTagLink {
+    card_uuid: string;
+    tag_uuid: string;
+}
+
+/**
+ * The live card↔tag joins — the baseline a whole-set `card_set_tags` proposal needs.
+ * `getChangesSince` deliberately does not carry these: its shape is the frozen
+ * `/api/card/sync/pull` wire.
+ *
+ * A pair counts only when the pair AND its tag are un-tombstoned: a link into a deleted
+ * tag would seed a dead uuid into a whole-set proposal. Mirrors the app's live-view join
+ * (`cards/mod.rs`). Returns no links when the DB is absent or predates the `card_tag`
+ * table — a read path never creates schema.
+ */
+export function getCardTagLinks(dir: string): CardTagLink[] {
+    const db = openCardDbReadonly(dir);
+    if (!db) return [];
+    try {
+        if (!tableExists(db, 'card_tag') || !tableExists(db, 'tag')) return [];
+        return db
+            .prepare(
+                `SELECT ct.card_uuid, ct.tag_uuid
+                 FROM card_tag ct
+                 JOIN tag t ON t.uuid = ct.tag_uuid
+                 WHERE ct.deleted_at IS NULL AND t.deleted_at IS NULL
+                 ORDER BY ct.card_uuid ASC, ct.tag_uuid ASC`
+            )
+            .all() as CardTagLink[];
+    } finally {
+        db.close();
+    }
+}
+
 export function tableExists(db: Database.Database, name: string): boolean {
     return !!db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(name);
 }

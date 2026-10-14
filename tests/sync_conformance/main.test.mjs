@@ -910,6 +910,149 @@ async function checkCardProposalShape(v, errs) {
     if (afterFp !== beforeFp) errs.push(`catalog changed by a proposal: ${afterFp} != ${beforeFp} (INV-17)`);
 }
 
+// ---- §8.3 step 1 inbox PRODUCER checks — the TAG half of the phase-5 target set ----
+// Same seam and same oracle discipline as `card_proposal_shape`: the hub drains a proposal
+// through its card-tag command, so the queued payload must be byte-identical to what that
+// command journals. The witness is in-repo — this host already derives these kinds'
+// object_id/op/class (`sync/change_log.ts`) and applies them (`sync/datasetjournal.ts`) — so
+// agreement here is agreement with the wire, not a guess at it. `card_set_tags` is a
+// WHOLE-SET replace, which is why the payload is pinned as the full list: a delta would
+// silently erase every tag left out of it on the authority.
+async function checkTagProposalShape(v, errs) {
+    const client = await db();
+    await cardProposalReset(client, v.cluster, v.scope, v.catalog);
+    const beforeFp = await cardCatalogFingerprint(client, v.scope);
+
+    const { proposeSetCardTags, proposeTagDelete, proposeTagSave } =
+        await import('../../src/lib/datasets/card_proposals.ts');
+    const { changeClassOf, objectIdFor, opFor } = await import('../../src/lib/sync/change_log.ts');
+
+    const saved = await proposeTagSave(v.cluster, v.scope, v.save.change_id, v.save.tag, client);
+    const deleted = await proposeTagDelete(v.cluster, v.scope, v.delete.change_id, v.delete.tag_uuid, client);
+    const assigned = await proposeSetCardTags(
+        v.cluster, v.scope, v.assign.change_id, v.assign.card_uuid, v.assign.tag_uuids, client
+    );
+    for (const [label, r] of [
+        ['card_tag_save', saved], ['card_tag_delete', deleted], ['card_set_tags', assigned],
+    ]) {
+        if (r.queued !== 1 || r.deduped !== 0 || r.refused.length) {
+            errs.push(`${label} propose result ${JSON.stringify(r)} != {queued:1}`);
+        }
+    }
+
+    const rows = await client.app_inbox.findMany({
+        where: { cluster_id: v.cluster },
+        orderBy: { proposal_seq: 'asc' },
+    });
+    if (rows.length !== 3) {
+        errs.push(`inbox rows ${rows.length} != 3 (tag save + tag delete + whole-set assign)`);
+        return;
+    }
+    const [save, del, set] = rows;
+    const e = v.expect;
+    const CANON_STAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+    // proposal_seq is this scope's own dense counter (INV-1: a separate number space).
+    const seqs = [save, del, set].map((r) => Number(r.proposal_seq)).join(',');
+    if (seqs !== '1,2,3') errs.push(`proposal_seq ${seqs} != 1,2,3 (dense, no gap)`);
+
+    const cases = [
+        ['card_tag_save', save, e.save_kind, e.save_op, e.save_object_id, e.save_payload],
+        ['card_tag_delete', del, e.delete_kind, e.delete_op, e.delete_object_id, e.delete_payload],
+        ['card_set_tags', set, e.assign_kind, e.assign_op, e.assign_object_id, e.assign_payload],
+    ];
+    for (const [label, row, kind, op, objectId, payload] of cases) {
+        if (row.kind !== kind) errs.push(`${label}: kind ${JSON.stringify(row.kind)} != ${JSON.stringify(kind)}`);
+        if (row.op !== op) errs.push(`${label}: op ${JSON.stringify(row.op)} != ${JSON.stringify(op)}`);
+        if (row.object_id !== objectId) {
+            errs.push(`${label}: object_id ${JSON.stringify(row.object_id)} != ${JSON.stringify(objectId)}`);
+        }
+        if (row.scope !== v.scope) errs.push(`${label}: scope ${row.scope} != ${v.scope}`);
+        if (row.status !== 'pending') errs.push(`${label}: status ${row.status} != pending`);
+        if (row.author !== v.cluster) {
+            errs.push(`${label}: author ${JSON.stringify(row.author)} != bearer principal ${JSON.stringify(v.cluster)}`);
+        }
+        // Payload byte-parity: this object is the drainer's apply input, so a renamed or
+        // dropped key is a wire break, not a cosmetic difference.
+        if (canon(row.payload) !== canon(payload)) {
+            errs.push(`${label}: payload ${canon(row.payload)} != ${canon(payload)}`);
+        }
+        if (!CANON_STAMP.test(row.edit_time)) {
+            errs.push(`${label}: edit_time ${JSON.stringify(row.edit_time)} is not canonical fixed-width UTC (INV-6)`);
+        }
+        // Same-host parity: this host's own journal reader must derive what the seam queued.
+        const derivedId = objectIdFor(row.kind, row.payload, v.cluster);
+        if (derivedId !== row.object_id) {
+            errs.push(`${label}: objectIdFor ${JSON.stringify(derivedId)} != queued object_id ${JSON.stringify(row.object_id)}`);
+        }
+        const derivedOp = opFor(row.kind);
+        if (derivedOp !== row.op) errs.push(`${label}: opFor ${derivedOp} != queued op ${row.op}`);
+        const cls = changeClassOf(row.kind);
+        if (cls !== 'state') {
+            errs.push(`${label}: changeClassOf ${cls} != state (a row edit must stay coalescible)`);
+        }
+    }
+
+    // The tag save carries the ROW's stamp (the delete and the assign stamp now).
+    if (save.edit_time !== e.save_edit_time) {
+        errs.push(`card_tag_save edit_time ${JSON.stringify(save.edit_time)} != the row's updated_at ${JSON.stringify(e.save_edit_time)}`);
+    }
+    // The assign's object_id is the CARD, not the tag list's first entry or the row uuid.
+    if (set.object_id !== v.assign.card_uuid) {
+        errs.push(`card_set_tags object_id ${JSON.stringify(set.object_id)} != card_uuid ${JSON.stringify(v.assign.card_uuid)}`);
+    }
+    // Whole set, verbatim, in the sent order — a filtered, folded or truncated list is a
+    // data-loss bug on the authority (the omitted tags get soft-deleted).
+    const sentList = Array.isArray(set.payload.tag_uuids) ? set.payload.tag_uuids : null;
+    if (!sentList) {
+        errs.push(`card_set_tags tag_uuids is not an array: ${JSON.stringify(set.payload.tag_uuids)}`);
+    } else if (sentList.join(',') !== v.assign.tag_uuids.join(',')) {
+        errs.push(`card_set_tags tag_uuids ${JSON.stringify(sentList)} != the whole set ${JSON.stringify(v.assign.tag_uuids)}`);
+    }
+
+    // INV-3: re-proposing any change_id dedups and burns NO proposal_seq (no gaps).
+    const seqBefore = await client.$queryRaw`
+        SELECT next_seq FROM app_inbox_seq WHERE cluster_id = ${v.cluster} AND scope = ${v.scope}
+    `;
+    const again = await Promise.all([
+        proposeTagSave(v.cluster, v.scope, v.save.change_id, v.save.tag, client),
+        proposeTagDelete(v.cluster, v.scope, v.delete.change_id, v.delete.tag_uuid, client),
+        proposeSetCardTags(v.cluster, v.scope, v.assign.change_id, v.assign.card_uuid, v.assign.tag_uuids, client),
+    ]);
+    for (const [i, r] of again.entries()) {
+        if (r.queued !== 0 || r.deduped !== 1) {
+            errs.push(`re-propose #${i} same change_id => ${JSON.stringify(r)} (expected {queued:0, deduped:1}, INV-3)`);
+        }
+    }
+    const seqAfter = await client.$queryRaw`
+        SELECT next_seq FROM app_inbox_seq WHERE cluster_id = ${v.cluster} AND scope = ${v.scope}
+    `;
+    if (String(seqBefore[0]?.next_seq) !== String(seqAfter[0]?.next_seq)) {
+        errs.push(`dedup advanced app_inbox_seq ${seqBefore[0]?.next_seq} -> ${seqAfter[0]?.next_seq} (INV-3: a dup must not mint a seq)`);
+    }
+    const afterCount = await client.app_inbox.count({ where: { cluster_id: v.cluster } });
+    if (afterCount !== 3) errs.push(`inbox rows after dedup ${afterCount} != 3`);
+
+    // A poison assign never reaches the drain: the seam throws instead of queueing a junk list.
+    let refused = '';
+    try {
+        await proposeSetCardTags(v.cluster, v.scope, 'chg-tag-dup-item', v.assign.card_uuid, ['x', 'x'], client);
+    } catch (error) {
+        refused = String(error?.message ?? error);
+    }
+    if (!refused) errs.push('duplicate tag_uuids queued instead of refused by the seam');
+    const junkCount = await client.app_inbox.count({ where: { cluster_id: v.cluster } });
+    if (junkCount !== 3) errs.push(`a poison assign queued an inbox row (${junkCount} != 3)`);
+
+    // INV-1: proposing never journals. INV-17: it never moves the catalog.
+    const journalRows = await client.$queryRaw`
+        SELECT seq FROM app_sync_log WHERE cluster_id = ${v.cluster}
+    `;
+    if (journalRows.length) errs.push(`proposing minted ${journalRows.length} app_sync_log row(s) (INV-1)`);
+    const afterFp = await cardCatalogFingerprint(client, v.scope);
+    if (afterFp !== beforeFp) errs.push(`catalog changed by a proposal: ${afterFp} != ${beforeFp} (INV-17)`);
+}
+
 // ---- §9 flow 8 handover checks (website-local; the epoch+continuity primitive) ----
 // Drives `applyHandover` + `nextDatasetSeq` directly against the scratch journal — the
 // same advisory-lock transaction the route opens. These pin the two invariants handover
@@ -1253,6 +1396,7 @@ async function runVector(name) {
         case 'app_state_shape': await checkAppState(v, errs); break;
         case 'stats': await checkStats(v, errs); break;
         case 'card_proposal_shape': await checkCardProposalShape(v, errs); break;
+        case 'tag_proposal_shape': await checkTagProposalShape(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
         case 'app_lww': await checkAppLww(v, errs); break;
@@ -1267,7 +1411,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'app_state_shape', 'stats', 'card_proposal_shape', 'handover', 'epoch', 'blobstore']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'publish_write', 'availability_write', 'app_state_shape', 'stats', 'card_proposal_shape', 'tag_proposal_shape', 'handover', 'epoch', 'blobstore']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

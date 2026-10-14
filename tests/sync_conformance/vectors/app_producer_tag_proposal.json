@@ -1,0 +1,52 @@
+{
+    "check": "tag_proposal_shape",
+    "_note": "sync-v2 §8.3 step 1 / §14 phase 5 producer, tag half (the target set is cards AND tags). Drives the website's tag-proposal seam (proposeTagSave / proposeTagDelete / proposeSetCardTags → ingestProposals) against a scratch DB and pins that a website-UI tag edit becomes an inbox row the app's card-tag command can apply VERBATIM: kind/op/object_id parity (card_tag_save/upsert/object=payload.uuid; card_tag_delete/delete/object=payload.tag_uuid; card_set_tags/upsert/object=payload.card_uuid), payload == the serialized Tag / {tag_uuid} / {card_uuid, tag_uuids[]}, and the whole SET rather than a delta (a partial list silently erases the omitted tags). The same-host oracle is `objectIdFor`/`opFor`/`changeClassOf` — what this host's own journal reader derives from each payload must agree with what the seam put on the wire. Also proves INV-6 canonical edit_time, INV-3 change_id dedup with no proposal_seq gap, INV-1 (no journal row minted) and INV-17 (catalog byte-unchanged). The producer is proposal-only — it never writes live/.",
+    "cluster": "conf-tag@local",
+    "scope": "11111111-2222-3333-4444-666666666666",
+    "catalog": { "current_version": 9, "snapshot_seq": 4, "journal_role": "mirror", "deleted": "N" },
+    "save": {
+        "change_id": "chg-tag-save-1",
+        "tag": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000011",
+            "name": "grammar",
+            "color": "#2f9e44",
+            "deleted_at": null,
+            "created_at": "2026-01-01T00:00:00.000Z",
+            "updated_at": "2026-01-03T00:00:00.000Z"
+        }
+    },
+    "delete": {
+        "change_id": "chg-tag-del-1",
+        "tag_uuid": "bbbbbbbb-0000-0000-0000-000000000012"
+    },
+    "assign": {
+        "change_id": "chg-tag-set-1",
+        "card_uuid": "cccccccc-0000-0000-0000-000000000013",
+        "tag_uuids": ["aaaaaaaa-0000-0000-0000-000000000011", "bbbbbbbb-0000-0000-0000-000000000012"]
+    },
+    "expect": {
+        "save_kind": "card_tag_save",
+        "save_op": "upsert",
+        "save_object_id": "aaaaaaaa-0000-0000-0000-000000000011",
+        "save_edit_time": "2026-01-03T00:00:00.000Z",
+        "save_payload": {
+            "uuid": "aaaaaaaa-0000-0000-0000-000000000011",
+            "name": "grammar",
+            "color": "#2f9e44",
+            "deleted_at": null,
+            "created_at": "2026-01-01T00:00:00.000Z",
+            "updated_at": "2026-01-03T00:00:00.000Z"
+        },
+        "delete_kind": "card_tag_delete",
+        "delete_op": "delete",
+        "delete_object_id": "bbbbbbbb-0000-0000-0000-000000000012",
+        "delete_payload": { "tag_uuid": "bbbbbbbb-0000-0000-0000-000000000012" },
+        "assign_kind": "card_set_tags",
+        "assign_op": "upsert",
+        "assign_object_id": "cccccccc-0000-0000-0000-000000000013",
+        "assign_payload": {
+            "card_uuid": "cccccccc-0000-0000-0000-000000000013",
+            "tag_uuids": ["aaaaaaaa-0000-0000-0000-000000000011", "bbbbbbbb-0000-0000-0000-000000000012"]
+        }
+    }
+}

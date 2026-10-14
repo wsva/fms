@@ -213,6 +213,32 @@ Proposal-only by design: the seam never touches `live/<type>/<uuid>/data.sqlite3
 authority datasets are out of scope (their edits ride `/api/v1/sync/changes`), so nothing
 here asserts a live-row change.
 
+### `tag_proposal_shape` — the producer's tag half, §8.3 step 1 / §14 phase 5 (website-local)
+
+Phase 5's target set is **cards and tags**, so `app_producer_tag_proposal.json` drives the
+same seam's three tag wrappers (`proposeTagSave` / `proposeTagDelete` / `proposeSetCardTags`)
+and reads the queued rows back. It also has an oracle the card vector did not need: this host
+already **applies** these kinds (`sync/datasetjournal.ts`) and already **derives** their
+`object_id` / `op` / class (`sync/change_log.ts`), so parity is pinned in-repo rather than
+inferred from the doc. In `DB_CHECKS`.
+
+| Asserts | detail |
+| --- | --- |
+| command parity | `card_tag_save`→`upsert`/`object_id = payload.uuid`/payload = the serialized `Tag` (all six keys, `color` and `deleted_at` sent as explicit nulls); `card_tag_delete`→`delete`/`payload.tag_uuid`/`{tag_uuid}`; `card_set_tags`→**`upsert`**/`payload.card_uuid`/`{card_uuid, tag_uuids[]}` |
+| same-host parity | each queued row fed back through `objectIdFor` / `opFor` / `changeClassOf` must agree with what the seam put on the wire, and the class must be `state` (an assign that is not coalescible would fold differently on the two hosts) |
+| whole set, not a delta | `tag_uuids` equals the sent list verbatim, in order — a filtered or folded list silently erases every tag left out when the appplier replaces the pair set |
+| object_id is the card | `card_set_tags` keys on `card_uuid`, never a tag uuid: the pair set is one coalescing unit |
+| `edit_time` (INV-6) | the tag save carries the row's `updated_at`; the delete and the assign stamp now; all canonical fixed-width UTC |
+| ordering | `proposal_seq` dense `1,2,3` over this vector's own cluster + scope |
+| INV-3 dedup | re-proposing each `change_id` ⇒ `{queued:0, deduped:1}`, `next_seq` unmoved, row count still 3 — a bite test that mints a fresh token per call turns this red |
+| poison refusal | `tag_uuids: ['x','x']` throws in the seam and queues **nothing** — a junk list must never reach the drain, since a `card_tag` join is plain TEXT and no applier rejects a dangling tag |
+| INV-1 / INV-17 | zero `app_sync_log` rows; the catalog fingerprint byte-unchanged |
+
+`cardstore.getCardTagLinks` (the live-join read the assign baseline needs) is fs+sqlite and
+therefore out of this harness's reach: it was proven by a throwaway script that seeds a real
+`data.sqlite3`, queues through the seam, and runs each queued payload through
+`applyDatasetChange` — that script is not part of the suite.
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The
@@ -256,7 +282,8 @@ The contract checks (`features`, `cluster_contract`, `registry_contract`) need n
 database and run regardless; every journal-backed check (the `page_shape` / `resync` /
 `prune_*` vectors, the three `sweep_*` vectors, `version_availability`, the two `handover`
 vectors, the `epoch` vector, the two `blobstore` vectors, the `@app` read-plane vectors
-`app_state_shape` and `stats`, and the inbox producer vector `card_proposal_shape`)
+`app_state_shape` and `stats`, and the two inbox producer vectors `card_proposal_shape` and
+`tag_proposal_shape`)
 skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector.
 

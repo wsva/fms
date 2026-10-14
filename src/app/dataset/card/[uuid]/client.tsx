@@ -2,11 +2,12 @@
 
 /**
  * `/dataset/card/[uuid]` — the website's dataset-card editor (sync-v2.md §8.3 step 1,
- * §14 phase 5). An owner of a **mirror** card dataset adds / edits / deletes rows; each
- * mutation is proposed into the inbox (`propose*` → `ingestProposals`), never written to
- * the live `data.sqlite3` and never journalled. The desktop hub drains + applies + acks
- * later; until then the edit sits in the "pending proposals" panel below. An authority
- * dataset disables the editor and points the user at the journal path instead.
+ * §14 phase 5). An owner of a **mirror** card dataset adds / edits / deletes cards and
+ * manages tags; each mutation is proposed into the inbox (`propose*` → `ingestProposals`),
+ * never written to the live `data.sqlite3` and never journalled. The desktop hub drains +
+ * applies + acks later; until then the edit sits in the "pending proposals" panel below.
+ * An authority dataset disables the editor and points the user at the journal path instead.
+ * The tag controls live in `tags.tsx` — they share this page's draft/reload lifecycle.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Chip, Input, ProgressCircle, TextArea, toast } from '@heroui/react'
@@ -18,6 +19,7 @@ import {
     type CardEditorState,
 } from '@/app/actions/card_editor'
 import type { InboxEntry } from '@/lib/sync/inbox'
+import { TagAssign, TagChips, TagPanel } from './tags'
 
 type Props = { uuid: string }
 
@@ -146,27 +148,46 @@ export default function Client({ uuid }: Props) {
 
             <div className="flex flex-col gap-1">
                 <h2 className="text-sm font-bold opacity-80">Cards ({stateEditor.cards.length})</h2>
+                {editable && Object.keys(stateEditor.cardTags).length === 0 && (
+                    <p className="text-xs opacity-60">
+                        no card↔tag links are readable yet — they land once the hub drains an assign.
+                    </p>
+                )}
                 {stateEditor.cards.length === 0
                     ? <div className="text-sm opacity-60 py-4 text-center">no live cards yet</div>
                     : stateEditor.cards.map((c) => (
-                        <div key={c.uuid} className="flex flex-row items-start gap-3 bg-sand-100 rounded-md px-3 py-2 text-sm">
-                            <div className="flex flex-col min-w-0 flex-1">
-                                <span className="font-medium truncate">{c.question || '(no question)'}</span>
-                                <span className="text-xs opacity-60 truncate">{c.answer}</span>
+                        <div key={c.uuid} className="flex flex-col gap-1 bg-sand-100 rounded-md px-3 py-2 text-sm">
+                            <div className="flex flex-row items-start gap-3">
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="font-medium truncate">{c.question || '(no question)'}</span>
+                                    <span className="text-xs opacity-60 truncate">{c.answer}</span>
+                                </div>
+                                <span className="font-mono text-xs opacity-50 shrink-0">{shortUuid(c.uuid)}</span>
+                                {editable && (
+                                    <div className="flex flex-row gap-1 shrink-0">
+                                        <Button size="sm" variant="ghost" onPress={() => startEdit({
+                                            uuid: c.uuid, question: c.question, suggestion: c.suggestion,
+                                            answer: c.answer, note: c.note, familiarity: c.familiarity,
+                                        })}>Edit</Button>
+                                        <Button size="sm" variant="danger" isDisabled={stateBusy} onPress={() => remove(c.uuid)}>Delete</Button>
+                                        <TagAssign datasetUuid={uuid} cardUuid={c.uuid}
+                                            tags={stateEditor.tags} assigned={stateEditor.cardTags[c.uuid] ?? []}
+                                            busy={stateBusy} onProposed={reload} />
+                                    </div>
+                                )}
                             </div>
-                            <span className="font-mono text-xs opacity-50 shrink-0">{shortUuid(c.uuid)}</span>
                             {editable && (
-                                <div className="flex flex-row gap-1 shrink-0">
-                                    <Button size="sm" variant="ghost" onPress={() => startEdit({
-                                        uuid: c.uuid, question: c.question, suggestion: c.suggestion,
-                                        answer: c.answer, note: c.note, familiarity: c.familiarity,
-                                    })}>Edit</Button>
-                                    <Button size="sm" variant="danger" isDisabled={stateBusy} onPress={() => remove(c.uuid)}>Delete</Button>
+                                <div className="flex flex-row gap-1 flex-wrap">
+                                    <TagChips tags={stateEditor.tags} assigned={stateEditor.cardTags[c.uuid] ?? []} />
                                 </div>
                             )}
                         </div>
                     ))}
             </div>
+
+            {editable && (
+                <TagPanel datasetUuid={uuid} tags={stateEditor.tags} onProposed={reload} busy={stateBusy} />
+            )}
 
             <div className="flex flex-col gap-1">
                 <h2 className="text-sm font-bold opacity-80">Pending proposals ({statePending.length})</h2>
