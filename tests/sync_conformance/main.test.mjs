@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE } from '../../src/lib/sync/change_log.ts';
 import { websiteClusterInfo, DATASET_JOURNAL_FEATURE, PROTOCOL_VERSION } from '../../src/lib/sync/cluster.ts';
 import { applyHandover } from '../../src/lib/sync/handover.ts';
+import { diffNeeded, swapLiveTree, readLiveTree } from '../../src/lib/sync/blobstore.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const VECTORS = path.join(HERE, 'vectors');
@@ -509,6 +510,61 @@ async function checkHandover(v, errs) {
     }
 }
 
+// The blob-store check drives the real `swapLiveTree` / `diffNeeded` / `readLiveTree`
+// from `lib/sync/blobstore.ts` directly — these are DB-only (the fs/verify layer lives
+// in the route, not the swap), so the vectors pin the dedup + refcount invariants
+// (§7:197 cross-version/cross-dataset de-dup; refcount rises/falls with live-tree swaps)
+// without touching the filesystem. Each vector owns its datasets + synthetic shas, so the
+// reset deletes exactly its own rows. Ops:
+//   put   { dataset, refs:[{path,sha256,size}], expect_applied }  — swap the live tree
+//   diff  { dataset, refs:[...], expect_need:[sha256,...] }        — the store-miss set
+//   refcount { sha256, expect }                                    — the global ledger row
+//   tree  { dataset, expect:{ path: sha256, ... } }                — the live tree rows
+async function bsReset(v) {
+    const d = await db();
+    const datasets = v.datasets ?? [];
+    if (datasets.length > 0) {
+        await d.dataset_blob_path.deleteMany({ where: { dataset_uuid: { in: datasets } } });
+    }
+    const shas = [...new Set(JSON.stringify(v).match(/[0-9a-f]{64}/g) ?? [])];
+    if (shas.length > 0) await d.dataset_blob.deleteMany({ where: { sha256: { in: shas } } });
+}
+
+async function checkBlobstore(v, errs) {
+    await bsReset(v);
+    const d = await db();
+    for (const st of v.steps) {
+        if (st.op === 'put') {
+            const applied = await d.$transaction((tx) => swapLiveTree(tx, st.dataset, st.refs));
+            if (typeof st.expect_applied === 'number' && applied.applied !== st.expect_applied) {
+                errs.push(`put(${st.dataset}) applied=${applied.applied} != expected ${st.expect_applied}`);
+            }
+        } else if (st.op === 'diff') {
+            const need = await diffNeeded(d, st.refs);
+            const got = need.map((r) => r.sha256).sort();
+            const want = [...st.expect_need].sort();
+            if (JSON.stringify(got) !== JSON.stringify(want)) {
+                errs.push(`diff(${st.dataset}) need=${JSON.stringify(got)} != expected ${JSON.stringify(want)} (§7 dedup: only hashes the store lacks)`);
+            }
+        } else if (st.op === 'refcount') {
+            const row = await d.dataset_blob.findUnique({ where: { sha256: st.sha256 }, select: { refcount: true } });
+            const got = row ? row.refcount : null;
+            if (got !== st.expect) {
+                errs.push(`refcount(${st.sha256.slice(0, 8)}) = ${got} != expected ${st.expect} (cross-dataset refcount)`);
+            }
+        } else if (st.op === 'tree') {
+            const tree = await readLiveTree(d, st.dataset);
+            const got = Object.fromEntries([...tree.entries()].sort());
+            const want = Object.fromEntries(Object.entries(st.expect).sort());
+            if (JSON.stringify(got) !== JSON.stringify(want)) {
+                errs.push(`tree(${st.dataset}) = ${JSON.stringify(got)} != expected ${JSON.stringify(want)}`);
+            }
+        } else {
+            errs.push(`unknown blobstore step op ${JSON.stringify(st.op)}`);
+        }
+    }
+}
+
 async function runVector(name) {
     const v = readVector(name);
     const errs = [];
@@ -520,6 +576,7 @@ async function runVector(name) {
         case 'sweep_skips_nonauthority': await checkSweepSkipsNonauthority(v, errs); break;
         case 'version_availability': await checkVersionAvailability(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
+        case 'blobstore': await checkBlobstore(v, errs); break;
         case 'features': checkFeatures(v, errs); break;
         case 'cluster_contract': checkClusterContract(v, errs); break;
         case 'registry_contract': await checkRegistryContract(v, errs); break;
@@ -529,7 +586,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'handover']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'handover', 'blobstore']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

@@ -107,6 +107,24 @@ without it the minter resumes at the stale value and collides with hub seqs re-p
 during the mirror period. Each vector runs under its **own** cluster id (like the sweep
 vectors), so the seed/reset is isolated and order-independent.
 
+### `blobstore` — changed-file transport, §7 (website-local)
+
+Two website-authored vectors pin `lib/sync/blobstore.ts` — driven through the DB-only
+half (`swapLiveTree`, `diffNeeded`, `readLiveTree`). The blob store is the surface sync-v2.md
+§7 defers ("content-addressed blob store, matching the host route"); the app tree has no
+blob client yet, so like the `sweep_*`, `version_availability` and `handover` pairs these are
+website-local. Each vector owns its datasets and synthetic hashes, so the reset deletes
+exactly its own rows.
+
+| Vector | asserts |
+| --- | --- |
+| `blobstore_dedup` | one `dataset_blob` row per distinct hash, **shared across datasets** — a hash named by two datasets carries `refcount 2` (**§7:197 cross-version/dataset de-dup**); a diff reports only the hashes the store lacks (an already-held hash needs no upload even at a new path) |
+| `blobstore_diff_and_refs` | an unchanged re-push diffs to `need: []` (**zero bytes on a no-change push**); a swap that changes a path retires the old hash to `refcount 0` and raises the new one; a removed path retires its hash; the **same** hash at two paths in one dataset contributes 2 to the global refcount |
+
+The on-disk layer (stream-to-tmp + **digest re-verification** + atomic rename + GC) is
+covered by the phase-4 e2e probe rather than a vector — it writes to a scratch `BLOB_ROOT`,
+not to the shared journal tables.
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The
@@ -146,8 +164,8 @@ docker rm -f fms_conf_pg
 
 The contract checks (`features`, `cluster_contract`, `registry_contract`) need no
 database and run regardless; every journal-backed check (the `page_shape` / `resync` /
-`prune_*` vectors, the three `sweep_*` vectors, `version_availability`, and the two
-`handover` vectors) skips cleanly when `DATABASE_URL` is
+`prune_*` vectors, the three `sweep_*` vectors, `version_availability`, the two
+`handover` vectors, and the two `blobstore` vectors) skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector.
 
 ## Why a loader is involved

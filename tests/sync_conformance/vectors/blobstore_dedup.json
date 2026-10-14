@@ -1,0 +1,65 @@
+{
+  "check": "blobstore",
+  "comment": "§7:197 cross-dataset de-dup: one blob row per distinct hash, refcount = number of live-tree paths naming it across ALL datasets. Drives swapLiveTree/diffNeeded/readLiveTree (DB-only). Website-local vector (no app-side blob client yet).",
+  "cluster": "cluster-blobstore-dedup",
+  "datasets": [
+    "aaaaaaaa-0001-4001-8001-000000000001",
+    "bbbbbbbb-0002-4002-8002-000000000002"
+  ],
+  "steps": [
+    {
+      "op": "put",
+      "dataset": "aaaaaaaa-0001-4001-8001-000000000001",
+      "refs": [
+        { "path": "f1", "sha256": "1111111111111111111111111111111111111111111111111111111111111111", "size": 10 },
+        { "path": "f2", "sha256": "2222222222222222222222222222222222222222222222222222222222222222", "size": 20 }
+      ],
+      "expect_applied": 2
+    },
+    {
+      "op": "put",
+      "dataset": "bbbbbbbb-0002-4002-8002-000000000002",
+      "refs": [
+        { "path": "g1", "sha256": "1111111111111111111111111111111111111111111111111111111111111111", "size": 10 },
+        { "path": "g2", "sha256": "3333333333333333333333333333333333333333333333333333333333333333", "size": 30 }
+      ],
+      "expect_applied": 2
+    },
+    {
+      "op": "refcount",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "expect": 2,
+      "note": "shared across two datasets -> one ledger row, refcount 2"
+    },
+    {
+      "op": "refcount",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "expect": 1
+    },
+    {
+      "op": "refcount",
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "expect": 1
+    },
+    {
+      "op": "diff",
+      "dataset": "aaaaaaaa-0001-4001-8001-000000000001",
+      "refs": [
+        { "path": "f1", "sha256": "1111111111111111111111111111111111111111111111111111111111111111", "size": 10 },
+        { "path": "f3", "sha256": "4444444444444444444444444444444444444444444444444444444444444444", "size": 40 }
+      ],
+      "expect_need": [
+        "4444444444444444444444444444444444444444444444444444444444444444"
+      ],
+      "note": "sha1 already in the store -> nothing to upload for it, only sha4 is needed"
+    },
+    {
+      "op": "tree",
+      "dataset": "aaaaaaaa-0001-4001-8001-000000000001",
+      "expect": {
+        "f1": "1111111111111111111111111111111111111111111111111111111111111111",
+        "f2": "2222222222222222222222222222222222222222222222222222222222222222"
+      }
+    }
+  ]
+}

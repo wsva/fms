@@ -1,0 +1,81 @@
+{
+  "check": "blobstore",
+  "comment": "Refcount lifecycle over live-tree swaps (§7): an unchanged re-push needs no upload; a changed path retires the old hash (refcount->0, still on disk until GC) and names the new one; a removed path drops its hash. Also pins that a hash at TWO paths in ONE dataset contributes 2 to the global refcount. Website-local vector.",
+  "cluster": "cluster-blobstore-refs",
+  "datasets": [
+    "cccccccc-0003-4003-8003-000000000003"
+  ],
+  "steps": [
+    {
+      "op": "put",
+      "dataset": "cccccccc-0003-4003-8003-000000000003",
+      "refs": [
+        { "path": "p1", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "size": 10 },
+        { "path": "p2", "sha256": "6666666666666666666666666666666666666666666666666666666666666666", "size": 20 }
+      ],
+      "expect_applied": 2
+    },
+    { "op": "refcount", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "expect": 1 },
+    { "op": "refcount", "sha256": "6666666666666666666666666666666666666666666666666666666666666666", "expect": 1 },
+    {
+      "op": "diff",
+      "dataset": "cccccccc-0003-4003-8003-000000000003",
+      "refs": [
+        { "path": "p1", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "size": 10 },
+        { "path": "p2", "sha256": "6666666666666666666666666666666666666666666666666666666666666666", "size": 20 }
+      ],
+      "expect_need": [],
+      "note": "unchanged tree -> zero bytes to upload (the whole point of changed-file transport)"
+    },
+    {
+      "op": "put",
+      "dataset": "cccccccc-0003-4003-8003-000000000003",
+      "refs": [
+        { "path": "p1", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "size": 10 },
+        { "path": "p2", "sha256": "7777777777777777777777777777777777777777777777777777777777777777", "size": 21 }
+      ],
+      "expect_applied": 2,
+      "note": "p2 content changed -> new hash; old p2 hash retired"
+    },
+    { "op": "refcount", "sha256": "6666666666666666666666666666666666666666666666666666666666666666", "expect": 0, "note": "retired by the swap" },
+    { "op": "refcount", "sha256": "7777777777777777777777777777777777777777777777777777777777777777", "expect": 1, "note": "newly referenced" },
+    { "op": "refcount", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "expect": 1, "note": "unchanged path, untouched" },
+    {
+      "op": "tree",
+      "dataset": "cccccccc-0003-4003-8003-000000000003",
+      "expect": {
+        "p1": "5555555555555555555555555555555555555555555555555555555555555555",
+        "p2": "7777777777777777777777777777777777777777777777777777777777777777"
+      }
+    },
+    {
+      "op": "put",
+      "dataset": "cccccccc-0003-4003-8003-000000000003",
+      "refs": [
+        { "path": "p1", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "size": 10 }
+      ],
+      "expect_applied": 1,
+      "note": "p2 removed entirely"
+    },
+    { "op": "refcount", "sha256": "7777777777777777777777777777777777777777777777777777777777777777", "expect": 0, "note": "p2 removal retires it -> GC-eligible after grace" },
+    {
+      "op": "put",
+      "dataset": "cccccccc-0003-4003-8003-000000000003",
+      "refs": [
+        { "path": "x", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "size": 10 },
+        { "path": "y", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "size": 10 }
+      ],
+      "expect_applied": 2,
+      "note": "same hash at two paths in one dataset: p1 removed (was the only prior ref), x+y added"
+    },
+    { "op": "refcount", "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "expect": 2, "note": "two live paths -> two refs, one stored object" },
+    {
+      "op": "tree",
+      "dataset": "cccccccc-0003-4003-8003-000000000003",
+      "expect": {
+        "x": "5555555555555555555555555555555555555555555555555555555555555555",
+        "y": "5555555555555555555555555555555555555555555555555555555555555555"
+      }
+    }
+  ]
+}

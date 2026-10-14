@@ -213,6 +213,42 @@ model dataset_file_hash {
   @@id([dataset_uuid, path])
 }
 
+/*
+Content-addressed blob store ledger (sync-v2.md §7 changed-file transport).
+One row per DISTINCT sha256, shared across every dataset and version — the
+cross-dataset de-duplication §7:197 calls for. `refcount` is how many live-tree
+rows (dataset_blob_path, any dataset) currently name this hash: 0 means no
+dataset's current tree references it, so the blob is a serving-cache entry GC may
+reclaim after a grace window. Durability is NOT this table's job — a changed-file
+tree always has an immutable `versions/v<N>.tar.gz` archive holding the same bytes
+(INV-8), so reclaiming a refcount-0 blob never loses content. Bytes live at
+BLOB_ROOT/<sha[0:2]>/<sha> (see lib/sync/blobstore.ts).
+*/
+model dataset_blob {
+  sha256     String   @id @db.VarChar(64)
+  size       BigInt
+  refcount   Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/*
+A dataset's live tree as (path → content-hash) rows. This is what a changed-file
+diff is computed against (POST /api/v1/datasets/{uuid}/objects) and what a blob
+refcount is derived from. DB files (manifest isDbFile) are never stored here —
+their content churns through card sync, not the blob plane.
+*/
+model dataset_blob_path {
+  dataset_uuid String   @db.VarChar(100)
+  path         String   @db.VarChar(1024)
+  sha256       String   @db.VarChar(64)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([dataset_uuid, path])
+  @@index([dataset_uuid])
+}
+
 /* Grouping only — links a dataset directory to legacy dataset_tag rows. */
 model dataset_tag_link {
   uuid         String   @id @db.VarChar(100)
