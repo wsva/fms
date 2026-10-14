@@ -45,6 +45,8 @@ import {
     appendJournal,
     latestForObject,
     parseEditTime,
+    clampEditTimeMs,
+    lwwLoses,
     scopeAuthorityEpoch,
     staleEpochReason,
 } from '@/lib/sync/change_log';
@@ -173,12 +175,10 @@ export async function POST(request: NextRequest) {
                 // INV-6 clamp: a stamp in the future (or unparseable) is replaced by the
                 // server's now, canonicalized to fixed-width UTC, so a wrong clock can
                 // never win a later-wins contest forever. Matches `rest.rs::normalize_edit_time`
-                // (clamp AFTER reading, then compare the clamped instant). The @app path
-                // below keeps its shipped behaviour; the clamp is applied to the dataset
-                // journal this increment (parity for @app is a follow-up, see plan §9).
-                const parsedMs = parseEditTime(editTime);
+                // (clamp AFTER reading, then compare the clamped instant). Both scopes apply
+                // it — the @app leg journals this clamped `stamp` below (parity with the app).
                 const nowMs = Date.now();
-                const effMs = parsedMs === null ? nowMs : Math.min(parsedMs, nowMs);
+                const effMs = clampEditTimeMs(parseEditTime(editTime), nowMs);
                 const stamp = rowStampAt(new Date(effMs));
 
                 // ---- dataset scope: the authority branch (phase 7b) ----
@@ -199,12 +199,9 @@ export async function POST(request: NextRequest) {
                     // rejected and carries the winner (INV-4).
                     if (objectId && coalescible(changeClassOf(kind))) {
                         const latest = await latestForObject(tx, clusterId, scope, objectId);
-                        if (latest) {
-                            const storedMs = parseEditTime(latest.edit_time);
-                            if (storedMs !== null && storedMs >= effMs) {
-                                out.push(losing(id, latest.seq, latest.payload));
-                                continue;
-                            }
+                        if (latest && lwwLoses(parseEditTime(latest.edit_time), effMs)) {
+                            out.push(losing(id, latest.seq, latest.payload));
+                            continue;
                         }
                     }
 
@@ -227,9 +224,20 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
-                // ---- @app scope: the shipped cloud-authority branch (unchanged) ----
+                // ---- @app scope: the cloud-authority branch ----
+                // Only `dictation` is coalescible here (state class); xp (counter) and
+                // card_review/read_attempt_* (appendOnly) fall through untouched. A losing
+                // stale dictation push is acked ok:true but flagged rejected with the
+                // winner, so applyAppChange's blind upsert never overwrites a newer row.
+                if (objectId && coalescible(changeClassOf(kind))) {
+                    const latest = await latestForObject(tx, clusterId, APP_SCOPE, objectId);
+                    if (latest && lwwLoses(parseEditTime(latest.edit_time), effMs)) {
+                        out.push(losing(id, latest.seq, latest.payload));
+                        continue;
+                    }
+                }
                 const seq = await nextSeq(tx, clusterId);
-                await appendJournal(tx, clusterId, seq, APP_SCOPE, objectId, kind, editTime, userKey, ch.payload);
+                await appendJournal(tx, clusterId, seq, APP_SCOPE, objectId, kind, stamp, userKey, ch.payload);
                 await applyAppChange(tx, clusterId, userKey, kind, ch.payload);
                 await tx.app_applied_change.create({ data: { cluster_id: clusterId, change_id: id } });
                 out.push(applied(id));

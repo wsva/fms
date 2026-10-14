@@ -1,0 +1,35 @@
+{
+  "comment": "Website-local (not a desktop vector): sync-v2.md §7/§14 — @app writeback conflict-resolution parity. The dataset branch of POST /api/v1/sync/changes already applies the INV-6 edit_time clamp and the INV-4/INV-5 coalescible later-edit_time-wins loss check; the @app cloud-authority branch now does too, so a stale dictation push can no longer blind-overwrite a newer row through applyAppChange's upsert and is acked as losing(winner_seq/winner_payload) like the app's rest.rs sync_changes. The pure half (classes/clamp/lww) runs WITHOUT a database; the journal round-trip self-guards on DATABASE_URL. classes: only `dictation` is state/coalescible at @app, so only it can be rejected losing — xp (counter) and card_review/read_attempt_save (appendOnly) never fold. clamp (INV-6, normalize_edit_time): a future stamp becomes the reference now, a past stamp passes through, an unparseable stamp becomes now, so a wrong clock can never win later-wins forever. lww (INV-4/INV-5): incoming loses iff the stored stamp is at-or-newer (ties give the win to the stored entry, matching rest.rs `existing >= incoming`); a null stored stamp never wins, so a fresh change is not wrongly rejected. roundtrip: seed one @app object dated 2026-05-01 via nextSeq+appendJournal, read it back with latestForObject, and prove a stale (04-01) push loses while a fresher (06-01) push wins. All stamps are genuine past dates vs any plausible run time, so nothing clamps and the comparison is stable forever.",
+  "check": "app_lww",
+  "cluster": "cluster-app-lww",
+  "expect": {
+    "classes": [
+      { "kind": "dictation", "expect_coalescible": true },
+      { "kind": "xp", "expect_coalescible": false },
+      { "kind": "card_review", "expect_coalescible": false },
+      { "kind": "read_attempt_save", "expect_coalescible": false }
+    ],
+    "clamp": {
+      "now_iso": "2026-07-01T00:00:00.000Z",
+      "cases": [
+        { "edit_time": "2999-01-01T00:00:00.000Z", "expect": "now" },
+        { "edit_time": "2000-01-01T00:00:00.000Z", "expect": "past" },
+        { "edit_time": "", "expect": "now" }
+      ]
+    },
+    "lww": [
+      { "stored_ms": 300, "eff_ms": 200, "expect": true },
+      { "stored_ms": 200, "eff_ms": 200, "expect": true },
+      { "stored_ms": 100, "eff_ms": 200, "expect": false },
+      { "stored_ms": null, "eff_ms": 200, "expect": false }
+    ]
+  },
+  "roundtrip": {
+    "object_id": "conf@fms.test:m1:s1",
+    "user_key": "u-app-lww",
+    "kind": "dictation",
+    "store_edit_time": "2026-05-01T00:00:00.000Z",
+    "stale_edit_time": "2026-04-01T00:00:00.000Z",
+    "fresh_edit_time": "2026-06-01T00:00:00.000Z"
+  }
+}

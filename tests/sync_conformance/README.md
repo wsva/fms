@@ -147,6 +147,31 @@ ships dormant for dataset scopes: the app client still hard-errors a dataset-sco
 Website origin, so no live follower reaches that branch yet (host-before-client, as phases
 4/5 did).
 
+### `app_lww` — @app writeback clamp + later-wins parity, §7/§14 (website-local)
+
+The last gap on the `@app` writeback leg. `POST /api/v1/sync/changes` has two branches behind
+one advisory lock: the phase-7b **dataset** branch (clamp + LWW + losing-reporting) and the
+shipped **@app** cloud-authority branch. The `@app` branch journaled the **raw** `edit_time`
+(skipping the INV-6 clamp) and did **no** coalescible later-edit_time-wins check — so a stale
+dictation push blindly overwrote a newer row through `applyAppChange`'s upsert and was acked
+`applied`, never returning the app's `losing(winner_seq, winner_payload)`. The route now shares
+`clampEditTimeMs` + `lwwLoses` with the dataset branch. `app_lww` drives `changeClassOf` /
+`coalescible` / `parseEditTime` / `clampEditTimeMs` / `lwwLoses` / `nextSeq` + `appendJournal` +
+`latestForObject` directly:
+
+| Asserts | detail |
+| --- | --- |
+| only `dictation` coalesces | `coalescible(changeClassOf(k))`: `dictation`→true; `xp` (counter), `card_review`/`read_attempt_save` (appendOnly)→false — so only a stale dictation push can be rejected losing |
+| INV-6 clamp | against a vector-pinned reference `now`: a future stamp→now, a past stamp→itself, an unparseable `''`→now (a wrong clock can never win later-wins forever) |
+| INV-4/INV-5 truth table | `lwwLoses(stored, eff)`: stored newer→lose, equal→lose (tie gives the stored entry the win, matching `rest.rs` `existing >= incoming`), stored older→win, `null` stored→win |
+| journal round-trip | seed one `@app` object dated 2026-05-01 via `nextSeq`+`appendJournal`, read it back with `latestForObject`, then show a 04-01 push **loses** and a 06-01 push **wins** |
+
+Unlike the journal-backed vectors, `app_lww` is **deliberately not in `DB_CHECKS`**: its pure
+half (classes/clamp/lww) runs **without `DATABASE_URL`**, and only the round-trip self-guards on
+`haveDb()` — so a DB-less run exercises the predicates while skipping the seed, never a false
+skip. Like the `@app` push leg itself, this ships dormant until the app switches
+`writeback_flush_inner` to `hub_request` (host-before-client, as phases 4/5/7b did).
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The
@@ -191,6 +216,11 @@ database and run regardless; every journal-backed check (the `page_shape` / `res
 `prune_*` vectors, the three `sweep_*` vectors, `version_availability`, the two `handover`
 vectors, the `epoch` vector, and the two `blobstore` vectors) skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector.
+
+`app_lww` is the deliberate hybrid: it is **not** in `DB_CHECKS`, so its pure half
+(classes / clamp / later-wins truth table) always runs, and only its `appendJournal`+
+`latestForObject` round-trip self-guards on `haveDb()`. A DB-less run exercises the
+predicates and skips just the seed.
 
 ## Why a loader is involved
 

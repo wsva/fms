@@ -234,6 +234,25 @@ export function parseEditTime(raw: string): number | null {
 }
 
 /**
+ * INV-6: clamp a parsed edit_time to the server's now — a future or unparseable stamp
+ * becomes now, so a wrong clock can never win a later-wins contest forever. Parity with
+ * the app's `normalize_edit_time` (clamp AFTER parse, then compare the clamped instant).
+ */
+export function clampEditTimeMs(parsedMs: number | null, nowMs: number): number {
+    return parsedMs === null ? nowMs : Math.min(parsedMs, nowMs);
+}
+
+/**
+ * Later-edit_time-wins, from the two clamped instants in millis: the incoming change
+ * LOSES when the stored entry is at-or-newer (INV-4/INV-5; ties resolve to the stored
+ * winner, matching the app's `existing >= incoming` in `sync_changes`). A null stored
+ * stamp (absent/malformed row) never wins, so a fresh change is not wrongly rejected.
+ */
+export function lwwLoses(storedMs: number | null, effMs: number): boolean {
+    return storedMs !== null && storedMs >= effMs;
+}
+
+/**
  * Allocate the next journal seq for a cluster. Must run inside the caller's
  * transaction, which holds the per-cluster advisory lock (§11.2), so two
  * instances appending to the same cluster cannot mint the same seq.

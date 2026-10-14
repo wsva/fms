@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE, scopeAuthorityEpoch, staleEpochReason, staleEpochRefused } from '../../src/lib/sync/change_log.ts';
+import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE, scopeAuthorityEpoch, staleEpochReason, staleEpochRefused, changeClassOf, coalescible, latestForObject, nextSeq, parseEditTime, lwwLoses, clampEditTimeMs } from '../../src/lib/sync/change_log.ts';
 import { websiteClusterInfo, DATASET_JOURNAL_FEATURE, PROTOCOL_VERSION } from '../../src/lib/sync/cluster.ts';
 import { applyHandover } from '../../src/lib/sync/handover.ts';
 import { diffNeeded, swapLiveTree, readLiveTree } from '../../src/lib/sync/blobstore.ts';
@@ -575,6 +575,88 @@ async function checkEpoch(v, errs) {
     await hoReset(cluster);
 }
 
+// ---- @app writeback conflict-resolution parity (INV-6 clamp + INV-4/5 coalescible LWW) ----
+// The pure predicates always run — no DB needed — pinning which @app kinds coalesce, the
+// edit_time clamp, and the later-wins comparison. The journal round-trip self-guards on
+// haveDb(): it seeds one @app object through nextSeq + appendJournal and reads it back
+// through latestForObject — the exact lookups the @app route branch runs — then shows a
+// stale push losing and a fresher push winning via lwwLoses. Deliberately NOT in
+// DB_CHECKS so the pure half passes without DATABASE_URL (the round-trip simply skips).
+async function appLwwReset(cluster) {
+    const d = await db();
+    await d.$executeRaw`DELETE FROM app_sync_log WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_sync_prune_mark WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_applied_change WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM dataset_sync_seq WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_sync_seq WHERE cluster_id = ${cluster}`;
+}
+
+async function checkAppLww(v, errs) {
+    const exp = v.expect;
+
+    // (1) only `dictation` is coalescible at @app; counter/appendOnly kinds never fold.
+    for (const c of exp.classes ?? []) {
+        const got = coalescible(changeClassOf(c.kind));
+        if (got !== c.expect_coalescible) {
+            errs.push(`coalescible(changeClassOf('${c.kind}')) = ${got} != expected ${c.expect_coalescible}`);
+        }
+    }
+
+    // (2) INV-6 clamp, against a vector-pinned reference `now` so it is deterministic:
+    // future→now, past→past, unparseable→now.
+    const nowMs = parseEditTime(exp.clamp.now_iso);
+    for (const c of exp.clamp.cases ?? []) {
+        const parsed = parseEditTime(c.edit_time);
+        const got = clampEditTimeMs(parsed, nowMs);
+        if (c.expect === 'now') {
+            if (got !== nowMs) errs.push(`clampEditTimeMs('${c.edit_time}') = ${got} != now ${nowMs}`);
+        } else if (c.expect === 'past') {
+            if (parsed === null || got !== parsed || !(parsed < nowMs)) {
+                errs.push(`clampEditTimeMs('${c.edit_time}') did not pass a past stamp through (parsed=${parsed}, got=${got}, now=${nowMs})`);
+            }
+        }
+    }
+
+    // (3) LWW truth table: incoming loses iff stored is at-or-newer; a null stored never wins.
+    for (const c of exp.lww ?? []) {
+        const got = lwwLoses(c.stored_ms, c.eff_ms);
+        if (got !== c.expect) {
+            errs.push(`lwwLoses(stored=${c.stored_ms}, eff=${c.eff_ms}) = ${got} != expected ${c.expect}`);
+        }
+    }
+
+    // (4) journal round-trip (DB only): all stamps are genuine past dates relative to any
+    // plausible run time, so no clamp edge and the comparison is stable forever.
+    if (haveDb()) {
+        const cluster = v.cluster;
+        const rt = v.roundtrip;
+        await appLwwReset(cluster);
+        const d = await db();
+        await d.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cluster}))`;
+            const seq = await nextSeq(tx, cluster);
+            await appendJournal(tx, cluster, seq, APP_SCOPE, rt.object_id, rt.kind, rt.store_edit_time, rt.user_key, {});
+        });
+        const found = await latestForObject(d, cluster, APP_SCOPE, rt.object_id);
+        if (!found) {
+            errs.push(`roundtrip: latestForObject(@app, ${rt.object_id}) returned null after seeding`);
+        } else if (found.edit_time !== rt.store_edit_time) {
+            errs.push(`roundtrip: stored edit_time ${JSON.stringify(found.edit_time)} != seeded ${JSON.stringify(rt.store_edit_time)}`);
+        } else {
+            const storedMs = parseEditTime(found.edit_time);
+            const staleEff = parseEditTime(rt.stale_edit_time);
+            const freshEff = parseEditTime(rt.fresh_edit_time);
+            if (!lwwLoses(storedMs, staleEff)) {
+                errs.push(`roundtrip: stale push (eff=${staleEff}) should LOSE to stored (=${storedMs}) but lwwLoses=false`);
+            }
+            if (lwwLoses(storedMs, freshEff)) {
+                errs.push(`roundtrip: fresh push (eff=${freshEff}) should WIN over stored (=${storedMs}) but lwwLoses=true`);
+            }
+        }
+        await appLwwReset(cluster);
+    }
+}
+
 // The blob-store check drives the real `swapLiveTree` / `diffNeeded` / `readLiveTree`
 // from `lib/sync/blobstore.ts` directly — these are DB-only (the fs/verify layer lives
 // in the route, not the swap), so the vectors pin the dedup + refcount invariants
@@ -642,6 +724,7 @@ async function runVector(name) {
         case 'version_availability': await checkVersionAvailability(v, errs); break;
         case 'handover': await checkHandover(v, errs); break;
         case 'epoch': await checkEpoch(v, errs); break;
+        case 'app_lww': await checkAppLww(v, errs); break;
         case 'blobstore': await checkBlobstore(v, errs); break;
         case 'features': checkFeatures(v, errs); break;
         case 'cluster_contract': checkClusterContract(v, errs); break;
