@@ -68,6 +68,26 @@ Multiple instances may each sweep once a day — safe, not a bug, because `prune
 ever *raises* the mark and the sweep runs under the per-cluster advisory lock, so overlap
 is idempotent rather than racing.
 
+### `version_availability` — registry takedown, §11.5 (website-local)
+
+Two more website-authored vectors pin the takedown read-resolution in `resolveVersionRow`
+(driven directly — it is DB-only, so no archive is staged on disk). The app's
+`registry_contract` vector fixes the manifest *body*; these fix the resolution the body
+does not express:
+
+| Vector                    | asserts                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------- |
+| `version_availability`    | a taken-down top (v3) is `410 Gone` on an explicit read; the pin walks DOWN past it to the next-lower available (v2); a still-available explicit read is served; a nonexistent v9 is `404` |
+| `version_all_unavailable` | every version taken down ⇒ the pin resolves to `404` ("… or none"); an explicit read is still `410` (bytes exist, new reads do not) |
+
+Both also assert `resolveVersionRow` never mutates the version rows — the §11.5 pin
+fallback is a **read-time** decision. `dataset.current_version` is deliberately left
+where the last publish put it (INV-17: a takedown is not a re-pin), so an overturned
+takedown restores the exact prior version. This is proven against the real route write
+(`POST /api/v1/publish/availability`, which flips only `dataset_version.available`) in the
+phase's scratch-DB probe: a takedown leaves `current_version` unmoved and resolution walks
+down; a restore walks back.
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The

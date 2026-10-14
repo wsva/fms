@@ -8,6 +8,12 @@
  * pure DB read of that immutable `dataset_version` row. The client calls it without a
  * version (server resolves the pin), reads `current_version` back, then requests
  * `/snapshot?version={current_version}` so bytes and provenance cannot drift (INV-8).
+ *
+ * §11.5 takedown: a version the operator has taken down is refused here — an explicit
+ * read of it is `410 Gone`, and a pin whose top was taken down silently resolves to the
+ * next-lower *available* version (see `resolveVersionRow`). The stored `current_version`
+ * is not re-pinned by a takedown (INV-17), so a restore returns this read to its prior
+ * version.
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';

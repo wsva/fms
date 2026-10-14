@@ -1,0 +1,18 @@
+{
+  "comment": "Website-local (not a desktop vector): §11.5 takedown read-resolution. Drives resolveVersionRow directly (DB-only, no archive on disk needed). The published top (v3) is taken down (available='N'); an explicit read of it is 410 Gone, an explicit read of a still-available v2 is served, and the PIN (no version) walks DOWN past the taken-down top to the next-lower available version (v2) — the read-time fallback, with current_version left at 3 as a ceiling (INV-17: takedown is not a re-pin). A read of a nonexistent v9 is still 404.",
+  "check": "version_availability",
+  "dataset_uuid": "44444444-4444-4444-8444-444444444444",
+  "current_version": 3,
+  "versions": [
+    { "version": 1, "available": "Y" },
+    { "version": 2, "available": "Y" },
+    { "version": 3, "available": "N" }
+  ],
+  "cases": [
+    { "requested": 3, "expect_status": 410 },
+    { "requested": 2, "expect_status": "ok", "expect_version": 2 },
+    { "requested": 1, "expect_status": "ok", "expect_version": 1 },
+    { "requested": null, "expect_status": "ok", "expect_version": 2 },
+    { "requested": 9, "expect_status": 404 }
+  ]
+}

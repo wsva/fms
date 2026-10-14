@@ -16,9 +16,13 @@
  */
 import fs from 'fs';
 import path from 'path';
+import type { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { prisma } from '@/lib/prisma';
 import { archiveDir } from './paths';
 import { canReadDataset, datasetCatalogFields, type DatasetCatalog } from './access';
+
+/** A Prisma client or a transaction client — both read `dataset_version`. */
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 /** The `dataset_version` columns a registry read needs (all immutable per version). */
 const versionFields = {
@@ -30,6 +34,7 @@ const versionFields = {
     total_bytes: true,
     overall_hash: true,
     info_updated_at: true,
+    available: true,
 } as const;
 
 export type RegistryVersion = {
@@ -41,16 +46,57 @@ export type RegistryVersion = {
     total_bytes: bigint;
     overall_hash: string | null;
     info_updated_at: string | null;
+    available: string;
 };
 
 export type RegistryGate =
     | { ok: true; ds: DatasetCatalog; version: number; ver: RegistryVersion; archivePath: string }
-    | { ok: false; status: 401 | 403 | 404; error: string };
+    | { ok: false; status: 401 | 403 | 404 | 410; error: string };
 
-/** The version a registry read resolves to: an explicit `?version=N`, else the pin. */
-export function resolvePublishedVersion(ds: DatasetCatalog, requested?: number | null): number | null {
-    if (requested != null) return requested;
-    return ds.current_version ?? null;
+/** A version resolved for a read: an available row, or the reason this read cannot serve. */
+export type ResolvedVersion =
+    | { ok: true; version: number; ver: RegistryVersion }
+    | { ok: false; status: 404 | 410; error: string };
+
+/**
+ * Resolve which `dataset_version` a registry read serves, honoring the §11.5 takedown flag.
+ * DB-only — never touches the filesystem, so it is unit-testable without a staged archive.
+ *
+ * - **Explicit `?version=N`**: the row must exist. A row the operator took down
+ *   (`available='N'`) is a **410 Gone**, not a 404 — the artifact exists and subscribers
+ *   keep their copies (INV-22), but fresh reads are refused.
+ * - **The pin (no version)**: resolve to the highest AVAILABLE version at or below
+ *   `current_version`. When the pinned top has been taken down this walks to the
+ *   next-lower available one, or 404 when nothing at/below the pin is available. It reads
+ *   `current_version` as a CEILING and never re-pins it (§11.5 + INV-17: a takedown is not
+ *   a publish, so the stored pin is left exactly where the last publish put it).
+ */
+export async function resolveVersionRow(
+    uuid: string,
+    currentVersion: number | null,
+    requestedVersion?: number | null,
+    client: DbClient = prisma
+): Promise<ResolvedVersion> {
+    if (requestedVersion != null) {
+        const ver = await client.dataset_version.findUnique({
+            where: { dataset_uuid_version: { dataset_uuid: uuid, version: requestedVersion } },
+            select: versionFields,
+        });
+        if (!ver) return { ok: false, status: 404, error: 'Published version not found' };
+        if (ver.available !== 'Y') {
+            return { ok: false, status: 410, error: `Version ${requestedVersion} is unavailable (taken down)` };
+        }
+        return { ok: true, version: requestedVersion, ver };
+    }
+
+    if (currentVersion == null) return { ok: false, status: 404, error: 'No published version' };
+    const ver = await client.dataset_version.findFirst({
+        where: { dataset_uuid: uuid, version: { lte: currentVersion }, available: 'Y' },
+        orderBy: { version: 'desc' },
+        select: versionFields,
+    });
+    if (!ver) return { ok: false, status: 404, error: 'No published version' };
+    return { ok: true, version: ver.version, ver };
 }
 
 /**
@@ -69,11 +115,12 @@ export function parseVersionQuery(raw: string | null): number | null {
 /**
  * Resolve and authorize one registry read.
  *
- * Order matters: existence → visibility → pin → version row → on-disk containment.
- * Visibility is per-dataset (the `visibility` column) in this increment; the gate is
- * the same `canReadDataset` the live routes use (public → anyone, shared → owner or
+ * Order matters: existence → visibility → version (availability-aware, §11.5) → on-disk
+ * containment. Visibility is per-dataset (the `visibility` column) in this increment; the
+ * gate is the same `canReadDataset` the live routes use (public → anyone, shared → owner or
  * subscriber, private → owner), so an anonymous caller can read a public entry
- * (§11.6) and an identified-but-unallowed caller gets 403, not 401 (§7).
+ * (§11.6) and an identified-but-unallowed caller gets 403, not 401 (§7). A taken-down
+ * version is a 410 (see {@link resolveVersionRow}).
  */
 export async function gateRegistryRead(
     uuid: string,
@@ -91,16 +138,9 @@ export async function gateRegistryRead(
         return { ok: false, status: email ? 403 : 401, error: email ? 'Forbidden' : 'Unauthorized' };
     }
 
-    const version = resolvePublishedVersion(ds, requestedVersion);
-    if (version == null) {
-        return { ok: false, status: 404, error: 'No published version' };
-    }
-
-    const ver = await prisma.dataset_version.findUnique({
-        where: { dataset_uuid_version: { dataset_uuid: uuid, version } },
-        select: versionFields,
-    });
-    if (!ver) return { ok: false, status: 404, error: 'Published version not found' };
+    const resolved = await resolveVersionRow(uuid, ds.current_version, requestedVersion);
+    if (!resolved.ok) return { ok: false, status: resolved.status, error: resolved.error };
+    const { version, ver } = resolved;
 
     // The stored archive_path is absolute and was written by the upload route from
     // archivePath(type,uuid,version). Re-validate containment under the immutable

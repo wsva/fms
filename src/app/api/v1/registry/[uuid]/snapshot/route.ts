@@ -9,6 +9,11 @@
  * packed `_archive/<type>/<uuid>/v<N>.tar.gz` the upload route wrote. No re-hash, no
  * staging, nothing to dispose.
  *
+ * §11.5 takedown: because the bytes stay, a taken-down version's artifact is still on
+ * disk — but `gateRegistryRead` refuses the read (`410 Gone` for an explicit version, pin
+ * resolution past it) before anything is streamed, so a takedown stops new downloads
+ * without deleting anything (subscribers keep their copies, INV-22).
+ *
  * Headers: `x-snapshot-hash` is the version's `overall_hash`. `x-snapshot-seq` is
  * deliberately **omitted** — a registry copy tracks `published_version`, not a journal
  * cursor (§6.1), so the client's cursor stays NULL rather than being stamped with a

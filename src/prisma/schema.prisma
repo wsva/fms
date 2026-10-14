@@ -183,6 +183,14 @@ model dataset_version {
   total_bytes     BigInt   @default(0)
   overall_hash    String?  @db.VarChar(64)
   info_updated_at String?  @db.VarChar(32)
+  // sync-v2 §11.5 takedown: the one sanctioned metadata mutation of an otherwise
+  // immutable (INV-8) `versions/` entry. 'N' = an operator has taken this published
+  // version down — registry reads return 410 for it and the pin resolves to the
+  // next-lower available version. Bytes stay (an overturned takedown flips this back),
+  // and the dataset's `current_version` pin is deliberately NOT rewritten here (INV-17:
+  // only an explicit publish moves the pin). Default 'Y' keeps every existing version
+  // published.
+  available       String   @default("Y") @db.VarChar(1)
   created_at      DateTime @default(now()) @db.Timestamptz(6)
   updated_at      DateTime @default(now()) @db.Timestamptz(6)
 

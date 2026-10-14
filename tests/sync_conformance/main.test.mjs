@@ -344,6 +344,56 @@ async function checkSweepSkipsNonauthority(v, errs) {
     }
 }
 
+// ---- §11.5 takedown / version-availability check (website-local) ----
+// Drives `resolveVersionRow` directly — it is DB-only (never touches the filesystem),
+// so this proves the read-time takedown contract without staging an archive. The app's
+// `registry_contract` vector pins the manifest BODY shape; this pins the §11.5
+// resolution the body does not express: a taken-down version is 410 on an explicit read,
+// and a pin whose top was taken down walks to the next-lower AVAILABLE version.
+async function seedVersions(v, client) {
+    await client.$executeRaw`DELETE FROM dataset_version WHERE dataset_uuid = ${v.dataset_uuid}`;
+    for (const row of v.versions) {
+        await client.$executeRaw`
+            INSERT INTO dataset_version (uuid, dataset_uuid, version, archive_path, archive_sha256, archive_size, available)
+            VALUES (${`v-${v.dataset_uuid}-${row.version}`}, ${v.dataset_uuid}, ${row.version},
+                    ${`/x/${row.version}.tar.gz`}, ${'0'.repeat(64)}, ${BigInt(1)}, ${row.available})
+        `;
+    }
+}
+
+async function checkVersionAvailability(v, errs) {
+    const client = await db();
+    await seedVersions(v, client);
+    const { resolveVersionRow } = await import('../../src/lib/datasets/registry.ts');
+
+    for (const c of v.cases) {
+        const r = await resolveVersionRow(v.dataset_uuid, v.current_version, c.requested ?? null, client);
+        if (c.expect_status === 'ok') {
+            if (!r.ok) {
+                errs.push(`req=${JSON.stringify(c.requested)}: expected ok, got ${r.status} (${r.error})`);
+                continue;
+            }
+            if (r.version !== c.expect_version) errs.push(`req=${JSON.stringify(c.requested)}: resolved ${r.version} != ${c.expect_version}`);
+            if (r.ver.available !== 'Y') errs.push(`req=${JSON.stringify(c.requested)}: resolved row is not available`);
+        } else {
+            if (r.ok) {
+                errs.push(`req=${JSON.stringify(c.requested)}: expected ${c.expect_status}, got ok(${r.version})`);
+                continue;
+            }
+            if (r.status !== c.expect_status) errs.push(`req=${JSON.stringify(c.requested)}: status ${r.status} != ${c.expect_status}`);
+        }
+    }
+
+    // INV-8/INV-17 read-only proof: resolution never mutates the rows or their flags —
+    // the pin fallback is a read-time decision, not a re-pin.
+    const after = await client.$queryRaw`
+        SELECT version, available FROM dataset_version WHERE dataset_uuid = ${v.dataset_uuid} ORDER BY version
+    `;
+    const want = v.versions.map((x) => `${x.version}:${x.available}`).sort().join(',');
+    const got = after.map((x) => `${Number(x.version)}:${x.available}`).sort().join(',');
+    if (got !== want) errs.push(`resolveVersionRow mutated version rows (INV-8/INV-17): ${got} != seed ${want}`);
+}
+
 async function runVector(name) {
     const v = readVector(name);
     const errs = [];
@@ -353,6 +403,7 @@ async function runVector(name) {
         case 'prune_forces_resync': await checkPruneForcesResync(v, errs); break;
         case 'sweep_forces_resync': await checkSweepForcesResync(v, errs); break;
         case 'sweep_skips_nonauthority': await checkSweepSkipsNonauthority(v, errs); break;
+        case 'version_availability': await checkVersionAvailability(v, errs); break;
         case 'features': checkFeatures(v, errs); break;
         case 'cluster_contract': checkClusterContract(v, errs); break;
         case 'registry_contract': await checkRegistryContract(v, errs); break;
@@ -362,7 +413,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

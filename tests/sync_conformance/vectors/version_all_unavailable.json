@@ -1,0 +1,15 @@
+{
+  "comment": "Website-local: every published version taken down (all available='N'). There is nothing at/below the pin to serve, so the pin resolves to 404 'No published version' (the doc's \"next-lower available version OR NONE\"). An explicit read of either still-available-for-none version is 410 Gone — the bytes exist, new reads do not (INV-22: existing subscribers keep their copies).",
+  "check": "version_availability",
+  "dataset_uuid": "55555555-5555-4555-8555-555555555555",
+  "current_version": 2,
+  "versions": [
+    { "version": 1, "available": "N" },
+    { "version": 2, "available": "N" }
+  ],
+  "cases": [
+    { "requested": null, "expect_status": 404 },
+    { "requested": 2, "expect_status": 410 },
+    { "requested": 1, "expect_status": 410 }
+  ]
+}
