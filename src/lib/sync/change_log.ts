@@ -498,3 +498,62 @@ export async function pruneLog(
 
     return Math.max(maxDeleted, await pruneMarkFor(tx, clusterId, scope));
 }
+
+/** Seconds of journal history between retention passes (mirrors the app's 86_400s CAS window). */
+const PRUNE_INTERVAL_MS = 86_400 * 1000;
+
+/**
+ * Process-local, per-cluster last-sweep time. The app holds one
+ * `LAST_PRUNE_UNIX` static (a single-user desktop); the website is multi-tenant, so the
+ * clock is keyed per cluster. This is per-process, not shared across Next.js instances —
+ * which is fine: {@link pruneLog} only ever *raises* the mark, and the sweep runs under
+ * the per-cluster advisory lock, so two instances sweeping the same cluster in the same
+ * day are idempotent rather than racing.
+ */
+const lastPruneMs = new Map<string, number>();
+
+/**
+ * Opportunistic hub-side retention (§3.5): the read-path sweep that gives
+ * {@link pruneLog} its only runtime caller. Mirrors the app's `maybe_prune` —
+ * cheap enough to call from the hot `/changes` path: it returns immediately until a
+ * day has elapsed since the last pass, and the mark is claimed *before* awaiting so
+ * concurrent pulls on this instance don't all run the sweep.
+ *
+ * Where the app prunes every scope in one global pass and gates on a *cluster-level*
+ * `role() == "hub"`, the website is multi-tenant and hosts two authorities, so the gate
+ * is **per-scope**: `@app` is always ours to prune; a dataset scope is pruned only when
+ * its catalog row is `journal_role='authority'`. A mirrored scope's journal belongs to a
+ * desktop hub — pruning it here would raise a `pruned_up_to` mark for rows this cloud
+ * does not own and fabricate a spurious `resync_required` for its followers.
+ *
+ * Never throws: a sweep failure must not fail the read it accompanies (warn-only,
+ * exactly like the app).
+ */
+export async function maybePrune(client: PrismaClient, clusterId: string): Promise<void> {
+    const now = Date.now();
+    if (now - (lastPruneMs.get(clusterId) ?? 0) < PRUNE_INTERVAL_MS) return;
+    lastPruneMs.set(clusterId, now);
+
+    try {
+        await client.$transaction(async (tx) => {
+            // Same per-cluster advisory lock the push path takes, held to commit, so
+            // seq minting, the prune, and the mark raise stay in one number space.
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${clusterId}))`;
+            const scopes = await tx.$queryRaw<{ scope: string }[]>`
+                SELECT DISTINCT scope FROM app_sync_log WHERE cluster_id = ${clusterId}
+            `;
+            for (const { scope } of scopes) {
+                if (scope !== APP_SCOPE) {
+                    const ds = await tx.dataset.findFirst({
+                        where: { uuid: scope, user_id: clusterId, deleted: 'N' },
+                        select: { journal_role: true },
+                    });
+                    if (!ds || ds.journal_role !== 'authority') continue;
+                }
+                await pruneLog(tx, clusterId, scope, LOG_RETENTION_DAYS);
+            }
+        });
+    } catch (error) {
+        console.warn('[sync] change-log retention sweep failed:', error);
+    }
+}

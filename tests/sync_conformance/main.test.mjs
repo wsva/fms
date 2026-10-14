@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readChanges, appendJournal, nextDatasetSeq, pruneLog, APP_SCOPE } from '../../src/lib/sync/change_log.ts';
+import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE } from '../../src/lib/sync/change_log.ts';
 import { websiteClusterInfo, DATASET_JOURNAL_FEATURE, PROTOCOL_VERSION } from '../../src/lib/sync/cluster.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -234,6 +234,116 @@ async function checkRegistryContract(v, errs) {
     }
 }
 
+// ---- retention-sweep checks (website-local; the app's `maybe_prune` analogue) ----
+// These drive `maybePrune`, the read-path sweep both `/changes` routes now call. The
+// sweep gates PER SCOPE: `@app` is always ours to prune; a dataset scope is swept only
+// when its catalog row is `journal_role='authority'`. A mirror/absent scope must be
+// left alone — pruning it would raise `pruned_up_to` for journal rows this cloud does
+// not own and fabricate a spurious resync for the desktop hub that does.
+// Each sweep vector uses its OWN cluster id (`v.cluster`), so the process-local
+// once-a-day throttle never collapses two vectors into one no-op run.
+function sweepScope(v) {
+    return v.scope === 'app' ? APP_SCOPE : (v.dataset_uuid ?? DATASET_SCOPE);
+}
+
+async function sweepReset(cluster) {
+    const d = await db();
+    await d.$executeRaw`DELETE FROM app_sync_log WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_sync_prune_mark WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_applied_change WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM dataset_sync_seq WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_sync_seq WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM dataset WHERE user_id = ${cluster}`;
+}
+
+// Seed a minimal catalog row so the per-scope authority gate has something to read.
+async function sweepCatalog(v) {
+    if (!v.catalog) return;
+    const d = await db();
+    const uuid = v.dataset_uuid ?? DATASET_SCOPE;
+    await d.$executeRaw`DELETE FROM dataset WHERE uuid = ${uuid}`;
+    await d.$executeRaw`
+        INSERT INTO dataset (uuid, user_id, name, dataset_type, format, journal_role, deleted)
+        VALUES (${uuid}, ${v.cluster}, 'conf-sweep', 'cards', 'jsonl', ${v.catalog.journal_role}, 'N')
+    `;
+}
+
+async function sweepSeed(v, cluster) {
+    const d = await db();
+    const scope = sweepScope(v);
+    for (const s of v.seed ?? []) {
+        await d.$transaction(async (tx) => {
+            const seq = await nextDatasetSeq(tx, cluster, scope);
+            await appendJournal(
+                tx, cluster, seq, scope,
+                s.object_id ?? '', s.kind ?? '',
+                s.edit_time ?? '2026-01-01T00:00:00Z', s.user_key ?? '',
+                s.payload ?? {}
+            );
+        });
+    }
+}
+
+// Raw surviving seqs for a scope (the page can't show them once resync suppresses
+// entries, so read the table directly to prove WHICH rows the sweep kept).
+async function listSeqs(cluster, scope) {
+    const d = await db();
+    const rows = await d.$queryRaw`
+        SELECT seq FROM app_sync_log WHERE cluster_id = ${cluster} AND scope = ${scope} ORDER BY seq ASC
+    `;
+    return rows.map((r) => Number(r.seq));
+}
+
+async function checkSweepForcesResync(v, errs) {
+    const cluster = v.cluster;
+    const scope = sweepScope(v);
+    await sweepReset(cluster);
+    await sweepCatalog(v);
+    await sweepSeed(v, cluster);
+
+    const d = await db();
+    await maybePrune(d, cluster);
+
+    const page = await readChanges(d, cluster, scope, afterOf(v), PAGE_LIMIT);
+    const exp = v.expect;
+    if (typeof exp.resync_required === 'boolean' && page.resync_required !== exp.resync_required) {
+        errs.push(`sweep resync_required ${page.resync_required} != expected ${exp.resync_required}`);
+    }
+    if (typeof exp.pruned_up_to === 'number' && page.pruned_up_to !== exp.pruned_up_to) {
+        errs.push(`sweep pruned_up_to ${page.pruned_up_to} != expected ${exp.pruned_up_to}`);
+    }
+    if (Array.isArray(exp.surviving_seqs)) {
+        const got = await listSeqs(cluster, scope);
+        const want = sorted(exp.surviving_seqs);
+        if (JSON.stringify(got) !== JSON.stringify(want)) {
+            errs.push(`surviving seqs ${JSON.stringify(got)} != expected ${JSON.stringify(want)} (un-stamped rows must never be pruned)`);
+        }
+    }
+}
+
+async function checkSweepSkipsNonauthority(v, errs) {
+    const cluster = v.cluster;
+    const scope = sweepScope(v);
+    await sweepReset(cluster);
+    await sweepCatalog(v);
+    await sweepSeed(v, cluster);
+
+    const d = await db();
+    await maybePrune(d, cluster);
+
+    const page = await readChanges(d, cluster, scope, afterOf(v), PAGE_LIMIT);
+    if (page.pruned_up_to !== 0) {
+        errs.push(`non-authority scope was pruned: pruned_up_to=${page.pruned_up_to} (must stay 0 — cloud does not own this journal)`);
+    }
+    if (page.resync_required !== false) {
+        errs.push(`non-authority scope forced a spurious resync`);
+    }
+    const entries = page.entries ?? [];
+    if (typeof v.expect.entry_count === 'number' && entries.length !== v.expect.entry_count) {
+        errs.push(`non-authority scope entry_count ${entries.length} != expected ${v.expect.entry_count} (its rows must survive the sweep)`);
+    }
+}
+
 async function runVector(name) {
     const v = readVector(name);
     const errs = [];
@@ -241,6 +351,8 @@ async function runVector(name) {
         case 'page_shape': await checkPageShape(v, errs); break;
         case 'resync': await checkResync(v, errs); break;
         case 'prune_forces_resync': await checkPruneForcesResync(v, errs); break;
+        case 'sweep_forces_resync': await checkSweepForcesResync(v, errs); break;
+        case 'sweep_skips_nonauthority': await checkSweepSkipsNonauthority(v, errs); break;
         case 'features': checkFeatures(v, errs); break;
         case 'cluster_contract': checkClusterContract(v, errs); break;
         case 'registry_contract': await checkRegistryContract(v, errs); break;
@@ -250,7 +362,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

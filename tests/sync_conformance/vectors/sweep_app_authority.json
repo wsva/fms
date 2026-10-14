@@ -1,0 +1,16 @@
+{
+  "comment": "Website-local (not a desktop vector): the read-path retention sweep must compact @app scope, which the cloud is ALWAYS the authority for. Seeded with one old-stamped row (prunable) and one un-stamped `edit_time=''` row (the Postgres analogue of the app's SQLite `datetime('')=NULL` — NEVER pruned). The @app gate needs no catalog row.",
+  "check": "sweep_forces_resync",
+  "cluster": "cluster-sweep-app",
+  "scope": "app",
+  "seed": [
+    { "kind": "dictation", "object_id": "old", "edit_time": "2000-01-01T00:00:00Z", "payload": { "media_uuid": "m", "subtitle_uuid": "s" } },
+    { "kind": "dictation", "object_id": "unstamped", "edit_time": "", "payload": { "media_uuid": "m", "subtitle_uuid": "s" } }
+  ],
+  "after": 0,
+  "expect": {
+    "resync_required": true,
+    "pruned_up_to": 1,
+    "surviving_seqs": [2]
+  }
+}

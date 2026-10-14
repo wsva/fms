@@ -26,6 +26,14 @@
  *
  * `hub_seq` is the frozen conformance key (`changes_page_shape.json`); §7's
  * `host_seq` is a deliberate later rename, not applied unilaterally here.
+ *
+ * Retention runs here as the app's opportunistic read-path sweep (`maybePrune`): at
+ * most once a day per account it compacts the journal and raises `pruned_up_to`, so a
+ * follower cursor below the new mark is told `resync_required` and re-snapshots. The
+ * sweep is **per-scope gated**: it prunes `@app` and this account's *authority* dataset
+ * scopes, but never a *mirror* scope — those journal rows belong to a desktop hub, so
+ * pruning them here would fabricate a resync signal for a journal this cloud does not
+ * own. It is warn-only and never fails this read.
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -33,7 +41,7 @@ import { prisma } from '@/lib/prisma';
 import { toErrorMessage } from '@/lib/errors';
 import { resolveDatasetUser } from '@/lib/datasets/auth';
 import { assertValidUuid } from '@/lib/datasets/paths';
-import { readChanges } from '@/lib/sync/change_log';
+import { readChanges, maybePrune } from '@/lib/sync/change_log';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -52,6 +60,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ uui
         } catch {
             return NextResponse.json({ error: 'Dataset not found' }, { status: 404 });
         }
+
+        // Opportunistic retention before serving, so a sweep that raises the mark is
+        // reflected in this page's own gap check. Per-scope gated (never touches a
+        // mirror scope) and warn-only; it does not fail this read.
+        await maybePrune(prisma, email);
 
         // Absent/invalid cursor ⇒ -1 (the unknown-cursor sentinel), which forces one
         // resync (§3.2) — the same convention as /api/v1/app/changes.

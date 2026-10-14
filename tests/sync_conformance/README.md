@@ -40,6 +40,34 @@ seeds a row stamped years ago but inserted now, and asserts it **is** pruned at
 suite before that fix and this vector goes red while the six frozen ones stay green —
 which is the whole point of §13. It is proposed for adoption into the desktop suite too.
 
+### `sweep_*` — the read-path retention sweep (website-local)
+
+Three more website-authored vectors pin `maybePrune`, the opportunistic once-a-day
+retention sweep both `/changes` routes now call before serving (the website analogue of
+the app's `change_log::maybe_prune`, `rest.rs:699/729`). They are website-local because
+the *gate* is website-specific: the app is a single-user desktop hub whose whole process
+is `role()=="hub"`, whereas the cloud is multi-tenant and hosts two authorities, so the
+sweep gates **per scope** — `@app` is always pruned; a dataset scope is swept only when
+its catalog row is `journal_role='authority'`.
+
+| Vector                       | asserts                                                            |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `sweep_app_authority`        | the `@app` scope is swept without any catalog row, and an un-stamped (`edit_time=''`) row survives at the gap boundary (`pruned_up_to` lands on the old-stamped seq, not the un-stamped one) |
+| `sweep_dataset_authority`    | a `journal_role='authority'` dataset scope IS swept → follower below the mark gets `resync_required` |
+| `sweep_dataset_mirror_skipped` | a `journal_role='mirror'` scope with the **same** old seed is NOT swept → `pruned_up_to` stays 0, no spurious resync, its rows survive |
+
+The authority/mirror pair is the safety property: the website must never raise
+`pruned_up_to` for a journal it does not own, or it would fabricate a `resync_required`
+signal for the desktop hub that does. Each vector runs under its **own** cluster id, so
+the process-local once-a-day throttle never collapses two sweeps into one no-op.
+
+Note this is a behavioral change from the app in one respect that is *correct* here and
+must not be "fixed" to match: the app's throttle is a single process-static
+(`LAST_PRUNE_UNIX`); the website's is a `Map` keyed by cluster, **per Next.js instance**.
+Multiple instances may each sweep once a day — safe, not a bug, because `pruneLog` only
+ever *raises* the mark and the sweep runs under the per-cluster advisory lock, so overlap
+is idempotent rather than racing.
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The
@@ -77,8 +105,9 @@ DATABASE_URL='postgresql://postgres:scratchpw@127.0.0.1:5434/fms_conf' \
 docker rm -f fms_conf_pg
 ```
 
-The four contract checks (`features`, `cluster_contract`, `registry_contract`) need no
-database and run regardless; the three journal checks skip cleanly when `DATABASE_URL` is
+The contract checks (`features`, `cluster_contract`, `registry_contract`) need no
+database and run regardless; every journal-backed check (the `page_shape` / `resync` /
+`prune_*` vectors and the three `sweep_*` vectors) skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector.
 
 ## Why a loader is involved

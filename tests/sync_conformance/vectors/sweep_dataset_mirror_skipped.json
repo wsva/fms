@@ -1,0 +1,16 @@
+{
+  "comment": "Website-local: the gate GUARD — the inverse of the authority vector with an identical old-stamped seed. A `journal_role='mirror'` dataset scope belongs to a desktop hub; the cloud must NOT sweep it. Pruning here would raise `pruned_up_to` for journal rows this host does not own and fabricate a spurious `resync_required` for the hub that does. So after the sweep the mark stays 0, no resync is signaled, and the row survives.",
+  "check": "sweep_skips_nonauthority",
+  "cluster": "cluster-sweep-mirror",
+  "dataset_uuid": "22222222-2222-4222-8222-222222222222",
+  "catalog": { "journal_role": "mirror" },
+  "seed": [
+    { "kind": "cue_save", "object_id": "cue-old", "edit_time": "2000-01-01T00:00:00Z", "payload": { "uuid": "cue-old" } }
+  ],
+  "after": 0,
+  "expect": {
+    "resync_required": false,
+    "pruned_up_to": 0,
+    "entry_count": 1
+  }
+}

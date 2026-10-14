@@ -6,16 +6,17 @@
  * resolve — the scope is a fixed key).
  *
  * Identity is the Bearer principal (= the cluster id); a caller only ever reads its
- * own cluster's journal. Retention pruning (`pruneLog`) is a separate scheduled
- * concern, not done per-read here; when a prune raises `pruned_up_to` above a
- * follower's cursor, this page reports `resync_required` so it re-snapshots.
+ * own cluster's journal. Retention runs here as the app's opportunistic read-path
+ * sweep (`maybePrune`): at most once a day per cluster it compacts the journal and
+ * raises `pruned_up_to`, so a follower still cursor-ing below the new mark is told
+ * `resync_required` and re-snapshots. It is warn-only and never fails this read.
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { toErrorMessage } from '@/lib/errors';
 import { resolveDatasetUser } from '@/lib/datasets/auth';
-import { APP_SCOPE, readChanges } from '@/lib/sync/change_log';
+import { APP_SCOPE, readChanges, maybePrune } from '@/lib/sync/change_log';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -28,6 +29,11 @@ export async function GET(request: NextRequest) {
     try {
         const email = await resolveDatasetUser(request);
         if (!email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        // Opportunistic retention before serving: a sweep that raises `pruned_up_to`
+        // must be reflected in this same page's gap check, so it runs first. Never
+        // throws; a failed sweep simply serves the journal as-is.
+        await maybePrune(prisma, email);
 
         // Absent/invalid cursor ⇒ -1 (unknown), which forces one resync (§3.2).
         const rawAfter = request.nextUrl.searchParams.get('after');
