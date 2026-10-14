@@ -4,6 +4,16 @@
  * (dictation progress, xp deltas, card-review events) here; the website journals
  * each under the `@app` scope and projects it onto the readable table (INV-18).
  *
+ * Phase 7b extends this one endpoint to DATASET scopes too (doc §7, §14): when the
+ * caller hosts a scope (`dataset.journal_role='authority'`), an accepted dataset-
+ * scope change mints a per-`(cluster,scope)` seq, applies to the dataset's live
+ * `data.sqlite3`, and journals it — all behind the same per-cluster advisory lock
+ * and change_id dedup. A mirrored or unwritable scope is refused per-change with an
+ * actionable reason (INV-20), never silently queued. This ships dormant: the app
+ * client hard-errors dataset-scope pushes against a Website hub today
+ * (`client/mod.rs:539-542`), so no live follower reaches this branch yet — exactly
+ * the phase 4/5 posture of standing up the host before the client points at it.
+ *
  * Identity is the Bearer principal (account email), which is also the cluster id —
  * the website hosts one cloud cluster per account. The body's `user_key` is NOT
  * trusted for identity; it is only echoed for object-id parity.
@@ -17,9 +27,13 @@
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import type { Prisma } from '@/generated/prisma/client';
 import { prisma } from '@/lib/prisma';
 import { toErrorMessage } from '@/lib/errors';
 import { resolveDatasetWriter } from '@/lib/datasets/auth';
+import { datasetDir } from '@/lib/datasets/paths';
+import { countLiveCards } from '@/lib/datasets/cardstore';
+import { rowStampAt } from '@/lib/datasets/stamps';
 import {
     APP_SCOPE,
     scopeFor,
@@ -27,11 +41,13 @@ import {
     coalescible,
     objectIdFor,
     nextSeq,
+    nextDatasetSeq,
     appendJournal,
     latestForObject,
     parseEditTime,
 } from '@/lib/sync/change_log';
 import { applyAppChange } from '@/lib/sync/appstate';
+import { applyDatasetChange, isJournalWritableKind, JOURNAL_WRITABLE_KINDS } from '@/lib/sync/datasetjournal';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -93,6 +109,10 @@ export async function POST(request: NextRequest) {
         // One transaction for the batch, serialized per cluster across instances by
         // an advisory xact lock held until commit (§11.2). This is what makes the
         // per-cluster seq monotonic even with several Next.js instances behind a LB.
+        // Dataset scopes are minted per `(cluster, scope)` via dataset_sync_seq, but
+        // the SAME cluster-wide lock serializes an interleaved @app + dataset batch —
+        // taking per-scope xact locks in per-batch order would deadlock (§11.2).
+        const hostedScopes = new Map<string, string>(); // scope -> dataset_type (accepted)
         const results = await prisma.$transaction(async (tx) => {
             // $executeRaw, not $queryRaw: the lock call returns a `void` column
             // the driver adapter cannot deserialize; the lock still holds to commit.
@@ -116,42 +136,69 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
 
-                // INV-20 scope gate: this host advertises `app_journal` only, so any
-                // kind that resolves to a dataset scope is refused with an actionable
-                // error — never silently queued or dropped.
                 const datasetUuid = typeof ch.dataset_uuid === 'string' ? ch.dataset_uuid : '';
                 const scope = scopeFor(kind, datasetUuid);
-                if (scope !== APP_SCOPE) {
-                    out.push(
-                        failed(
-                            id,
-                            `cloud_hub does not advertise scope '${scope || '(none)'}' for kind '${kind}'; this host serves @app only`
-                        )
-                    );
-                    continue;
-                }
-
                 const editTime = typeof ch.edit_time === 'string' ? ch.edit_time : '';
                 const objectId = objectIdFor(kind, ch.payload, userKey);
 
-                // Later-edit_time-wins for coalescible state kinds (dictation). A
-                // losing push is still acked (ok:true) but flagged rejected and carries
-                // the winner (INV-4) so the follower drops its stale copy and
-                // re-converges from the journal.
-                if (objectId && coalescible(changeClassOf(kind))) {
-                    const latest = await latestForObject(tx, clusterId, APP_SCOPE, objectId);
-                    if (latest) {
-                        const incomingMs = parseEditTime(editTime);
-                        const storedMs = parseEditTime(latest.edit_time);
-                        // A missing/unparseable stamp is treated as oldest so a fresh
-                        // push wins rather than being wrongly rejected.
-                        if (incomingMs !== null && storedMs !== null && storedMs >= incomingMs) {
-                            out.push(losing(id, latest.seq, latest.payload));
-                            continue;
+                // INV-6 clamp: a stamp in the future (or unparseable) is replaced by the
+                // server's now, canonicalized to fixed-width UTC, so a wrong clock can
+                // never win a later-wins contest forever. Matches `rest.rs::normalize_edit_time`
+                // (clamp AFTER reading, then compare the clamped instant). The @app path
+                // below keeps its shipped behaviour; the clamp is applied to the dataset
+                // journal this increment (parity for @app is a follow-up, see plan §9).
+                const parsedMs = parseEditTime(editTime);
+                const nowMs = Date.now();
+                const effMs = parsedMs === null ? nowMs : Math.min(parsedMs, nowMs);
+                const stamp = rowStampAt(new Date(effMs));
+
+                // ---- dataset scope: the authority branch (phase 7b) ----
+                if (scope !== APP_SCOPE) {
+                    // INV-20/INV-13 gate: this host advertises `dataset_journal` ONLY for
+                    // scopes it hosts (journal_role='authority'). One catalog lookup decides
+                    // the refusal reason AND yields the dataset_type for the apply.
+                    const gate = await resolveAuthorityWrite(tx, clusterId, id, scope, kind);
+                    if (gate.refusal) {
+                        out.push(gate.refusal);
+                        continue;
+                    }
+                    const dsType = gate.datasetType;
+
+                    // LWW against the dataset-scope journal (INV-5: the journal is never
+                    // pruned today, so a journal lookup cannot lose to a retention gap).
+                    // A losing coalescible state push is still acked (ok:true) but flagged
+                    // rejected and carries the winner (INV-4).
+                    if (objectId && coalescible(changeClassOf(kind))) {
+                        const latest = await latestForObject(tx, clusterId, scope, objectId);
+                        if (latest) {
+                            const storedMs = parseEditTime(latest.edit_time);
+                            if (storedMs !== null && storedMs >= effMs) {
+                                out.push(losing(id, latest.seq, latest.payload));
+                                continue;
+                            }
                         }
                     }
+
+                    // INV-10 write order: apply to sqlite FIRST, then journal. A throw in
+                    // the writer (malformed payload, DB not ready) becomes a per-change
+                    // refusal and the change is NOT journaled — a journaled-but-unapplied
+                    // change would fork this host's journal from its live dir (INV-18).
+                    try {
+                        await applyDatasetChange(datasetDir(dsType, scope), kind, ch.payload, stamp);
+                    } catch (e) {
+                        out.push(failed(id, toErrorMessage(e)));
+                        continue;
+                    }
+
+                    const dseq = await nextDatasetSeq(tx, clusterId, scope);
+                    await appendJournal(tx, clusterId, dseq, scope, objectId, kind, stamp, userKey, ch.payload);
+                    await tx.app_applied_change.create({ data: { cluster_id: clusterId, change_id: id } });
+                    hostedScopes.set(scope, dsType);
+                    out.push(applied(id));
+                    continue;
                 }
 
+                // ---- @app scope: the shipped cloud-authority branch (unchanged) ----
                 const seq = await nextSeq(tx, clusterId);
                 await appendJournal(tx, clusterId, seq, APP_SCOPE, objectId, kind, editTime, userKey, ch.payload);
                 await applyAppChange(tx, clusterId, userKey, kind, ch.payload);
@@ -162,9 +209,78 @@ export async function POST(request: NextRequest) {
             return out;
         });
 
+        // Post-transaction: a hosted scope whose rows changed has stale denormalized
+        // counts and a stale `updated_at` (the same bookkeeping /api/card/sync/push
+        // does). Recompute from the live DB; do NOT bump `snapshot_seq` for a hosted
+        // scope — its honest cursor is the journal seq, and counting both a catalog
+        // counter and the journal would recreate §3-fact-2. File IO stays outside the
+        // PG tx; per-scope counts are idempotent, so a retry after a partial failure
+        // lands the same numbers.
+        for (const [scope, dsType] of hostedScopes) {
+            try {
+                const data =
+                    dsType === 'card'
+                        ? { card_count: countLiveCards(datasetDir(dsType, scope)), updated_at: new Date() }
+                        : { updated_at: new Date() };
+                await prisma.dataset.update({ where: { uuid: scope }, data });
+            } catch (e) {
+                // A count-refresh failure does not undo an applied change; the next
+                // round's full recompute (or a re-push) corrects the denormalized field.
+                console.error(`dataset count refresh failed for ${scope}:`, toErrorMessage(e));
+            }
+        }
+
         return NextResponse.json(results);
     } catch (error) {
         console.error('app sync push failed:', error);
         return NextResponse.json({ error: toErrorMessage(error) }, { status: 500 });
     }
+}
+
+/**
+ * INV-20/INV-13 scope gate + single catalog read for a dataset-scope write. Returns
+ * either a `refusal` (an actionable `failed` result the caller acks and skips) or
+ * the `datasetType` needed to apply the change. Four distinct refusals so a client
+ * learns exactly why a write did not land:
+ *   - unwritable kind — no row-level cloud writer (never journal what you can't apply);
+ *   - no catalog row — this account does not own/upload the dataset;
+ *   - mirrored role — journal_role='mirror', so writes belong to the desktop hub, not here;
+ *   - not ready — hosted but the dataset is not in 'ready' status.
+ * The name check on `scope` (a uuid) is enforced by datasetDir's own assertValidUuid
+ * during the apply; here a non-uuid simply matches no catalog row.
+ */
+async function resolveAuthorityWrite(
+    tx: Prisma.TransactionClient,
+    clusterId: string,
+    id: string,
+    scope: string,
+    kind: string
+): Promise<{ refusal: ChangeResult; datasetType?: undefined } | { refusal?: undefined; datasetType: string }> {
+    // (a) No row-level writer for this kind → refuse before anything else, so a
+    // change is never journaled the host cannot apply.
+    if (!isJournalWritableKind(kind)) {
+        return {
+            refusal: failed(id, `no cloud writer for kind '${kind}' yet; this host applies only: ${JOURNAL_WRITABLE_KINDS.join(', ')}`),
+        };
+    }
+    // (b) One lookup tells "not mine" from "mirrored" from "ready", and yields the type.
+    const ds = await tx.dataset.findFirst({
+        where: { uuid: scope, user_id: clusterId, deleted: 'N' },
+        select: { journal_role: true, status: true, dataset_type: true },
+    });
+    if (!ds) {
+        return { refusal: failed(id, `no catalog row for scope '${scope}' under this account; upload the dataset first`) };
+    }
+    if (ds.journal_role !== 'authority') {
+        return {
+            refusal: failed(
+                id,
+                `scope '${scope}' is mirrored, not hosted (journal_role='${ds.journal_role}'); write dataset-scope changes to your desktop hub, not the cloud mirror`
+            ),
+        };
+    }
+    if (ds.status !== 'ready') {
+        return { refusal: failed(id, `hosted scope '${scope}' is not ready (status='${ds.status}')`) };
+    }
+    return { datasetType: ds.dataset_type };
 }

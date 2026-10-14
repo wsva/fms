@@ -148,6 +148,15 @@ model dataset {
   current_version Int?
   media_count     Int      @default(0)
   card_count      Int      @default(0)
+  // sync-v2 phase 7b: this scope's journal role. 'mirror' = the desktop hub owns
+  // the dataset-scope journal and the website stores its seqs verbatim (POST
+  // /api/v1/changes); 'authority' = this website mints the scope's journal seq
+  // (POST /api/v1/sync/changes) and a stale hub's mirror push into it is refused
+  // (INV-1/INV-13). Flipped only by an operator/handover, never implicitly by a
+  // push. journal_epoch is the per-scope handover epoch — minted 0, surfaced in
+  // mirror refusals, nothing bumps it until handover export/import ships.
+  journal_role    String   @default("mirror") @db.VarChar(10)
+  journal_epoch   Int      @default(0)
   deleted         String   @default("N") @db.VarChar(1)
   created_at      DateTime @default(now()) @db.Timestamptz(6)
   updated_at      DateTime @default(now()) @db.Timestamptz(6)
@@ -218,6 +227,23 @@ xact lock so appends serialize across instances (sync-v2.md §11.2).
 model app_sync_seq {
   cluster_id String @id @db.VarChar(320)
   next_seq   BigInt @default(1)
+}
+
+/*
+Per-scope dataset seq minter (sync-v2.md phase 7b). The dataset-scope analogue of
+app_sync_seq: it mints a monotonic seq per (cluster_id, dataset uuid) journal, but
+SELF-SEEDS above any hub-mirrored rows already in app_sync_log for that scope
+(see nextDatasetSeq), so a mirror→authority handover CONTINUES the sequence
+instead of restarting at 1 and colliding with the mirrored number space (§9 flow
+8). The @app minter above is untouched — the live cloud-authority path has zero
+regression risk from this per-scope counter.
+*/
+model dataset_sync_seq {
+  cluster_id String @db.VarChar(320)
+  scope      String @db.VarChar(100)
+  next_seq   BigInt @default(1)
+
+  @@id([cluster_id, scope])
 }
 
 /*

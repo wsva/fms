@@ -12,6 +12,7 @@
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { toErrorMessage } from '@/lib/errors';
 import { resolveDatasetUser } from '@/lib/datasets/auth';
 import { websiteClusterInfo } from '@/lib/sync/cluster';
@@ -22,7 +23,14 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
     try {
         const email = await resolveDatasetUser(request);
-        return NextResponse.json(websiteClusterInfo(email));
+        // `dataset_journal` is advertised only to an account that actually hosts a
+        // scope as authority (phase 7b). An authenticated caller with zero hosted
+        // scopes — and every unauthenticated probe — gets the base feature set, so
+        // the capability is never promised to a caller whose writes would be refused.
+        const hostsDatasetJournal = email
+            ? (await prisma.dataset.count({ where: { user_id: email, deleted: 'N', journal_role: 'authority' } })) > 0
+            : false;
+        return NextResponse.json(websiteClusterInfo(email, hostsDatasetJournal));
     } catch (error) {
         console.error('cluster advertisement failed:', error);
         return NextResponse.json({ error: toErrorMessage(error) }, { status: 500 });

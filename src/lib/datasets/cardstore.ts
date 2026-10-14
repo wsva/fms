@@ -146,7 +146,7 @@ export async function withDatasetLock<T>(dir: string, fn: () => Promise<T> | T):
 }
 
 /** Read/write open that creates the card schema — only for paths that write rows (push). */
-function openCardDb(dir: string): Database.Database {
+export function openCardDb(dir: string): Database.Database {
     const p = cardDbPath(dir);
     fs.mkdirSync(dir, { recursive: true });
     const db = new Database(p);

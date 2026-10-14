@@ -16,8 +16,10 @@
  *     mutable live dir, fixing §3's leak. The routes are live, so the capability is safe
  *     to advertise; the client gates its registry path on exactly this string.
  *
- * Still not advertised: `dataset_journal` — the website hosts no dataset-scope journal
- * yet (phase 7b).
+ * Still not advertised unconditionally: `dataset_journal` — the website hosts a
+ * dataset-scope journal only for scopes it is the authority over
+ * (`dataset.journal_role='authority'`), so the feature is advertised per-caller, not
+ * globally. See {@link websiteClusterInfo}.
  *
  * Field names mirror `sync/mod.rs::ClusterInfo` byte-for-byte (snake_case, `epoch`
  * and `protocol_version` as u32): a renamed field on either side is a breaking
@@ -41,17 +43,30 @@ export const PROTOCOL_VERSION = 6;
 /** The capabilities this website host actually serves routes for. */
 export const WEBSITE_FEATURES = ['app_journal', 'registry_reads'] as const;
 
+/**
+ * Advertised only to a caller that hosts at least one dataset scope as authority
+ * (`dataset.journal_role='authority'`). Phase 7b added the mint+apply leg, but the
+ * capability is per-account: an account whose datasets are all mirrors does not get
+ * a `dataset_journal` promise whose writes would then be refused for it (INV-20).
+ */
+export const DATASET_JOURNAL_FEATURE = 'dataset_journal';
+
 /** `GET /api/v1/cluster` payload — "who am I talking to, and what can it do". */
 export interface ClusterInfo {
     /** Provenance vocabulary shared with the client's `upstream_of` (INV-19). */
     authority_kind: string;
     /** Cluster (hub identity group). The website hosts one cluster per account. */
     cluster_id: string;
-    /** Authority epoch — placeholder `0` until handover (phase 7b) gives it a bump rule. */
+    /**
+     * Cluster-level authority epoch — placeholder `0` until handover gives it a bump
+     * rule. The PER-SCOPE handover epoch lives on the catalog (`dataset.journal_epoch`),
+     * surfaced in mirror-vs-authority refusals (`POST /api/v1/changes`,
+     * `POST /api/v1/sync/changes`); nothing bumps either yet.
+     */
     epoch: number;
     /** Wire protocol version, mirrored from `/status` so one read suffices. */
     protocol_version: number;
-    /** Advertised capabilities; see {@link WEBSITE_FEATURES}. */
+    /** Advertised capabilities; see {@link WEBSITE_FEATURES} + {@link DATASET_JOURNAL_FEATURE}. */
     features: string[];
 }
 
@@ -59,15 +74,20 @@ export interface ClusterInfo {
  * Build the website's cluster advertisement. `cluster_id` is the caller's
  * account email when authenticated, `""` otherwise — an unauthenticated probe
  * still learns the feature set (writes are gated separately by Bearer auth), so
- * a pre-login client can negotiate before it has an identity.
+ * a pre-login client can negotiate before it has an identity. `hostsDatasetJournal`
+ * adds the `dataset_journal` capability for an account that actually hosts a scope
+ * (the route derives it from a catalog count); with no identity there is nothing to
+ * host, so an unauthenticated probe never sees it.
  */
-export function websiteClusterInfo(principalEmail: string | null): ClusterInfo {
+export function websiteClusterInfo(principalEmail: string | null, hostsDatasetJournal = false): ClusterInfo {
+    const features: string[] = [...WEBSITE_FEATURES];
+    if (hostsDatasetJournal) features.push(DATASET_JOURNAL_FEATURE);
     return {
         authority_kind: 'cloud_hub',
         cluster_id: principalEmail ?? '',
         epoch: 0,
         protocol_version: PROTOCOL_VERSION,
-        features: [...WEBSITE_FEATURES],
+        features,
     };
 }
 

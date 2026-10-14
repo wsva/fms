@@ -9,6 +9,13 @@
  *
  * Writers serialize behind the per-dataset lock, so two devices pushing the same
  * card at once cannot interleave.
+ *
+ * One conflict engine per dataset: when the cloud is the **journal authority**
+ * for this dataset (`journal_role='authority'`, sync-v2 phase 7b), row-level
+ * changes arrive through the journaled `POST /api/v1/sync/changes` path — which
+ * applies each change *and* records it — so this direct row-push route refuses
+ * the dataset. Mirror datasets (the desktop hub is authority) keep this route as
+ * their only row-level writer, exactly as before phase 7b.
  */
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -38,6 +45,25 @@ export async function POST(request: NextRequest) {
         }
         if (!(await canPushDataset(gated.ds, email))) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+        // One conflict engine per dataset (INV-13's live arm): a hosted scope's
+        // rows arrive through `POST /api/v1/sync/changes` as journaled changes,
+        // which apply directly and mint seq. This whole-archive row-CAS path has
+        // no journal, so letting it write a hosted dataset would fork the two
+        // writers. `gateDatasetRead`'s catalog view omits `journal_role`, so read
+        // it here. Mirror datasets (the default) keep this path unchanged.
+        const role = await prisma.dataset.findUnique({
+            where: { uuid: datasetUuid },
+            select: { journal_role: true },
+        });
+        if (role?.journal_role === 'authority') {
+            return NextResponse.json(
+                {
+                    error:
+                        "this dataset is hosted by the cloud journal authority (journal_role='authority'); write its rows through POST /api/v1/sync/changes, not card/sync/push",
+                },
+                { status: 409 }
+            );
         }
 
         let body: { cards?: SyncCard[]; tags?: SyncTag[] };

@@ -243,6 +243,42 @@ export async function nextSeq(tx: Prisma.TransactionClient, clusterId: string): 
 }
 
 /**
+ * Allocate the next journal seq for a DATASET scope. The dataset-scope analogue of
+ * {@link nextSeq}: same advisory-lock contract (must run inside the caller's
+ * per-cluster transaction), but the counter is per `(cluster_id, scope)` and
+ * SELF-SEEDS on first use at `MAX(app_sync_log.seq for that scope) + 1` (or 1 for
+ * an empty scope). Seeding above the mirror high-water is what makes a
+ * mirror→authority handover CONTINUOUS (sync-v2.md §9 flow 8): a scope whose
+ * history the website already mirrored from a desktop hub resumes above those
+ * seqs instead of restarting at 1 and colliding with the mirrored number space
+ * that shares `app_sync_log` (§3-fact-2). The @app minter ({@link nextSeq}) is a
+ * separate table and is untouched, so the live cloud-authority path carries no
+ * regression risk from this per-scope counter.
+ */
+export async function nextDatasetSeq(
+    tx: Prisma.TransactionClient,
+    clusterId: string,
+    scope: string
+): Promise<number> {
+    // INSERT..SELECT over the aggregate seeds from the scope's current high-water in
+    // one statement; the aggregate always yields exactly one row (MAX→NULL on empty).
+    // ON CONFLICT DO NOTHING makes this a no-op once the counter exists.
+    await tx.$executeRaw`
+        INSERT INTO dataset_sync_seq (cluster_id, scope, next_seq)
+        SELECT ${clusterId}, ${scope}, COALESCE(MAX(seq), 0) + 1
+        FROM app_sync_log
+        WHERE cluster_id = ${clusterId} AND scope = ${scope}
+        ON CONFLICT (cluster_id, scope) DO NOTHING
+    `;
+    const rows = await tx.$queryRaw<{ seq: unknown }[]>`
+        UPDATE dataset_sync_seq SET next_seq = next_seq + 1
+        WHERE cluster_id = ${clusterId} AND scope = ${scope}
+        RETURNING next_seq - 1 AS seq
+    `;
+    return toNum(rows[0]?.seq);
+}
+
+/**
  * Append one row-mutation to the cluster's journal, returning its seq. Must be
  * called *after* the projection write succeeds, inside the same transaction as
  * {@link nextSeq} (write order matters: a journaled change always has its row).
@@ -286,6 +322,17 @@ async function hubSeqFor(db: DbClient, clusterId: string, scope: string): Promis
         WHERE cluster_id = ${clusterId} AND scope = ${scope}
     `;
     return toNum(rows[0]?.m);
+}
+
+/**
+ * The journal high-water for a scope, exported for the pull-honesty surfaces
+ * (manifest `seq`, snapshot `x-snapshot-seq`): a hosted (authority) dataset names
+ * its cursor as its own journal seq rather than the catalog `snapshot_seq` counter,
+ * so §3-fact-2's "one snapshot function writes whatever the host answered" cannot
+ * hand a follower a counter from one number space as a cursor into another.
+ */
+export async function journalHighWater(db: DbClient, clusterId: string, scope: string): Promise<number> {
+    return hubSeqFor(db, clusterId, scope);
 }
 
 /**

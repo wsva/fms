@@ -1,13 +1,20 @@
 /**
  * Mirror-ingest for dataset-scope journal entries (sync-v2.md §0, §8.2, §14 step 4).
  *
- * The website is a **mirror** of the desktop hub's journal: read-only by
- * construction, "never the merge input" (§2). This module stores the hub's
- * dataset-scope rows verbatim under the caller's cluster_id — it mints **no** seq
- * (INV-1), rewrites nothing (INV-2), and never touches the `dataset` catalog,
- * `current_version`, `snapshot_seq`, or `versions/` (INV-17: mirroring and
- * publishing stay separate, explicit acts). It only writes `app_sync_log` +
- * `app_applied_change`.
+ * For a **mirror** dataset (the desktop hub is the dataset-scope authority,
+ * `journal_role='mirror'`), the website stores the hub's rows read-only by
+ * construction, "never the merge input" (§2). This module stores those rows
+ * verbatim under the caller's cluster_id — it mints **no** seq (INV-1), rewrites
+ * nothing (INV-2), and never touches the `dataset` catalog, `current_version`,
+ * `snapshot_seq`, or `versions/` (INV-17: mirroring and publishing stay separate,
+ * explicit acts). It only writes `app_sync_log` + `app_applied_change`.
+ *
+ * Phase 7b gives one dataset scope a second, opposite role: when the cloud itself
+ * is the authority (`journal_role='authority'`), seqs are *minted* at
+ * `POST /api/v1/sync/changes` and this mirror receiver is **not** the writer — so
+ * entries for a hosted scope are refused here (see the role gate in
+ * `ingestMirrorEntries`). The two legs never share a scope: one account, one
+ * journal per `(cluster_id, scope)`, and exactly one writer per scope (INV-13).
  *
  * Deliberately isolated from `change_log.ts`: the live `@app` authority primitives
  * (`nextSeq`/`appendJournal`/`applyAppChange`) are untouched, so the shipped
@@ -96,6 +103,23 @@ export async function ingestMirrorEntries(
     const refused: MirrorRefusal[] = [];
     const refuse = (change_id: string, error: string) => refused.push({ change_id, error });
 
+    // INV-13 (the only live enforceable arm this increment): a scope the website
+    // HOSTS as authority must not be mirror-FILLED by a (stale) desktop hub, or two
+    // writers mint into one number space. Cache the per-scope role so a batch over
+    // one scope does not re-query the catalog per entry. A scope with no catalog row
+    // is still storable (the owner-history mirror read the GET route serves).
+    const roleCache = new Map<string, { role: string; epoch: number } | null>();
+    const roleOf = async (scope: string): Promise<{ role: string; epoch: number } | null> => {
+        if (roleCache.has(scope)) return roleCache.get(scope)!;
+        const ds = await tx.dataset.findFirst({
+            where: { uuid: scope, user_id: clusterId, deleted: 'N' },
+            select: { journal_role: true, journal_epoch: true },
+        });
+        const hit = ds ? { role: ds.journal_role, epoch: ds.journal_epoch } : null;
+        roleCache.set(scope, hit);
+        return hit;
+    };
+
     for (const raw of entries) {
         const e = (raw ?? {}) as MirrorEntry;
 
@@ -139,6 +163,19 @@ export async function ingestMirrorEntries(
             assertValidUuid(scope);
         } catch {
             refuse(label, `scope ${JSON.stringify(scope.slice(0, 40))} is not a valid dataset uuid`);
+            continue;
+        }
+
+        // INV-13: refuse to mirror-fill a scope this account HOSTS as authority —
+        // the cloud is that scope's single seq writer now, and a stale hub's verbatim
+        // rows would collide with (and predate) the minted journal. The message names
+        // the current journal_epoch so the hub learns it has been superseded.
+        const role = await roleOf(scope);
+        if (role && role.role === 'authority') {
+            refuse(
+                label,
+                `scope '${scope}' is hosted by the cloud authority (journal_role='authority', epoch ${role.epoch}); a mirror push into a hosted scope is refused — the desktop hub no longer owns this journal`
+            );
             continue;
         }
 
