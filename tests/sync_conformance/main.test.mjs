@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 
 import { readChanges, appendJournal, nextDatasetSeq, pruneLog, maybePrune, APP_SCOPE } from '../../src/lib/sync/change_log.ts';
 import { websiteClusterInfo, DATASET_JOURNAL_FEATURE, PROTOCOL_VERSION } from '../../src/lib/sync/cluster.ts';
+import { applyHandover } from '../../src/lib/sync/handover.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const VECTORS = path.join(HERE, 'vectors');
@@ -394,6 +395,120 @@ async function checkVersionAvailability(v, errs) {
     if (got !== want) errs.push(`resolveVersionRow mutated version rows (INV-8/INV-17): ${got} != seed ${want}`);
 }
 
+// ---- §9 flow 8 handover checks (website-local; the epoch+continuity primitive) ----
+// Drives `applyHandover` + `nextDatasetSeq` directly against the scratch journal — the
+// same advisory-lock transaction the route opens. These pin the two invariants handover
+// carries: INV-13 (a real flip bumps journal_epoch exactly once; a same-role re-handover
+// is idempotent) and INV-1 (a mirror→authority flip continues the hub's seq number space,
+// not restarts it). Each vector runs under its OWN cluster id so the reset+seed is
+// isolated, mirroring the sweep vectors.
+async function hoReset(cluster) {
+    const d = await db();
+    await d.$executeRaw`DELETE FROM app_sync_log WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_sync_prune_mark WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_applied_change WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM dataset_sync_seq WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM app_sync_seq WHERE cluster_id = ${cluster}`;
+    await d.$executeRaw`DELETE FROM dataset WHERE user_id = ${cluster}`;
+}
+
+// Seed the catalog row at the vector's starting role + epoch (applyHandover reads it).
+async function hoCatalog(v, cluster, scope) {
+    const d = await db();
+    await d.$executeRaw`
+        INSERT INTO dataset (uuid, user_id, name, dataset_type, format, journal_role, journal_epoch, deleted)
+        VALUES (${scope}, ${cluster}, 'conf-handover', 'cards', 'jsonl',
+                ${v.catalog.journal_role}, ${v.catalog.journal_epoch ?? 0}, 'N')
+    `;
+}
+
+// Inject a hub's verbatim journal rows (mirror.ts stores them with the hub's own seq),
+// so the authority minter has a real high-water to continue above.
+async function hoSeedJournal(cluster, scope, seqs) {
+    const d = await db();
+    for (const seq of seqs) {
+        await d.$executeRaw`
+            INSERT INTO app_sync_log
+                (cluster_id, seq, scope, object_id, kind, op, edit_time, user_key, payload)
+            VALUES
+                (${cluster}, ${BigInt(seq)}, ${scope}, '', 'cue_save', 'upsert',
+                 '2020-01-01T00:00:00Z', '', '{}'::jsonb)
+        `;
+    }
+}
+
+async function hoSeedCounter(cluster, scope, nextSeq) {
+    const d = await db();
+    await d.$executeRaw`
+        INSERT INTO dataset_sync_seq (cluster_id, scope, next_seq)
+        VALUES (${cluster}, ${scope}, ${BigInt(nextSeq)})
+    `;
+}
+
+async function hoCounterExists(cluster, scope) {
+    const d = await db();
+    const rows = await d.$queryRaw`SELECT 1 AS x FROM dataset_sync_seq WHERE cluster_id = ${cluster} AND scope = ${scope} LIMIT 1`;
+    return rows.length > 0;
+}
+
+async function checkHandover(v, errs) {
+    const cluster = v.cluster;
+    const scope = v.dataset_uuid;
+    await hoReset(cluster);
+    await hoCatalog(v, cluster, scope);
+    await hoSeedJournal(cluster, scope, v.mirror_seqs ?? []);
+    if (typeof v.counter_seed === 'number') await hoSeedCounter(cluster, scope, v.counter_seed);
+
+    const d = await db();
+    for (const st of v.steps) {
+        if (st.op === 'handover') {
+            const r = await d.$transaction(async (tx) => {
+                await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cluster}))`;
+                return applyHandover(tx, cluster, scope, st.role);
+            });
+            if (!r) {
+                errs.push(`handover(${st.role}): applyHandover returned null (owned row vanished)`);
+                continue;
+            }
+            if (typeof st.expect_changed === 'boolean' && r.changed !== st.expect_changed) {
+                errs.push(`handover(${st.role}) changed=${r.changed} != expected ${st.expect_changed}`);
+            }
+            if (st.expect_role && r.journal_role !== st.expect_role) {
+                errs.push(`handover(${st.role}) role=${r.journal_role} != expected ${st.expect_role}`);
+            }
+            if (typeof st.expect_epoch === 'number' && r.journal_epoch !== st.expect_epoch) {
+                errs.push(`handover(${st.role}) epoch=${r.journal_epoch} != expected ${st.expect_epoch} (INV-13: bump once per real flip only)`);
+            }
+        } else if (st.op === 'next_seq') {
+            const seq = await d.$transaction((tx) => nextDatasetSeq(tx, cluster, scope));
+            if (typeof st.expect_seq === 'number' && seq !== st.expect_seq) {
+                errs.push(`nextDatasetSeq after flip = ${seq} != expected ${st.expect_seq} (INV-1: continue above the mirror high-water, not restart)`);
+            }
+        } else if (st.op === 'counter_exists') {
+            const exists = await hoCounterExists(cluster, scope);
+            if (st.expect !== exists) {
+                errs.push(`dataset_sync_seq exists=${exists} != expected ${st.expect} (counter reset fires only on the flip INTO authority)`);
+            }
+        } else {
+            errs.push(`unknown handover step op ${JSON.stringify(st.op)}`);
+        }
+    }
+
+    if (v.expect_catalog) {
+        const row = await d.dataset.findFirst({ where: { uuid: scope, user_id: cluster }, select: { journal_role: true, journal_epoch: true } });
+        if (!row) {
+            errs.push('expect_catalog: owned catalog row missing after steps');
+        } else {
+            if (v.expect_catalog.journal_role && row.journal_role !== v.expect_catalog.journal_role) {
+                errs.push(`final role ${row.journal_role} != ${v.expect_catalog.journal_role}`);
+            }
+            if (typeof v.expect_catalog.journal_epoch === 'number' && row.journal_epoch !== v.expect_catalog.journal_epoch) {
+                errs.push(`final epoch ${row.journal_epoch} != ${v.expect_catalog.journal_epoch}`);
+            }
+        }
+    }
+}
+
 async function runVector(name) {
     const v = readVector(name);
     const errs = [];
@@ -404,6 +519,7 @@ async function runVector(name) {
         case 'sweep_forces_resync': await checkSweepForcesResync(v, errs); break;
         case 'sweep_skips_nonauthority': await checkSweepSkipsNonauthority(v, errs); break;
         case 'version_availability': await checkVersionAvailability(v, errs); break;
+        case 'handover': await checkHandover(v, errs); break;
         case 'features': checkFeatures(v, errs); break;
         case 'cluster_contract': checkClusterContract(v, errs); break;
         case 'registry_contract': await checkRegistryContract(v, errs); break;
@@ -413,7 +529,7 @@ async function runVector(name) {
 }
 
 // The journal-backed vectors need the schema; the contract vectors do not.
-const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability']);
+const DB_CHECKS = new Set(['page_shape', 'resync', 'prune_forces_resync', 'sweep_forces_resync', 'sweep_skips_nonauthority', 'version_availability', 'handover']);
 
 const vectorNames = allVectors();
 assert.ok(vectorNames.length > 0, `no vectors found in ${VECTORS}`);

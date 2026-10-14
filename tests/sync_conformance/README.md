@@ -88,6 +88,25 @@ takedown restores the exact prior version. This is proven against the real route
 phase's scratch-DB probe: a takedown leaves `current_version` unmoved and resolution walks
 down; a restore walks back.
 
+### `handover` — authority flip with epoch, §9 flow 8 (website-local)
+
+Two more website-authored vectors pin `applyHandover` (driven directly, alongside
+`nextDatasetSeq`) — the flip that moves a dataset scope between the desktop hub and this
+cloud. The app tree has no handover vectors yet (its half — the hub's journal *export* — is
+deferred, §14 7b), so these are website-local like the `sweep_*` and `version_availability`
+pairs. They pin the two invariants the flip carries:
+
+| Vector | asserts |
+| --- | --- |
+| `handover_mirror_to_authority` | a real flip bumps `journal_epoch` once (0→1, **INV-13**); the stale `dataset_sync_seq` is cleared so the next minted seq continues **above the mirror high-water** (`expect_seq 8` over hub rows 5,6,7 — **INV-1**, not a restart that would orphan a follower at cursor 7); a same-role re-handover is idempotent (`changed:false`, epoch stays 1) |
+| `handover_authority_to_mirror` | the reverse flip bumps once (3→4) and leaves the `dataset_sync_seq` counter **intact** (the reset fires only when *entering* authority); a repeated mirror handover is idempotent |
+
+The continuity proof is the point: the counter reset on the flip **into** authority is what
+makes a `mirror→authority→mirror→authority` re-handover correct, not just the first one —
+without it the minter resumes at the stale value and collides with hub seqs re-pushed verbatim
+during the mirror period. Each vector runs under its **own** cluster id (like the sweep
+vectors), so the seed/reset is isolated and order-independent.
+
 ## Intentional cross-host differences
 
 The vectors were authored against the desktop hub; three encode desktop-only facts. The
@@ -127,7 +146,8 @@ docker rm -f fms_conf_pg
 
 The contract checks (`features`, `cluster_contract`, `registry_contract`) need no
 database and run regardless; every journal-backed check (the `page_shape` / `resync` /
-`prune_*` vectors and the three `sweep_*` vectors) skips cleanly when `DATABASE_URL` is
+`prune_*` vectors, the three `sweep_*` vectors, `version_availability`, and the two
+`handover` vectors) skips cleanly when `DATABASE_URL` is
 unset, so a CI step without a database never turns red on an absent vector.
 
 ## Why a loader is involved

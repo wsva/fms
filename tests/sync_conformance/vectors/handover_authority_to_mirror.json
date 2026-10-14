@@ -1,0 +1,14 @@
+{
+  "comment": "Website-local: §9 flow 8 reverse (cloud→desktop). Seed an AUTHORITY scope (epoch 3) carrying a live dataset_sync_seq=100 minted during its authority period. Handing BACK to mirror bumps the epoch once (3→4) but must NOT delete the counter — applyHandover clears it only when a scope ENTERS authority — so the mirror period starts from a stable, untouched number space and a later re-handover resets it then. A repeated mirror handover is idempotent (changed=false, epoch 4).",
+  "check": "handover",
+  "cluster": "cluster-handover-a2m",
+  "dataset_uuid": "66666666-6666-4666-8666-666666666666",
+  "catalog": { "journal_role": "authority", "journal_epoch": 3 },
+  "counter_seed": 100,
+  "steps": [
+    { "op": "handover", "role": "mirror", "expect_changed": true, "expect_role": "mirror", "expect_epoch": 4 },
+    { "op": "counter_exists", "expect": true },
+    { "op": "handover", "role": "mirror", "expect_changed": false, "expect_role": "mirror", "expect_epoch": 4 }
+  ],
+  "expect_catalog": { "journal_role": "mirror", "journal_epoch": 4 }
+}

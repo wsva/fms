@@ -58,10 +58,11 @@ export interface ClusterInfo {
     /** Cluster (hub identity group). The website hosts one cluster per account. */
     cluster_id: string;
     /**
-     * Cluster-level authority epoch — placeholder `0` until handover gives it a bump
-     * rule. The PER-SCOPE handover epoch lives on the catalog (`dataset.journal_epoch`),
-     * surfaced in mirror-vs-authority refusals (`POST /api/v1/changes`,
-     * `POST /api/v1/sync/changes`); nothing bumps either yet.
+     * Cluster-level authority epoch — a placeholder `0`. Handover (§9 flow 8) is a
+     * PER-SCOPE operation: it bumps `dataset.journal_epoch` on the catalog (via
+     * `POST /api/v1/handover`), never this cluster-level field, so the advertisement
+     * stays `0` and a follower detects a per-scope supersession from the epoch named in
+     * a mirror-vs-authority refusal (`POST /api/v1/changes`, `POST /api/v1/sync/changes`).
      */
     epoch: number;
     /** Wire protocol version, mirrored from `/status` so one read suffices. */
