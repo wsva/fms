@@ -7,7 +7,6 @@ const publicRoutes = [
     '/listening/dictation',
     '/blog',
     '/unauthorized',
-    '/speak/just-speaking',
 ]
 
 function isPublicRoute(pathname: string): boolean {

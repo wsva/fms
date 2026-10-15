@@ -26,7 +26,6 @@ export const menuList: MenuGroup[] = [
             { key: "listen_dictation", name: "Dictation", description: "dictation practice from datasets", href: "/listen/dictation" },
 
             { key: "seperator_speak", name: "Speak", description: "", href: "" },
-            { key: "speak_just_speaking", name: "Just Speaking", description: "record and upload audio", href: "/speak/just-speaking" },
             { key: "speak_practice", name: "Practice", description: "practice", href: "/speak/practice" },
             { key: "speak_ask", name: "Asking", description: "preparations for interviews", href: "/speak/ask" },
 

@@ -87,11 +87,9 @@ The reading module is closely linked to the flashcard system: a word encountered
 
 ### 4. Speaking and Production
 
-The speaking module contains three distinct practices:
+The speaking module contains two distinct practices:
 
 **Shadowing / pronunciation practice**: The learner loads a sentence or passage of target-language text. The system generates a native-sounding audio reading via Gemini's text-to-speech. The learner records their own reading and submits it for speech-to-text transcription. The transcribed text is then compared to the original using a longest-common-subsequence diff, highlighting words and phrases that were dropped, mispronounced, or altered. The learner can iterate — record, compare, record again — until the performance matches the model.
-
-**Just Speaking**: A low-friction audio upload for free-form practice. The learner records anything — a spontaneous monologue, a prepared paragraph, a retelling of something they read — and uploads it. There is no scoring, no right answer. The purpose is to build the habit of producing the language.
 
 **Q&A**: A shared forum where learners post questions with supporting audio, video, or text, and receive answers from other members. The questions can be about anything: grammar, vocabulary, a phrase they heard and did not understand. This is the platform's social layer — the place where the individual learner's practice connects to a small community.
 
