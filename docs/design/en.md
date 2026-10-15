@@ -81,7 +81,7 @@ This slows reading down deliberately. The learner can:
 - Attach an **audio recording** to a sentence — either their own voice reading it aloud, or a reference recording
 - Color-code sentences for later reference
 
-The hierarchical structure (book → chapter → section → sentence) mirrors how real texts are organized, and the learner can jump to any point in the book. The pure-text view presents the book as flowing prose, without the sentence-by-sentence apparatus, for a more natural reading experience when that is what the learner wants.
+The hierarchical structure (book → chapter → section → sentence) mirrors how real texts are organized, and the learner can jump to any point in the book.
 
 The reading module is closely linked to the flashcard system: a word encountered while reading can be immediately added as a new card without losing the reading context.
 

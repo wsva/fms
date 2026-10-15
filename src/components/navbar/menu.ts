@@ -31,7 +31,6 @@ export const menuList: MenuGroup[] = [
 
             { key: "seperator_read", name: "Read", description: "", href: "" },
             { key: "read_book_main", name: "Reading", description: "read a book from datasets", href: "/speak/read" },
-            { key: "read_book_text", name: "View Book Text", description: "show content in pure text", href: "/speak/read/text" },
         ],
     },
     {
