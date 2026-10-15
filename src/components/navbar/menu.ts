@@ -62,7 +62,6 @@ export const menuList: MenuGroup[] = [
         items: [
             { key: "dataset_tag", name: "Tags", description: "manage tags for all features", href: "/dataset/tag" },
             { key: "dataset_market", name: "Market", description: "datasets shared by others", href: "/dataset/market" },
-            { key: "dataset_upload", name: "Upload", description: "upload a dataset directory", href: "/dataset/upload" },
             { key: "dataset_manage", name: "My Datasets", description: "visibility, tags and deletion", href: "/dataset/manage" },
         ],
     },

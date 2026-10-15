@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast, Button, Chip, ProgressCircle } from '@heroui/react';
-import { MdCloudDownload, MdLibraryAdd, MdLibraryAddCheck, MdUpload } from 'react-icons/md';
+import { MdCloudDownload, MdLibraryAdd, MdLibraryAddCheck } from 'react-icons/md';
 import { listMarketDatasets, subscribeDataset, unsubscribeDataset } from '@/app/actions/dataset_hub';
 import type { DatasetListItem, DatasetTagRef } from '@/lib/datasets/access';
 import { DATASET_TYPES } from '@/lib/datasets/info';
@@ -83,16 +83,12 @@ export default function Client({ email, initialTag, initialType }: Props) {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Dataset Hub</h1>
                     <p className="text-sm text-foreground-500 mt-0.5">
-                        Upload, subscribe to and download whole dataset directories
+                        Subscribe to and download whole dataset directories
                     </p>
                 </div>
                 <div className="ml-auto flex gap-2">
                     <Button size="sm" variant="ghost" onPress={() => router.push('/dataset/manage')}>
                         My Datasets
-                    </Button>
-                    <Button size="sm" variant="primary" onPress={() => router.push('/dataset/upload')}>
-                        <MdUpload size={16} />
-                        Upload
                     </Button>
                 </div>
                 {stateLoading && <ProgressCircle size="sm" aria-label="Loading" />}
@@ -146,7 +142,7 @@ export default function Client({ email, initialTag, initialType }: Props) {
                 <div className="flex flex-col items-center justify-center py-20 gap-3 text-foreground-400">
                     <MdCloudDownload size={48} className="opacity-30" />
                     <p className="text-sm">No datasets here yet</p>
-                    <p className="text-xs">Upload one, or ask an owner to share theirs.</p>
+                    <p className="text-xs">Upload one from the desktop app, or ask an owner to share theirs.</p>
                 </div>
             )}
 

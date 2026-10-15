@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast, Button, Chip, ProgressCircle } from '@heroui/react';
-import { MdCloudDownload, MdDelete, MdUpload } from 'react-icons/md';
+import { MdCloudDownload, MdDelete } from 'react-icons/md';
 import {
     listMyTags,
     listMyDatasets,
@@ -125,13 +125,7 @@ export default function Client({ email }: Props) {
                         Visibility, tags and deletion — the uploaded bytes are never rewritten
                     </p>
                 </div>
-                <div className="ml-auto flex gap-2">
-                    <Button size="sm" variant="primary" onPress={() => router.push('/dataset/upload')}>
-                        <MdUpload size={16} />
-                        Upload
-                    </Button>
-                </div>
-                {stateLoading && <ProgressCircle size="sm" aria-label="Loading" />}
+                {stateLoading && <ProgressCircle size="sm" aria-label="Loading" className="ml-auto" />}
             </div>
 
             {!stateLoading && stateRows.length === 0 && (
