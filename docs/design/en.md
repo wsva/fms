@@ -53,23 +53,13 @@ The system also detects **incomplete cards** — cards where either the question
 
 ### 2. Listening and Dictation
 
-The listening module lives at a single page (`/listen/media`) that combines a media library, a player, and all practice tools in one place. The learner brings authentic audio or video — news programs, podcasts, educational videos — and the page gives them everything needed to work with it.
+Listening practice lives at `/listen/dictation` and works entirely over **published datasets**. Rather than maintaining a personal media library, the learner opens a dictation dataset — a packaged set of audio or video files together with subtitle tracks prepared in the desktop app — and works through it cue by cue. The page is a three-step funnel: the available dictation datasets, the media inside the chosen dataset with its subtitle tracks, and the practice view for one media/subtitle pair. Materials are read from the dataset's own database, and the media and waveform files stream straight out of the dataset archive, so nothing has to be uploaded to practice with.
 
-**Layout**: The page is split into a left sidebar and a main content area. The sidebar holds the player (always visible) and below it a tag-based library for navigating the media collection. The main area is a tabbed workspace with five tabs: Dictation, Media, Subtitle, Transcript, and Note.
+**Practice view**: The player is pinned at the top of the view — audio mode for sound files, video mode otherwise — and a waveform of the whole track marks the currently focused cue's time range on wide screens, so the learner can see where they are. Each cue is a card with its own input field. What is typed is checked live against the cue text with punctuation and capitalization ignored, so only the words matter; a correct cue turns its card green and counts toward the `N / M` progress line above the cue list. A tip line below the input shows the cue with every word not yet matched replaced by a run of underscores annotated with its length — partial feedback that never gives away the answer. When the cue carries a stored translation, a second tip line does the same for that text.
 
-**Media tab** — manages the item itself: title, source (either a URL or an uploaded audio/video file), a freeform note, and tag assignments. A media item can be shared with others by tagging it with a public tag; shared items are browsable and playable by subscribers without them needing to make their own copy.
+**Replay and navigation**: The focused cue's segment can be replayed with the play button, with Ctrl+S or Ctrl+D, or by typing two spaces at the end of the input, which also stops playback again. Ctrl+↑/↓ moves to the previous or next cue, focusing its input and scrolling it into view. "Large" mode narrows the list to the single focused cue in a large field, for one-cue-at-a-time work.
 
-**Subtitle tab** — each media item can carry multiple subtitle tracks, one per user. Subtitles are stored as VTT or SRT and can be created or imported directly in the browser. The editing tools operate at the cue level: the learner can adjust the start and end timestamp of any cue (by typing or by pinning to the current playback position), merge adjacent cues, split a cue, insert new ones, or delete. An "edit as text" mode allows direct editing of the raw subtitle text for bulk corrections. A special "Invalid Subtitle" filter across the library surfaces any media item that has subtitle entries with zero-length or malformed timing, making it easy to find and fix broken tracks.
-
-**Transcript tab** — full plain-text transcripts of the audio, stored independently from the subtitle. These serve as reading material and reference rather than practice material.
-
-**Note tab** — freeform notes about the media item, for anything the learner wants to record: vocabulary observations, cultural context, questions.
-
-**Dictation tab** — the primary active listening practice. The learner selects a subtitle track and each cue appears as a numbered card. For each cue, the learner types what they hear into an input field. The system checks the answer in real time (punctuation is ignored) and turns the cue's index chip green on a correct match. A tip line below the input field shows which words have not yet been typed, with unguessed words replaced by underscores — giving partial feedback without giving away the answer. Pressing the play button (or Ctrl+S / Ctrl+D, or typing two spaces) replays just that cue's audio segment. If a translation was stored on the cue, a tooltip button reveals it as a hint. The learner can also switch a cue into edit mode inline without leaving dictation — useful for correcting a subtitle error the moment it is noticed — and can open any cue directly as a new flashcard with one click.
-
-Progress is tracked per media/subtitle pair: a counter shows how many cues have been marked correct, and the learner can mark the entire session complete when finished. Progress is saved automatically.
-
-Outside of dictation mode, the active cue is highlighted in a prominent display above the player during normal playback, so the learner can follow along without the input field.
+Progress is tracked per user and per media/subtitle pair: the set of solved cues and an `in_progress` / `complete` status are saved automatically as the learner works and restored on return, and the whole session can be marked complete at any point.
 
 ### 3. Reading
 

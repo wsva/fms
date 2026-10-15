@@ -34,7 +34,7 @@ import {
 import { getDictation, saveDictation } from '@/app/actions/listen'
 import HlsPlayer from '@/components/HlsPlayer'
 import WaveformCanvas, { type WaveformData } from '@/components/WaveformCanvas'
-import CueEditor from '../media/cue_editor'
+import CueEditor from './cue_editor'
 
 const EDIT_ENABLED = false
 
@@ -221,7 +221,7 @@ export default function Client({ user_id }: Props) {
         return () => mediaEl.removeEventListener('timeupdate', onTimeUpdate)
     }, [stateMediaUUID, updateStateCues])
 
-    // ── progress persistence (1 s debounce, like /listen/media) ──
+    // ── progress persistence (1 s debounce) ──
     const scheduleDictSave = (successSet: Set<string>, status: string) => {
         if (!stateMediaUUID || !stateSubtitle?.uuid) return
         if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)

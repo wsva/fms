@@ -27,8 +27,8 @@ export default async function Home() {
             {showReminder && <HomePopup user_id={email} />}
             {motto && <MottoPopup motto={motto} />}
             <div className="container grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
-                <IndexItem href='/listen/media' label='Listening'
-                    description='View or edit media. Dictation.'
+                <IndexItem href='/listen/dictation' label='Listening'
+                    description='Dictate cues from a dataset subtitle.'
                 />
                 <IndexItem href='/speak/read' label='Reading'
                     description='Read a book sentence by sentence.'
