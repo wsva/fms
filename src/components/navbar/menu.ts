@@ -64,7 +64,6 @@ export const menuList: MenuGroup[] = [
             { key: "plan_main", name: "Plan", description: "make plans", href: "/plan" },
             { key: "tools_stats", name: "Learning Stats", description: "XP, progress and practice history", href: "/stats" },
             { key: "tools_pdf_reader", name: "PDF Reader", description: "PDF reader", href: "/tools/pdf_reader" },
-            { key: "tools_shared_services", name: "Shared Services", description: "shared data or STT services", href: "/tools/services" },
         ],
     },
     {
