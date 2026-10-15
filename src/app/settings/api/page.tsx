@@ -38,19 +38,6 @@ const API_SECTIONS: ApiSection[] = [
         ],
     },
     {
-        section: 'Q&A',
-        entries: [
-            { method: 'GET',    path: '/api/ask',                               description: 'List your questions' },
-            { method: 'GET',    path: '/api/ask?uuid=',                         description: 'Get a single question' },
-            { method: 'POST',   path: '/api/ask',                               description: 'Create a question — body: { title?, content? }' },
-            { method: 'PATCH',  path: '/api/ask',                               description: 'Update a question — body: { uuid, title?, content? }' },
-            { method: 'DELETE', path: '/api/ask?uuid=',                         description: 'Delete a question' },
-            { method: 'GET',    path: '/api/ask/answers?question_uuid=',        description: 'List answers for a question' },
-            { method: 'POST',   path: '/api/ask/answers',                       description: 'Add an answer — body: { question_uuid, content? }' },
-            { method: 'DELETE', path: '/api/ask/answers?uuid=',                 description: 'Delete an answer' },
-        ],
-    },
-    {
         section: 'Blog',
         entries: [
             { method: 'GET',    path: '/api/blog',                              description: 'List your blog posts' },

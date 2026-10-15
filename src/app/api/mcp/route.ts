@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveAuth } from '@/lib/api-auth';
 import { getCardAll, getCard, saveCard, removeCard } from '@/app/actions/card';
-import { getQuestionAll, getQuestion, saveQuestion, removeQuestion, getAnswerAll, saveAnswer, removeAnswer } from '@/app/actions/ask';
 import { getBlogAll, getBlog, saveBlog } from '@/app/actions/blog';
 import { getPlanAll, getPlan, savePlan, removePlan, getRecordAll, getRecord, saveRecord, removeRecord } from '@/app/actions/plan';
 import { searchTopword } from '@/app/actions/word';
@@ -19,16 +18,6 @@ const TOOLS = [
     { name: 'create_card', description: 'Create a new flashcard.', inputSchema: { type: 'object', properties: { question: { type: 'string' }, answer: { type: 'string' }, suggestion: { type: 'string' }, note: { type: 'string' } }, required: ['question', 'answer'] } },
     { name: 'update_card', description: 'Update an existing flashcard.', inputSchema: { type: 'object', properties: { uuid: { type: 'string' }, question: { type: 'string' }, answer: { type: 'string' }, suggestion: { type: 'string' }, note: { type: 'string' } }, required: ['uuid'] } },
     { name: 'delete_card', description: 'Delete a flashcard by UUID.', inputSchema: { type: 'object', properties: { uuid: { type: 'string' } }, required: ['uuid'] } },
-
-    // Q&A
-    { name: 'list_questions', description: 'List all Q&A questions owned by you.', inputSchema: { type: 'object', properties: {} } },
-    { name: 'get_question', description: 'Get a single question by UUID.', inputSchema: { type: 'object', properties: { uuid: { type: 'string' } }, required: ['uuid'] } },
-    { name: 'create_question', description: 'Create a new question.', inputSchema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' } } } },
-    { name: 'update_question', description: 'Update a question.', inputSchema: { type: 'object', properties: { uuid: { type: 'string' }, title: { type: 'string' }, content: { type: 'string' } }, required: ['uuid'] } },
-    { name: 'delete_question', description: 'Delete a question and its answers.', inputSchema: { type: 'object', properties: { uuid: { type: 'string' } }, required: ['uuid'] } },
-    { name: 'list_answers', description: 'List answers for a question.', inputSchema: { type: 'object', properties: { question_uuid: { type: 'string' } }, required: ['question_uuid'] } },
-    { name: 'create_answer', description: 'Add an answer to a question.', inputSchema: { type: 'object', properties: { question_uuid: { type: 'string' }, content: { type: 'string' } }, required: ['question_uuid'] } },
-    { name: 'delete_answer', description: 'Delete an answer by UUID.', inputSchema: { type: 'object', properties: { uuid: { type: 'string' } }, required: ['uuid'] } },
 
     // Blog
     { name: 'list_blogs', description: 'List your blog posts.', inputSchema: { type: 'object', properties: {} } },
@@ -120,56 +109,6 @@ async function callTool(name: string, args: Args, email: string, scope: string):
         if (existing.status === 'error') return err(existing.error as string);
         if (existing.data.user_id !== email) return err('Forbidden');
         const r = await removeCard(args.uuid as string);
-        return r.status === 'error' ? err(r.error as string) : ok({ deleted: args.uuid });
-    }
-
-    // ── Q&A ───────────────────────────────────────────────────────────────────
-    if (name === 'list_questions') {
-        const r = await getQuestionAll();
-        if (r.status === 'error') return err(r.error as string);
-        return ok(r.data.filter(q => q.user_id === email));
-    }
-    if (name === 'get_question') {
-        const r = await getQuestion(args.uuid as string);
-        if (r.status === 'error') return err(r.error as string);
-        if (r.data.user_id !== email) return err('Forbidden');
-        return ok(r.data);
-    }
-    if (name === 'create_question') {
-        if (readonly) return err('This API key is read-only');
-        const now = new Date();
-        const r = await saveQuestion({ uuid: getUUID(), user_id: email, title: (args.title as string) ?? null, language: (args.language as string) ?? "en", content: (args.content as string) ?? null, audio_path: null, video_path: null, created_at: now, updated_at: now });
-        return r.status === 'error' ? err(r.error as string) : ok(r.data);
-    }
-    if (name === 'update_question') {
-        if (readonly) return err('This API key is read-only');
-        const existing = await getQuestion(args.uuid as string);
-        if (existing.status === 'error') return err(existing.error as string);
-        if (existing.data.user_id !== email) return err('Forbidden');
-        const r = await saveQuestion({ ...existing.data, ...(args.title !== undefined && { title: args.title as string }), ...(args.content !== undefined && { content: args.content as string }), updated_at: new Date() });
-        return r.status === 'error' ? err(r.error as string) : ok(r.data);
-    }
-    if (name === 'delete_question') {
-        if (readonly) return err('This API key is read-only');
-        const existing = await getQuestion(args.uuid as string);
-        if (existing.status === 'error') return err(existing.error as string);
-        if (existing.data.user_id !== email) return err('Forbidden');
-        const r = await removeQuestion(args.uuid as string);
-        return r.status === 'error' ? err(r.error as string) : ok({ deleted: args.uuid });
-    }
-    if (name === 'list_answers') {
-        const r = await getAnswerAll(args.question_uuid as string);
-        return r.status === 'error' ? err(r.error as string) : ok(r.data);
-    }
-    if (name === 'create_answer') {
-        if (readonly) return err('This API key is read-only');
-        const now = new Date();
-        const r = await saveAnswer({ uuid: getUUID(), user_id: email, question_uuid: args.question_uuid as string, content: (args.content as string) ?? null, audio_path: null, video_path: null, is_example: false, created_at: now, updated_at: now });
-        return r.status === 'error' ? err(r.error as string) : ok(r.data);
-    }
-    if (name === 'delete_answer') {
-        if (readonly) return err('This API key is read-only');
-        const r = await removeAnswer(args.uuid as string);
         return r.status === 'error' ? err(r.error as string) : ok({ deleted: args.uuid });
     }
 

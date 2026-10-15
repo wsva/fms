@@ -27,7 +27,6 @@ export const menuList: MenuGroup[] = [
 
             { key: "seperator_speak", name: "Speak", description: "", href: "" },
             { key: "speak_practice", name: "Practice", description: "practice", href: "/speak/practice" },
-            { key: "speak_ask", name: "Asking", description: "preparations for interviews", href: "/speak/ask" },
 
             { key: "seperator_read", name: "Read", description: "", href: "" },
             { key: "read_book_main", name: "Reading", description: "read a book from datasets", href: "/speak/read" },
