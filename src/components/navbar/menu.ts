@@ -24,7 +24,6 @@ export const menuList: MenuGroup[] = [
             { key: "seperator_listen", name: "Listen", description: "", href: "" },
             { key: "listen_media", name: "Media", description: "my media", href: "/listen/media" },
             { key: "listen_dictation", name: "Dictation", description: "dictation practice from datasets", href: "/listen/dictation" },
-            { key: "listen_dictation_upload", name: "Dictation (Upload)", description: "dictation from uploaded files", href: "/listen/dictation-upload" },
 
             { key: "seperator_speak", name: "Speak", description: "", href: "" },
             { key: "speak_just_speaking", name: "Just Speaking", description: "record and upload audio", href: "/speak/just-speaking" },
