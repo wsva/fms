@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import NextLink from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Link } from '@heroui/react';
 import {
     MdExpandMore,
@@ -10,10 +10,16 @@ import {
     MdChevronLeft,
     MdChevronRight,
     MdClose,
+    MdLogout,
+    MdPerson,
 } from 'react-icons/md';
 import { menuList } from './menu';
 import { hrefPath } from '@/lib/nav-crumbs';
+import { useSession } from '@/components/SessionProvider';
+import { authClient } from '@/lib/auth-client';
 import NavIcon from '@/components/design/NavIcon';
+
+const ACCENT = 'bg-[#0EA89A]/80 text-white';
 
 type Props = {
     /** Desktop rail mode: icons only. Ignored in the drawer. */
@@ -31,9 +37,11 @@ function isActive(pathname: string, href: string): boolean {
 
 export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose }: Props) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const redirectUrl = searchParams.get('redirect_url') ?? '/';
+    const { user, signOut } = useSession();
     const isDrawer = !!onClose;
     const rail = collapsed && !isDrawer;
-    // Rail mode has no room for the expand/collapse state, so it shows group initials.
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const isOpen = (name: string) => !rail && (expanded[name] ?? true);
     const toggle = (name: string) =>
@@ -41,6 +49,10 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
 
     const groupHasActive = (group: (typeof menuList)[number]) =>
         group.items.some(item => !/^seperator_/.test(item.key) && isActive(pathname, item.href));
+
+    const handleLogin = async () => {
+        await authClient.signIn.social({ provider: "wsva_oauth2", callbackURL: redirectUrl });
+    };
 
     return (
         <aside className={
@@ -63,11 +75,35 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                     </button>
                 )}
             </div>
-            <div className="border-b border-sand-300 my-1 w-full" />
+
+            {/* Auth row */}
+            <div className={`flex items-center w-full rounded-lg transition-colors shrink-0 ${
+                rail ? 'justify-center px-0 py-1.5' : 'gap-2 px-2 py-1.5'
+            } hover:bg-sand-300/60 ${user ? 'cursor-pointer' : ''}`}
+                title={user ? (rail ? `${user.name} (click to logout)` : 'Click to logout') : 'Login'}
+                onClick={() => (user ? signOut() : handleLogin())}
+            >
+                {user ? (
+                    <>
+                        <span className="w-6 h-6 rounded-full bg-[#0EA89A] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                            {(user.name || user.email).charAt(0).toUpperCase()}
+                        </span>
+                        {!rail && <span className="text-xs font-medium truncate flex-1 text-left">{user.name}</span>}
+                        {!rail && <MdLogout size={14} className="text-gray-400 shrink-0" />}
+                    </>
+                ) : (
+                    <>
+                        <MdPerson size={18} className="text-gray-500 shrink-0" />
+                        {!rail && <span className="text-xs font-medium text-gray-500">Login</span>}
+                    </>
+                )}
+            </div>
+            <div className="border-b border-sand-300 my-1 w-full shrink-0" />
 
             {/* Nav */}
-            <nav className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-0.5 w-full">
+            <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 w-full">
                 {menuList.map(group => {
+                    const GroupIcon = group.icon;
                     if (rail) {
                         return (
                             <button
@@ -75,43 +111,44 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                                 title={group.name}
                                 onClick={onToggleCollapsed}
                                 className={
-                                    'flex items-center justify-center h-9 w-9 mx-auto rounded-lg text-sm font-bold transition-colors ' +
-                                    (groupHasActive(group)
-                                        ? 'bg-sand-400 text-gray-800'
-                                        : 'text-gray-600 hover:bg-sand-300')
+                                    'flex items-center justify-center h-9 w-9 mx-auto rounded-lg transition-colors ' +
+                                    (groupHasActive(group) ? ACCENT : 'text-gray-600 hover:bg-sand-300')
                                 }
                             >
-                                {group.name.charAt(0)}
+                                <GroupIcon size={20} />
                             </button>
                         );
                     }
 
                     const open = isOpen(group.name);
+                    const gActive = groupHasActive(group);
                     return (
-                        <div key={group.name} className="flex flex-col">
+                        <div key={group.name} className="flex flex-col w-full">
                             <button
                                 onClick={() => toggle(group.name)}
                                 className={
-                                    'flex items-center justify-between w-full rounded-lg px-2 py-1.5 text-sm font-semibold transition-colors ' +
-                                    (groupHasActive(group) ? 'text-gray-800 hover:bg-sand-300' : 'text-gray-600 hover:bg-sand-300')
+                                    'flex items-center gap-2 w-full rounded-lg p-2 transition-colors ' +
+                                    (gActive ? ACCENT : 'text-gray-600 hover:bg-sand-300')
                                 }
                             >
-                                <span className="truncate">{group.name}</span>
+                                <GroupIcon size={20} className="shrink-0" />
+                                <span className="text-sm font-medium flex-1 truncate text-left">{group.name}</span>
                                 {open ? <MdExpandLess size={18} /> : <MdExpandMore size={18} />}
                             </button>
 
                             {open && (
-                                <div className="flex flex-col ml-1">
+                                <div className="flex flex-col gap-0.5 mt-0.5">
                                     {group.items.map(item => {
                                         if (/^seperator_/.test(item.key)) {
                                             return (
                                                 <div key={item.key}
-                                                    className="px-3 pt-2 pb-0.5 text-[11px] uppercase tracking-wide text-gray-400 font-bold select-none">
+                                                    className="pl-10 pt-2 pb-0.5 text-[10px] uppercase tracking-wide text-gray-400 font-bold select-none">
                                                     {item.name}
                                                 </div>
                                             );
                                         }
                                         const active = isActive(pathname, item.href);
+                                        const ItemIcon = item.icon;
                                         return (
                                             <NextLink
                                                 key={item.key}
@@ -119,13 +156,12 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                                                 onClick={onClose}
                                                 title={item.description}
                                                 className={
-                                                    'block rounded-lg px-3 py-1.5 text-sm truncate transition-colors ' +
-                                                    (active
-                                                        ? 'bg-sand-300 font-bold text-gray-900'
-                                                        : 'text-gray-600 hover:bg-sand-300/60')
+                                                    'flex items-center gap-2 w-full rounded-lg py-1.5 pl-10 pr-2 transition-colors ' +
+                                                    (active ? ACCENT : 'text-gray-600 hover:bg-sand-300/60')
                                                 }
                                             >
-                                                {item.name}
+                                                {ItemIcon && <ItemIcon size={18} className="shrink-0" />}
+                                                <span className="text-xs font-medium truncate">{item.name}</span>
                                             </NextLink>
                                         );
                                     })}
