@@ -33,16 +33,16 @@ export type MenuGroup = {
 /**
  * Top-level entries, rendered above the groups and reachable in one click.
  * Mirrors fms-app's rootTabs (Sidebar.tsx:89-96), down to the icons: the first
- * five are the ones the app uses for the same five tabs. Cards and Wiki point at
- * routes that do not exist yet: the card pages under /card/* are the old
- * pre-dataset system, and the site has no wiki.
+ * five are the ones the app uses for the same five tabs. The card pages
+ * under /card/* are the old pre-dataset system, distinct from the
+ * dataset-based /cards.
  */
 export const rootMenuItems: MenuItem[] = [
     { key: "listen_dictation", name: "Dictation", description: "dictation practice from datasets", href: "/listen/dictation", icon: Headphones },
     { key: "read_book_main", name: "Read a Book", description: "read a book from datasets", href: "/speak/read", icon: BookOpen },
     { key: "speak_practice", name: "Read Aloud", description: "record yourself reading a text", href: "/speak/practice", icon: MicGlyph },
-    { key: "cards", name: "Cards", description: "dataset-based cards (not built yet)", href: "/cards", icon: Layers },
-    { key: "wiki", name: "Wiki", description: "wiki (not built yet)", href: "/wiki", icon: BookOpenText },
+    { key: "cards", name: "Cards", description: "browse and review dataset cards", href: "/cards", icon: Layers },
+    { key: "wiki", name: "Wiki", description: "browse, search and edit wiki datasets", href: "/wiki", icon: BookOpenText },
 ];
 
 export const menuList: MenuGroup[] = [
