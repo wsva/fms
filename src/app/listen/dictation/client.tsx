@@ -10,14 +10,30 @@
  * waveform files stream through /api/v1/file. Per-user progress persists in
  * Postgres listen_dictation.
  *
- * Cue editing is fully wired (local edits + saveDatasetDictationCues) but
- * dormant: EDIT_ENABLED=false hides every edit affordance.
+ * Chrome is the shared toolbar kit: a flat Breadcrumb + Toolbar pair above an
+ * internally scrolling content area, exactly like the app. Cue editing is
+ * fully wired (local edits + saveDatasetDictationCues) but dormant:
+ * EDIT_ENABLED=false hides every edit affordance; the toolbar overflow menu
+ * shows the edit actions visibly disabled instead.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Button, Chip, Label, ListBox, ProgressCircle, Select, toast, Tooltip } from '@heroui/react'
+import { Button, Label, ListBox, ProgressCircle, Select, toast, Tooltip } from '@heroui/react'
 import { useImmer } from 'use-immer'
-import { MdCheckCircle, MdHelpOutline, MdRefresh } from 'react-icons/md'
+import {
+    ArrowDown,
+    ArrowUp,
+    Captions,
+    CheckCircle,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    HelpCircle,
+    Pencil,
+    RefreshCw,
+    Save,
+    Target,
+    Undo2,
+} from 'lucide-react'
 
 import type { Cue } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
@@ -34,9 +50,17 @@ import {
 import { getDictation, saveDictation } from '@/app/actions/listen'
 import HlsPlayer from '@/components/HlsPlayer'
 import WaveformCanvas, { type WaveformData } from '@/components/WaveformCanvas'
+import DatasetCard from '@/components/datasets/DatasetCard'
+import { Breadcrumb, Toolbar, ToolbarButton, ToolbarIconButton, ToolbarMenuItem, ToolbarOverflow } from '@/components/ui/toolbar'
+import { tbGhost } from '@/lib/ui/toolbar'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import CueEditor from './cue_editor'
 
 const EDIT_ENABLED = false
+
+// Persistent preference for the mobile "cues only" collapse toggle — same key
+// and semantics as the app (DictationPage COLLAPSED_KEY).
+const COLLAPSED_KEY = 'dictation.collapsed'
 
 const fileUrl = (datasetUuid: string, rel: string) =>
     `/api/v1/file?dataset=${encodeURIComponent(datasetUuid)}&path=${encodeURIComponent(rel)}`
@@ -48,6 +72,8 @@ type Props = {
 }
 
 export default function Client({ user_id }: Props) {
+    const mobile = useIsMobile()
+
     // ── selection state ──
     const [stateDatasetList, setStateDatasetList] = useState<DatasetListItem[]>([])
     const [stateDatasetUUID, setStateDatasetUUID] = useState('')
@@ -75,9 +101,34 @@ export default function Client({ user_id }: Props) {
     const [stateWaveformPeaks, setStateWaveformPeaks] = useState<WaveformData | null>(null)
     const videoRef = useRef<HTMLVideoElement | null>(null)
 
+    // "Cues only" mode (mobile): hide the player, waveform and progress line
+    // behind a toolbar toggle. Absent storage entry means the user never
+    // chose — fall back to the per-platform default (collapsed on a narrow
+    // viewport) without persisting it, so the default can still evolve.
+    // Lazy init reads storage only on the client; SSR renders expanded, and
+    // the collapsed-dependent markup only exists once a media is selected,
+    // which cannot happen before hydration.
+    const [collapsed, setCollapsed] = useState(() => {
+        if (typeof window === 'undefined') return false
+        try {
+            const stored = window.localStorage.getItem(COLLAPSED_KEY)
+            if (stored !== null) return stored === '1'
+        } catch { /* private mode / unsupported */ }
+        return window.matchMedia('(max-width: 1023px)').matches
+    })
+    const handleToggleCollapsed = () => {
+        setCollapsed((prev) => {
+            const next = !prev
+            try {
+                window.localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0')
+            } catch { /* ignore */ }
+            return next
+        })
+    }
+
     // Deferred cue-input focus: activating a cue swaps its answer field
-    // between <Input> and <TextArea> (full ⇄ large), so focus() must run
-    // after React committed the new element (ported from the app).
+    // between <Input> and <TextArea> (compact ⇄ medium ⇄ large), so focus()
+    // must run after React committed the new element (ported from the app).
     const [focusNonce, setFocusNonce] = useState(0)
     const pendingFocusUuidRef = useRef<string | null>(null)
     const requestFocusCue = useCallback((uuid: string) => {
@@ -93,24 +144,42 @@ export default function Client({ user_id }: Props) {
     }, [focusNonce])
 
     // ── datasets view ──
-    useEffect(() => {
-        const loadDatasets = async () => {
-            setStateLoading(true)
-            try {
-                const result = await listDictationDatasets()
-                if (result.status === 'success') {
-                    setStateDatasetList(result.data)
-                } else {
-                    toast.danger(String(result.error ?? 'Action failed'))
-                }
-            } finally {
-                setStateLoading(false)
+    const loadDatasets = useCallback(async () => {
+        setStateLoading(true)
+        try {
+            const result = await listDictationDatasets()
+            if (result.status === 'success') {
+                setStateDatasetList(result.data)
+            } else {
+                toast.danger(String(result.error ?? 'Action failed'))
             }
+        } finally {
+            setStateLoading(false)
         }
-        loadDatasets()
     }, [])
 
+    useEffect(() => {
+        loadDatasets()
+    }, [loadDatasets])
+
     // ── media list view: reload when the dataset changes ──
+    const loadMediaList = useCallback(async () => {
+        if (!stateDatasetUUID) return
+        setStateLoading(true)
+        try {
+            const result = await getDatasetDictationMedia(stateDatasetUUID)
+            if (result.status === 'success') {
+                setStateDatasetInfo(result.data.dataset)
+                setStateMediaList(result.data.media)
+            } else {
+                setStateMediaList([])
+                toast.danger(String(result.error ?? 'Action failed'))
+            }
+        } finally {
+            setStateLoading(false)
+        }
+    }, [stateDatasetUUID])
+
     useEffect(() => {
         if (dictSaveTimer.current) clearTimeout(dictSaveTimer.current)
         setStateMediaUUID('')
@@ -119,24 +188,8 @@ export default function Client({ user_id }: Props) {
         setStateDatasetInfo(null)
         setStateWaveformPeaks(null)
         if (!stateDatasetUUID) return
-
-        const loadMedia = async () => {
-            setStateLoading(true)
-            try {
-                const result = await getDatasetDictationMedia(stateDatasetUUID)
-                if (result.status === 'success') {
-                    setStateDatasetInfo(result.data.dataset)
-                    setStateMediaList(result.data.media)
-                } else {
-                    setStateMediaList([])
-                    toast.danger(String(result.error ?? 'Action failed'))
-                }
-            } finally {
-                setStateLoading(false)
-            }
-        }
-        loadMedia()
-    }, [stateDatasetUUID, updateStateCues])
+        loadMediaList()
+    }, [stateDatasetUUID, updateStateCues, loadMediaList])
 
     const selectedMedia = useMemo(
         () => stateMediaList.find((m) => m.uuid === stateMediaUUID),
@@ -154,6 +207,9 @@ export default function Client({ user_id }: Props) {
     }
 
     // ── practice view: cues + progress + waveform on media/subtitle change ──
+    // refreshNonce is bumped by the toolbar Refresh to re-read cues/progress
+    // in place (the app's "Refresh media" at this level).
+    const [refreshNonce, setRefreshNonce] = useState(0)
     useEffect(() => {
         setStateDictSuccessSet(new Set())
         setStateDictStatus('in_progress')
@@ -202,7 +258,7 @@ export default function Client({ user_id }: Props) {
             .catch(() => { if (!cancelled) setStateWaveformPeaks(null) })
 
         return () => { cancelled = true }
-    }, [stateDatasetUUID, stateMediaUUID, stateSubtitle?.uuid, user_id, updateStateCues, selectedMedia?.source])
+    }, [stateDatasetUUID, stateMediaUUID, stateSubtitle?.uuid, user_id, updateStateCues, selectedMedia?.source, refreshNonce])
 
     // ── playback sync: highlight the cue covering the current time ──
     useEffect(() => {
@@ -341,6 +397,18 @@ export default function Client({ user_id }: Props) {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [navigateCue, stateCues, stateMediaUUID])
 
+    // ── toolbar refresh: scope follows the current level ──
+    const refreshCaption = !stateDatasetUUID
+        ? 'Refresh datasets'
+        : stateMediaUUID
+            ? 'Refresh cues'
+            : 'Refresh media'
+    const refresh = () => {
+        if (!stateDatasetUUID) loadDatasets()
+        else if (stateMediaUUID) setRefreshNonce((n) => n + 1)
+        else loadMediaList()
+    }
+
     // ── derived ──
     const mediaSrc = selectedMedia ? fileUrl(stateDatasetUUID, `media/${selectedMedia.source}`) : ''
     const audioMode = selectedMedia ? isAudio(selectedMedia.source) : true
@@ -351,9 +419,7 @@ export default function Client({ user_id }: Props) {
         <div
             key={cue.uuid}
             data-cue-index={stateCues.indexOf(cue)}
-            className={`cursor-text rounded-xl border-2 py-1.5 px-2 transition-colors
-                ${cue.active ? 'border-green-500' : stateFocusedCueUUID === cue.uuid ? 'border-blue-400' : 'border-border-default'}
-                ${cue.deleted ? 'bg-red-300' : stateDictSuccessSet.has(cue.uuid) ? 'bg-green-100' : cue.modified ? 'bg-orange-300' : 'bg-bg-card'}`}
+            className={`cursor-text rounded-xl border-2 py-1.5 px-2 transition-colors ${stateFocusedCueUUID === cue.uuid ? 'border-accent' : 'border-border-light'} ${cue.deleted ? 'bg-error-bg' : stateFocusedCueUUID === cue.uuid ? 'bg-accent-bg/40' : stateDictSuccessSet.has(cue.uuid) ? 'bg-success-bg' : cue.modified ? 'bg-accent-bg/20' : 'bg-bg-body'}`}
             onMouseDown={(e) => {
                 if (stateFocusedCueUUID === cue.uuid) return
                 const t = e.target as HTMLElement
@@ -369,7 +435,7 @@ export default function Client({ user_id }: Props) {
                 }
                 if (target.closest('button')) return
                 const isOwnDictationField = target.id?.startsWith('d-s-i-')
-                if (!isOwnDictationField && target.closest('input, textarea')) return
+                if (!isOwnDictationField && target.closest('input, textarea, [data-no-focus]')) return
                 requestFocusCue(cue.uuid)
             }}
         >
@@ -431,184 +497,239 @@ export default function Client({ user_id }: Props) {
                 initialSuccess={stateDictSuccessSet.has(cue.uuid)}
                 onSuccess={handleDictSuccess}
                 onFocusInput={() => setStateFocusedCueUUID(cue.uuid)}
+                isActive={stateFocusedCueUUID === cue.uuid}
             />
         </div>
     )
 
     return (
-        <div className="flex flex-col w-full min-w-0 gap-3">
-            {/* Breadcrumb navigation */}
-            <nav className="flex items-center gap-2 px-4 py-2 text-sm select-none min-w-0 overflow-x-auto rounded-xl bg-bg-card border border-border-default">
-                <button
-                    className={`shrink-0 cursor-pointer hover:underline text-left ${stateDatasetUUID ? 'text-blue-600' : 'font-semibold'}`}
-                    onClick={() => setStateDatasetUUID('')}
-                >
-                    Datasets
-                </button>
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-bg-body">
+            {/* Breadcrumb — Datasets › dataset › media › subtitle trail */}
+            <Breadcrumb>
+                {stateDatasetUUID ? (
+                    <Breadcrumb.Link onClick={() => setStateDatasetUUID('')}>Datasets</Breadcrumb.Link>
+                ) : (
+                    <Breadcrumb.Current grow={false}>Datasets</Breadcrumb.Current>
+                )}
                 {stateDatasetInfo && (
                     <>
-                        <span className="shrink-0 text-gray-400">&rsaquo;</span>
-                        <button
-                            className={`cursor-pointer hover:underline truncate min-w-0 text-left ${stateMediaUUID ? 'max-w-[240px] text-blue-600' : 'flex-1 font-semibold'}`}
+                        <Breadcrumb.Sep />
+                        <Breadcrumb.Link
+                            variant={stateMediaUUID ? 'link' : 'current'}
+                            truncate={!!stateMediaUUID}
                             onClick={() => setStateMediaUUID('')}
                             title={stateDatasetInfo.name}
                         >
                             {stateDatasetInfo.name}
-                        </button>
+                        </Breadcrumb.Link>
                     </>
                 )}
                 {selectedMedia && (
                     <>
-                        <span className="shrink-0 text-gray-400">&rsaquo;</span>
-                        <span className="font-semibold truncate min-w-0 flex-1" title={selectedMedia.source}>
+                        <Breadcrumb.Sep />
+                        <Breadcrumb.Current
+                            title={stateSubtitle ? `${selectedMedia.source} — ${stateSubtitle.name || stateSubtitle.uuid}` : selectedMedia.source}
+                        >
                             {selectedMedia.source}
                             {stateSubtitle && (
-                                <> <span className="text-gray-400 font-normal">&rsaquo;</span> {stateSubtitle.name || stateSubtitle.uuid}</>
+                                <> <span className="text-text-tertiary font-normal">&rsaquo;</span> {stateSubtitle.name || stateSubtitle.uuid}</>
                             )}
-                        </span>
+                        </Breadcrumb.Current>
                     </>
                 )}
-                {stateLoading && <ProgressCircle size="sm" aria-label="Loading" />}
-            </nav>
+                {stateLoading && <ProgressCircle size="sm" className="shrink-0 ml-auto" aria-label="Loading" />}
+            </Breadcrumb>
 
-            {/* Toolbar */}
-            <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-xl bg-bg-card border border-border-default">
-                {!stateDatasetUUID && (
-                    <Button size="sm" variant="ghost" isDisabled={stateLoading}
-                        onPress={async () => {
-                            const result = await listDictationDatasets()
-                            if (result.status === 'success') setStateDatasetList(result.data)
-                        }}
-                    >
-                        <MdRefresh size={16} /> Refresh
-                    </Button>
-                )}
+            {/* Toolbar — a leading spacer right-aligns the contextual section,
+                matching the app's DictationPage bar. */}
+            <Toolbar mobile={mobile} className="@container">
+                <div className="flex-1 min-w-0" />
+
+                {/* ── Dictation section (cue view) ── */}
                 {!!stateMediaUUID && (
-                    <>
-                        <Button size="sm" variant={stateDictMode === 'large' ? 'primary' : 'secondary'}
-                            isDisabled={stateCues.length === 0}
-                            onPress={() => {
-                                if (stateDictMode === 'large') {
-                                    setStateDictMode('full')
-                                } else {
-                                    const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.uuid))
-                                    if (cueList.length > 0) setStateFocusedCueUUID(cueList[0].uuid)
-                                    setStateDictMode('large')
-                                }
-                            }}
-                        >
-                            Large
-                        </Button>
-                        <Button size="sm" variant={stateDictStatus === 'complete' ? 'primary' : 'secondary'}
-                            isDisabled={stateCues.length === 0}
-                            onPress={handleDictStatusToggle}
-                        >
-                            {stateDictStatus === 'complete' && <MdCheckCircle size={16} />}
-                            Complete
-                        </Button>
-                        <Tooltip isOpen={helpOpen} onOpenChange={setHelpOpen}>
-                            <Tooltip.Trigger>
-                                <Button size="sm" variant="ghost" onPress={() => setHelpOpen(true)}>
-                                    <MdHelpOutline size={16} /> Help
-                                </Button>
-                            </Tooltip.Trigger>
-                            <Tooltip.Content>
-                                <div className="flex flex-col gap-0.5">
-                                    <span>Play cue: Ctrl+S or double space at the end</span>
-                                    <span>Extend play: click the filled play button</span>
-                                    <span>Previous/Next cue: Ctrl+&#8593;/&#8595;</span>
-                                    <span>Punctuation and capitalization do not matter</span>
-                                </div>
-                            </Tooltip.Content>
-                        </Tooltip>
-                    </>
-                )}
-            </div>
-
-            {/* ── View 1: datasets ── */}
-            {!stateDatasetUUID && (
-                <div className="flex flex-col gap-3">
-                    <span className="text-xs text-gray-500 px-1">
-                        {stateDatasetList.length} dictation dataset{stateDatasetList.length !== 1 ? 's' : ''}
-                    </span>
-                    {stateDatasetList.length === 0 && !stateLoading && (
-                        <p className="text-gray-600">No dictation datasets available. Upload one in Dataset &rsaquo; Market.</p>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        {stateDatasetList.map((ds) => (
-                            <button
-                                key={ds.uuid}
-                                className="text-left p-4 border border-border-default rounded-xl bg-bg-card transition-colors hover:bg-bg-hover cursor-pointer flex flex-col gap-1"
-                                onClick={() => setStateDatasetUUID(ds.uuid)}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <span className="font-medium">{ds.name}</span>
-                                    <Chip size="sm">{ds.media_count} media</Chip>
-                                    {ds.language && <Chip size="sm" variant="secondary">{ds.language}</Chip>}
-                                </div>
-                                {ds.description && (
-                                    <span className="text-xs text-gray-500 line-clamp-2">{ds.description}</span>
-                                )}
-                                {!ds.is_owner && (
-                                    <span className="text-[11px] text-gray-400">{ds.visibility}</span>
-                                )}
-                            </button>
-                        ))}
+                    <div className="flex items-center gap-1">
+                        {/* Large mode is desktop-only: on a phone the focused cue already
+                            auto-enlarges to medium, and text-4xl would eat too much
+                            vertical space. */}
+                        {!mobile && (
+                            <ToolbarButton
+                                variant="toggle"
+                                active={stateDictMode === 'large'}
+                                icon={Target}
+                                label="Large"
+                                ariaLabel="Toggle large mode"
+                                title="Large"
+                                disabled={stateCues.length === 0}
+                                onClick={() => {
+                                    if (stateDictMode === 'large') {
+                                        setStateDictMode('full')
+                                    } else {
+                                        // Jump focus to the first incomplete cue when entering large mode.
+                                        const cueList = stateCues.filter((cue) => !stateDictSuccessSet.has(cue.uuid))
+                                        if (cueList.length > 0) setStateFocusedCueUUID(cueList[0].uuid)
+                                        setStateDictMode('large')
+                                    }
+                                }}
+                            />
+                        )}
+                        <ToolbarButton
+                            variant="toggle"
+                            active={stateDictStatus === 'complete'}
+                            icon={CheckCircle}
+                            label={stateDictStatus === 'complete' ? 'Completed' : 'Mark Completed'}
+                            title="Toggle completed"
+                            disabled={stateCues.length === 0}
+                            onClick={handleDictStatusToggle}
+                        />
+                        {/* Keyboard-shortcut help is desktop-only: the Ctrl+ combos need a
+                            hardware keyboard, and the touch equivalents (Clear / Show answer
+                            buttons, Play and the cue-step arrows) are visible on the phone.
+                            Plain tbGhost button so it can anchor the HeroUI Tooltip. */}
+                        {!mobile && (
+                            <Tooltip isOpen={helpOpen} onOpenChange={setHelpOpen}>
+                                <Tooltip.Trigger>
+                                    <button type="button" className={tbGhost} aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => setHelpOpen(true)}>
+                                        <HelpCircle size={14} /> Help
+                                    </button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span>Play Audio: Ctrl+s or double space at the end</span>
+                                        <span>Clear Input: Ctrl+d</span>
+                                        <span>Go to Previous/Next: Ctrl+&#11014;/&#11015;</span>
+                                        <span>Show Content/Reference: Ctrl+&#11013;/&#10145;</span>
+                                        <span>Punctuation and capitalization do not matter</span>
+                                    </div>
+                                </Tooltip.Content>
+                            </Tooltip>
+                        )}
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* ── View 2: media list ── */}
-            {stateDatasetUUID && !stateMediaUUID && (
-                <div className="flex flex-col gap-3">
-                    {stateMediaList.length === 0 && !stateLoading && (
-                        <p className="text-gray-600">No media in this dataset.</p>
-                    )}
-                    {stateMediaList.map((m) => (
-                        <div key={m.uuid} className="p-4 border border-border-default rounded-xl bg-bg-card flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium">{m.source}</span>
-                                {m.duration_ms !== null && (
-                                    <span className="text-xs text-gray-500">{Math.round(m.duration_ms / 1000)}s</span>
+                <ToolbarButton
+                    icon={RefreshCw}
+                    label={refreshCaption}
+                    ariaLabel={refreshCaption}
+                    title={refreshCaption}
+                    disabled={stateLoading}
+                    onClick={refresh}
+                />
+
+                {/* Cue editing lives in the overflow, visibly disabled: the machinery
+                    is fully wired but dormant while EDIT_ENABLED is false. */}
+                {!!stateMediaUUID && (
+                    <ToolbarOverflow label="Cue editing">
+                        <div className="px-3 py-1.5 text-xs text-text-tertiary">
+                            Cue editing is not available on the web yet
+                        </div>
+                        <ToolbarMenuItem icon={Pencil} disabled>Edit cues</ToolbarMenuItem>
+                        <ToolbarMenuItem icon={Save} disabled>Save subtitle</ToolbarMenuItem>
+                        <ToolbarMenuItem icon={Undo2} danger disabled>Discard edits</ToolbarMenuItem>
+                    </ToolbarOverflow>
+                )}
+
+                {/* ── Cue stepping + collapse toggle (cue view, mobile only) ── */}
+                {mobile && !!stateMediaUUID && (
+                    <div className="flex shrink-0 items-center gap-1">
+                        {/* Thick stroke: at 20px a default-weight arrow reads as a
+                            hairline on a phone and is easy to miss as a touch target. */}
+                        <ToolbarIconButton icon={ArrowUp} iconProps={{ strokeWidth: 3 }} size={20} ariaLabel="Previous cue" title="Previous cue" disabled={stateCues.length === 0} onClick={() => navigateCue(-1)} />
+                        <ToolbarIconButton icon={ArrowDown} iconProps={{ strokeWidth: 3 }} size={20} ariaLabel="Next cue" title="Next cue" disabled={stateCues.length === 0} onClick={() => navigateCue(1)} />
+                        <ToolbarIconButton
+                            icon={collapsed ? ChevronsUpDown : ChevronsDownUp}
+                            variant="toggle"
+                            active={collapsed}
+                            ariaLabel={collapsed ? 'Show player and waveform' : 'Hide everything except the cues'}
+                            onClick={handleToggleCollapsed}
+                        />
+                    </div>
+                )}
+            </Toolbar>
+
+            {/* Content area — the three mutually exclusive views render here. */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-4 gap-4">
+                {/* ── View 1: datasets ── */}
+                {!stateDatasetUUID && (
+                    <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-text-tertiary">
+                                {stateDatasetList.length} dictation dataset{stateDatasetList.length !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        {stateDatasetList.length === 0 && !stateLoading && (
+                            <p className="text-text-secondary">No dictation datasets available. Upload one in Dataset &rsaquo; Market.</p>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {stateDatasetList.map((ds) => (
+                                <DatasetCard
+                                    key={ds.uuid}
+                                    name={ds.name}
+                                    description={ds.description}
+                                    visibility={ds.visibility}
+                                    footer={`${ds.media_count} media${ds.language ? ` · ${ds.language}` : ''}`}
+                                    onClick={() => setStateDatasetUUID(ds.uuid)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── View 2: media list ── */}
+                {stateDatasetUUID && !stateMediaUUID && (
+                    <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto">
+                        {stateMediaList.length === 0 && !stateLoading && (
+                            <p className="text-text-secondary">No media in this dataset.</p>
+                        )}
+                        {stateMediaList.map((m) => (
+                            <div key={m.uuid} className="p-4 border rounded-lg flex flex-col gap-2 border-border-default">
+                                <span className="text-left font-medium text-text-primary">
+                                    {m.source}
+                                    {m.duration_ms !== null && (
+                                        <span className="ml-2 text-xs text-text-tertiary font-normal">{Math.round(m.duration_ms / 1000)}s</span>
+                                    )}
+                                </span>
+                                {m.subtitles.length > 0 ? (
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        <span className="text-xs text-text-tertiary">Subtitles:</span>
+                                        {m.subtitles.map((s) => (
+                                            <button
+                                                key={s.uuid}
+                                                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-accent-bg/30 border border-border-light cursor-pointer transition-colors hover:bg-accent-bg/60 hover:border-accent"
+                                                title={`Open dictation for "${s.name || s.uuid}"`}
+                                                onClick={() => selectMediaSubtitle(m.uuid, s.uuid)}
+                                            >
+                                                <Captions size={12} className="text-accent shrink-0" />
+                                                <span className="text-accent font-medium">{s.name || s.uuid}</span>
+                                                <span className="text-text-tertiary font-mono">(v{s.version})</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <span className="text-xs text-text-tertiary">No active subtitle — generate one in the app first.</span>
                                 )}
                             </div>
-                            {m.subtitles.length > 0 ? (
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                    <span className="text-xs text-gray-500">Subtitles:</span>
-                                    {m.subtitles.map((s) => (
-                                        <button
-                                            key={s.uuid}
-                                            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-bg-muted border border-border-default cursor-pointer transition-colors hover:border-blue-400"
-                                            title={`Open dictation for "${s.name || s.uuid}"`}
-                                            onClick={() => selectMediaSubtitle(m.uuid, s.uuid)}
-                                        >
-                                            <span className="text-blue-600 font-medium">{s.name || s.uuid}</span>
-                                            <span className="text-gray-400 font-mono">(v{s.version})</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <span className="text-xs text-gray-400">No active subtitle — generate one in the app first.</span>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
+                        ))}
+                    </div>
+                )}
 
-            {/* ── View 3: practice ── */}
-            {!!stateMediaUUID && (
-                <div className="flex flex-col gap-3">
-                    {mediaSrc && (
-                        <div className="flex flex-col gap-1 w-full sticky top-12 z-10 bg-bg-body rounded-xl p-2">
-                            {audioMode ? (
-                                <HlsPlayer className="w-full" videoRef={videoRef} src={mediaSrc} audioMode={true} />
-                            ) : (
-                                <div className="rounded-xl overflow-hidden shadow-lg bg-black">
-                                    <HlsPlayer className="w-full" videoRef={videoRef} src={mediaSrc} />
-                                </div>
+                {/* ── View 3: practice ── */}
+                {!!stateMediaUUID && (
+                    <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-hidden">
+                        {/* Player — hidden, never unmounted, while collapsed: the media
+                            element owns playback for the cue Play buttons (via videoRef),
+                            and the canvas keeps its ResizeObserver/media listeners. */}
+                        <div className={`${collapsed ? 'hidden' : 'flex'} flex-col gap-1 shrink-0 w-full sticky top-0 z-10 bg-bg-body`}>
+                            {mediaSrc && (
+                                audioMode ? (
+                                    <HlsPlayer className="w-full" videoRef={videoRef} src={mediaSrc} audioMode={true} />
+                                ) : (
+                                    <div className="rounded-xl overflow-hidden shadow-lg bg-black">
+                                        <HlsPlayer className="w-full" videoRef={videoRef} src={mediaSrc} />
+                                    </div>
+                                )
                             )}
                             {stateWaveformPeaks && (
-                                <div className="hidden lg:block bg-bg-card border-t border-border-default p-1 shadow-lg rounded-lg">
+                                <div className="hidden lg:block bg-bg-muted border-t border-border-light p-1 shadow-lg rounded-lg">
                                     <WaveformCanvas
                                         peaks={stateWaveformPeaks}
                                         videoRef={videoRef}
@@ -617,54 +738,63 @@ export default function Client({ user_id }: Props) {
                                 </div>
                             )}
                         </div>
-                    )}
 
-                    {subtitleList.length > 1 && (
-                        <Select
-                            value={stateSubtitle?.uuid ?? null}
-                            onChange={(v) => setStateSubtitle(subtitleList.find((s) => s.uuid === String(v ?? '')))}
-                        >
-                            <Label>Select subtitle</Label>
-                            <Select.Trigger>
-                                <Select.Value />
-                                <Select.Indicator />
-                            </Select.Trigger>
-                            <Select.Popover>
-                                <ListBox>
-                                    {subtitleList.map((s) => (
-                                        <ListBox.Item id={s.uuid} key={s.uuid} textValue={s.name || s.uuid}>
-                                            {s.name || s.uuid}
-                                        </ListBox.Item>
-                                    ))}
-                                </ListBox>
-                            </Select.Popover>
-                        </Select>
-                    )}
+                        {/* Dictation */}
+                        <div className="flex flex-col w-full gap-3 flex-1 min-h-0 overflow-hidden">
+                            {/* ── Fixed header ── */}
+                            {!collapsed && (
+                                <div className="shrink-0 flex flex-col gap-3">
+                                    {subtitleList.length > 1 && (
+                                        <Select
+                                            value={stateSubtitle?.uuid ?? null}
+                                            onChange={(v) => setStateSubtitle(subtitleList.find((s) => s.uuid === String(v ?? '')))}
+                                        >
+                                            <Label>Select subtitle</Label>
+                                            <Select.Trigger>
+                                                <Select.Value />
+                                                <Select.Indicator />
+                                            </Select.Trigger>
+                                            <Select.Popover>
+                                                <ListBox>
+                                                    {subtitleList.map((s) => (
+                                                        <ListBox.Item id={s.uuid} key={s.uuid} textValue={s.name || s.uuid}>
+                                                            {s.name || s.uuid}
+                                                        </ListBox.Item>
+                                                    ))}
+                                                </ListBox>
+                                            </Select.Popover>
+                                        </Select>
+                                    )}
 
-                    {stateCues.length > 0 && (
-                        <div className="flex items-center px-1">
-                            <span className="flex-1 text-sm text-gray-500">
-                                {stateDictSuccessSet.size} / {stateCues.length} &#10003;
-                            </span>
+                                    {stateCues.length > 0 && (
+                                        <div className="flex items-center px-1">
+                                            <span className="flex-1 text-sm text-text-tertiary">
+                                                {stateDictSuccessSet.size} / {stateCues.length} &#10003;
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ── Scrollable cue cards ── */}
+                            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pb-48">
+                                {stateNeedSave && (
+                                    <div className="flex flex-row items-end justify-end fixed bottom-10 end-10 p-4 z-10 gap-2">
+                                        <Button size="lg" variant="danger" onPress={handleDiscard}>Discard</Button>
+                                        <Button size="lg" isDisabled={stateSaving} variant="danger" onPress={handleSaveSubtitle}>Save</Button>
+                                    </div>
+                                )}
+
+                                {!stateLoading && stateCues.length === 0 && (
+                                    <p className="text-text-secondary">No cues for this subtitle.</p>
+                                )}
+
+                                {largeVisibleCues.map((cue) => renderCueCard(cue))}
+                            </div>
                         </div>
-                    )}
-
-                    {!stateLoading && stateCues.length === 0 && (
-                        <p className="text-gray-600">No cues for this subtitle.</p>
-                    )}
-
-                    {stateNeedSave && (
-                        <div className="flex flex-row items-end justify-end fixed bottom-10 end-10 p-4 z-10 gap-2">
-                            <Button size="lg" variant="danger" onPress={handleDiscard}>Discard</Button>
-                            <Button size="lg" isDisabled={stateSaving} variant="danger" onPress={handleSaveSubtitle}>Save</Button>
-                        </div>
-                    )}
-
-                    <div className="flex flex-col w-full gap-3">
-                        {largeVisibleCues.map((cue) => renderCueCard(cue))}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     )
 }
