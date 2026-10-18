@@ -8,6 +8,12 @@ import TopBar from './TopBar';
 const RAIL_KEY = 'fms-sidebar-rail';
 const WIDTH_KEY = 'fms-sidebar-width';
 
+// Routes rendered in the desktop app's fixed-window style: edge-to-edge flat
+// bars and an internally scrolling content area instead of the centered,
+// body-scrolling container every other page uses. Exact match or a subpath of
+// one of these five prefixes only — no other route can opt in by accident.
+const FULL_BLEED_PREFIXES = ['/listen/dictation', '/speak/read', '/speak/practice', '/cards', '/wiki'];
+
 const RAIL_WIDTH = 48;
 const MIN_WIDTH = 120;
 const MAX_WIDTH = 320;
@@ -47,6 +53,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const rail = useSyncExternalStore(subscribe, getRailSnapshot, () => false);
     const storedWidth = useSyncExternalStore(subscribe, getWidthSnapshot, () => DEFAULT_WIDTH);
+    const fullBleed = FULL_BLEED_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'));
 
     // Live drag width, kept out of localStorage until the pointer is released.
     const [dragWidth, setDragWidth] = useState<number | null>(null);
@@ -136,7 +143,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 style={{ transition: dragging ? 'none' : 'margin-left 200ms' }}
             >
                 <TopBar onOpenDrawer={() => setDrawerAt(pathname)} />
-                <main className="container mx-auto flex-1 w-full px-2 sm:px-4 py-4 pb-20">
+                <main className={fullBleed
+                    ? "flex-1 min-h-0 w-full h-[calc(100dvh-3rem)] overflow-hidden flex flex-col"
+                    : "container mx-auto flex-1 w-full px-2 sm:px-4 py-4 pb-20"}>
                     {children}
                 </main>
             </div>
