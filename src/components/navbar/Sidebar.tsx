@@ -56,8 +56,8 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
 
     return (
         <aside className={
-            `flex flex-col h-full border-r border-sand-300 bg-sand-200 select-none ` +
-            (rail ? 'w-12 items-center px-1 py-2 gap-1' : 'w-44 px-2 py-2 gap-1')
+            `flex flex-col h-full w-full border-r border-sand-300 bg-sand-200 select-none ` +
+            (rail ? 'items-center px-1 py-2 gap-1' : 'px-2 py-2 gap-1')
         }>
             {/* Brand */}
             <div className={`flex items-center shrink-0 ${rail ? 'justify-center' : 'justify-between px-1'} py-1`}>
@@ -77,7 +77,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
             </div>
 
             {/* Auth row */}
-            <div className={`flex items-center w-full rounded-lg transition-colors shrink-0 ${
+            <div data-no-toggle className={`flex items-center w-full rounded-lg transition-colors shrink-0 ${
                 rail ? 'justify-center px-0 py-1.5' : 'gap-2 px-2 py-1.5'
             } hover:bg-sand-300/60 ${user ? 'cursor-pointer' : ''}`}
                 title={user ? (rail ? `${user.name} (click to logout)` : 'Click to logout') : 'Login'}
