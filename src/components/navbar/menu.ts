@@ -1,97 +1,105 @@
-import type { IconType } from 'react-icons';
+import type { ComponentType } from 'react';
 import {
-    MdTranslate, MdStar, MdFormatQuote,
-    MdHearing, MdGraphicEq, MdRecordVoiceOver, MdMenuBook,
-    MdStyle, MdNoteAdd, MdLibraryBooks, MdTune, MdQuiz, MdTrendingUp, MdTableRows,
-    MdArticle, MdFeed, MdEditNote, MdPeople,
-    MdStorage, MdLabel, MdStorefront, MdCloudQueue,
-    MdBuild, MdEventNote, MdInsights, MdPictureAsPdf,
-    MdSettings, MdSettingsApplications, MdKey,
-} from 'react-icons/md';
+    Headphones, BookOpen, Layers, BookOpenText,
+    Languages, Star, Quote,
+    SquareStack, FilePlus, Library, SlidersHorizontal, GraduationCap, TrendingUp, Table,
+    Newspaper, FileText, SquarePen, Users,
+    Database, Tag, Store, Cloud,
+    Wrench, CalendarDays, ChartColumn, FileType,
+    Settings, Settings2, KeyRound,
+} from 'lucide-react';
+import MicGlyph from '@/components/design/MicGlyph';
+
+/**
+ * lucide icons plus the app's MicGlyph wrapper, which is a plain function
+ * component rather than a LucideIcon and so cannot share its type.
+ */
+export type MenuIcon = ComponentType<{ size?: number; className?: string }>;
 
 export type MenuItem = {
     key: string;
     name: string;
     description: string;
     href: string;
-    icon?: IconType;
+    icon: MenuIcon;
 }
 
 export type MenuGroup = {
     name: string;
-    icon: IconType;
+    icon: MenuIcon;
     items: MenuItem[];
 }
+
+/**
+ * Top-level entries, rendered above the groups and reachable in one click.
+ * Mirrors fms-app's rootTabs (Sidebar.tsx:89-96), down to the icons: the first
+ * five are the ones the app uses for the same five tabs. Cards and Wiki point at
+ * routes that do not exist yet: the card pages under /card/* are the old
+ * pre-dataset system, and the site has no wiki.
+ */
+export const rootMenuItems: MenuItem[] = [
+    { key: "listen_dictation", name: "Dictation", description: "dictation practice from datasets", href: "/listen/dictation", icon: Headphones },
+    { key: "read_book_main", name: "Read a Book", description: "read a book from datasets", href: "/speak/read", icon: BookOpen },
+    { key: "speak_practice", name: "Read Aloud", description: "record yourself reading a text", href: "/speak/practice", icon: MicGlyph },
+    { key: "cards", name: "Cards", description: "dataset-based cards (not built yet)", href: "/cards", icon: Layers },
+    { key: "wiki", name: "Wiki", description: "wiki (not built yet)", href: "/wiki", icon: BookOpenText },
+];
 
 export const menuList: MenuGroup[] = [
     {
         name: "Word",
-        icon: MdTranslate,
+        icon: Languages,
         items: [
-            { key: "word_top", name: "Top Words", description: "top words", href: "/word/top", icon: MdStar },
-            { key: "word_sentence", name: "Sentence", description: "search sentences", href: "/word/sentence", icon: MdFormatQuote },
-        ],
-    },
-    {
-        name: "Listen & Speak",
-        icon: MdHearing,
-        items: [
-            { key: "seperator_listen", name: "Listen", description: "", href: "" },
-
-            { key: "listen_dictation", name: "Dictation", description: "dictation practice from datasets", href: "/listen/dictation", icon: MdGraphicEq },
-
-            { key: "seperator_speak", name: "Speak", description: "", href: "" },
-            { key: "speak_practice", name: "Practice", description: "practice", href: "/speak/practice", icon: MdRecordVoiceOver },
-
-            { key: "seperator_read", name: "Read", description: "", href: "" },
-            { key: "read_book_main", name: "Reading", description: "read a book from datasets", href: "/speak/read", icon: MdMenuBook },
+            { key: "word_top", name: "Top Words", description: "top words", href: "/word/top", icon: Star },
+            { key: "word_sentence", name: "Sentence", description: "search sentences", href: "/word/sentence", icon: Quote },
         ],
     },
     {
         name: "Card",
-        icon: MdStyle,
+        icon: SquareStack,
         items: [
-            { key: "card_add", name: "Add Card", description: "add new card", href: "/card/add?edit=y", icon: MdNoteAdd },
-            { key: "card_my", name: "My Cards", description: "my cards", href: "/card/my", icon: MdLibraryBooks },
-            { key: "card_manage", name: "Manage Cards", description: "manage cards", href: "/card/manage", icon: MdTune },
-            { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test", icon: MdQuiz },
-            { key: "card_improve", name: "Improve Cards", description: "review AI-suggested improvements", href: "/card/improve", icon: MdTrendingUp },
-            { key: "card_table", name: "Card Table", description: "all cards in a table view", href: "/card/table", icon: MdTableRows },
+            { key: "card_add", name: "Add Card", description: "add new card", href: "/card/add?edit=y", icon: FilePlus },
+            { key: "card_my", name: "My Cards", description: "my cards", href: "/card/my", icon: Library },
+            { key: "card_manage", name: "Manage Cards", description: "manage cards", href: "/card/manage", icon: SlidersHorizontal },
+            { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test", icon: GraduationCap },
+            { key: "card_improve", name: "Improve Cards", description: "review AI-suggested improvements", href: "/card/improve", icon: TrendingUp },
+            { key: "card_table", name: "Card Table", description: "all cards in a table view", href: "/card/table", icon: Table },
         ],
     },
     {
         name: "Blog",
-        icon: MdArticle,
+        icon: Newspaper,
         items: [
-            { key: "blog_index", name: "Blog", description: "all blogs", href: "/blog", icon: MdFeed },
-            { key: "blog_add", name: "Add Blog", description: "add new blog", href: "/blog/add", icon: MdEditNote },
-            { key: "blog_all_of_others", name: "View Blogs By Others", description: "blogs by others", href: "/blog/all_of_others", icon: MdPeople },
+            { key: "blog_index", name: "Blog", description: "all blogs", href: "/blog", icon: FileText },
+            { key: "blog_add", name: "Add Blog", description: "add new blog", href: "/blog/add", icon: SquarePen },
+            { key: "blog_all_of_others", name: "View Blogs By Others", description: "blogs by others", href: "/blog/all_of_others", icon: Users },
         ],
     },
     {
         name: "Dataset",
-        icon: MdStorage,
+        icon: Database,
         items: [
-            { key: "dataset_tag", name: "Tags", description: "manage tags for all features", href: "/dataset/tag", icon: MdLabel },
-            { key: "dataset_market", name: "Market", description: "datasets shared by others", href: "/dataset/market", icon: MdStorefront },
-            { key: "dataset_manage", name: "My Datasets", description: "visibility, tags and deletion", href: "/dataset/manage", icon: MdCloudQueue },
+            { key: "dataset_tag", name: "Tags", description: "manage tags for all features", href: "/dataset/tag", icon: Tag },
+            { key: "dataset_market", name: "Market", description: "datasets shared by others", href: "/dataset/market", icon: Store },
+            { key: "dataset_manage", name: "My Datasets", description: "visibility, tags and deletion", href: "/dataset/manage", icon: Cloud },
         ],
     },
     {
         name: "Tools",
-        icon: MdBuild,
+        icon: Wrench,
         items: [
-            { key: "plan_main", name: "Plan", description: "make plans", href: "/plan", icon: MdEventNote },
-            { key: "tools_stats", name: "Learning Stats", description: "XP, progress and practice history", href: "/stats", icon: MdInsights },
-            { key: "tools_pdf_reader", name: "PDF Reader", description: "PDF reader", href: "/tools/pdf_reader", icon: MdPictureAsPdf },
+            { key: "plan_main", name: "Plan", description: "make plans", href: "/plan", icon: CalendarDays },
+            { key: "tools_stats", name: "Learning Stats", description: "XP, progress and practice history", href: "/stats", icon: ChartColumn },
+            { key: "tools_pdf_reader", name: "PDF Reader", description: "PDF reader", href: "/tools/pdf_reader", icon: FileType },
         ],
     },
+    // Last on purpose: the app renders Settings at the bottom of the nav.
     {
         name: "Settings",
-        icon: MdSettings,
+        icon: Settings,
         items: [
-            { key: "settings_general", name: "General", description: "General settings", href: "/settings/general", icon: MdSettingsApplications },
-            { key: "settings_api", name: "API", description: "view APIs", href: "/settings/api", icon: MdKey },
+            { key: "settings_general", name: "General", description: "General settings", href: "/settings/general", icon: Settings2 },
+            { key: "settings_api", name: "API", description: "view APIs", href: "/settings/api", icon: KeyRound },
         ],
     },
 ];

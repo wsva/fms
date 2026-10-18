@@ -3,21 +3,11 @@
 import { useState } from 'react';
 import NextLink from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Link } from '@heroui/react';
-import {
-    MdExpandMore,
-    MdExpandLess,
-    MdChevronLeft,
-    MdChevronRight,
-    MdClose,
-    MdLogout,
-    MdPerson,
-} from 'react-icons/md';
-import { menuList } from './menu';
+import { ChevronRight, ChevronsLeft, ChevronsRight, LogOut, User, X } from 'lucide-react';
+import { menuList, rootMenuItems } from './menu';
 import { hrefPath } from '@/lib/nav-crumbs';
 import { useSession } from '@/components/SessionProvider';
 import { authClient } from '@/lib/auth-client';
-import NavIcon from '@/components/design/NavIcon';
 
 const ACCENT = 'bg-accent/80 text-white';
 
@@ -48,7 +38,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
         setExpanded(prev => ({ ...prev, [name]: !(prev[name] ?? true) }));
 
     const groupHasActive = (group: (typeof menuList)[number]) =>
-        group.items.some(item => !/^seperator_/.test(item.key) && isActive(pathname, item.href));
+        group.items.some(item => isActive(pathname, item.href));
 
     const handleLogin = async () => {
         await authClient.signIn.social({ provider: "wsva_oauth2", callbackURL: redirectUrl });
@@ -59,22 +49,17 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
             `flex flex-col h-full w-full border-r border-border-default bg-bg-body select-none ` +
             (rail ? 'items-center px-1 py-2 gap-1' : 'px-2 py-2 gap-1')
         }>
-            {/* Brand */}
-            <div className={`flex items-center shrink-0 ${rail ? 'justify-center' : 'justify-between px-1'} py-1`}>
-                <Link href="/" className="flex items-center gap-2" onPress={onClose}>
-                    <NavIcon size={rail ? 28 : 34} />
-                    {!rail && <span className="font-bold text-lg">FmS</span>}
-                </Link>
-                {isDrawer && (
+            {isDrawer && (
+                <div className="flex items-center justify-end shrink-0 px-1 py-1">
                     <button
                         aria-label="Close menu"
                         className="p-1.5 rounded-md text-gray-600 hover:bg-bg-hover"
                         onClick={onClose}
                     >
-                        <MdClose size={20} />
+                        <X size={20} />
                     </button>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Auth row */}
             <div data-no-toggle className={`flex items-center w-full rounded-lg transition-colors shrink-0 ${
@@ -89,11 +74,11 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                             {(user.name || user.email).charAt(0).toUpperCase()}
                         </span>
                         {!rail && <span className="text-xs font-medium truncate flex-1 text-left">{user.name}</span>}
-                        {!rail && <MdLogout size={14} className="text-gray-400 shrink-0" />}
+                        {!rail && <LogOut size={14} className="text-gray-400 shrink-0" />}
                     </>
                 ) : (
                     <>
-                        <MdPerson size={18} className="text-gray-500 shrink-0" />
+                        <User size={18} className="text-gray-500 shrink-0" />
                         {!rail && <span className="text-xs font-medium text-gray-500">Login</span>}
                     </>
                 )}
@@ -102,6 +87,42 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
 
             {/* Nav */}
             <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 w-full">
+                {/* Root entries: one click, no group to expand */}
+                {rootMenuItems.map(item => {
+                    const ItemIcon = item.icon;
+                    const active = isActive(pathname, item.href);
+                    if (rail) {
+                        return (
+                            <NextLink
+                                key={item.key}
+                                href={item.href}
+                                title={item.name}
+                                className={
+                                    'flex items-center justify-center h-9 w-9 mx-auto rounded-lg transition-colors ' +
+                                    (active ? ACCENT : 'text-gray-600 hover:bg-bg-hover')
+                                }
+                            >
+                                <ItemIcon size={20} />
+                            </NextLink>
+                        );
+                    }
+                    return (
+                        <NextLink
+                            key={item.key}
+                            href={item.href}
+                            onClick={onClose}
+                            title={item.description}
+                            className={
+                                'flex items-center gap-2 w-full rounded-lg p-2 transition-colors ' +
+                                (active ? ACCENT : 'text-gray-600 hover:bg-bg-hover')
+                            }
+                        >
+                            <ItemIcon size={20} className="shrink-0" />
+                            <span className="text-sm font-medium flex-1 truncate text-left">{item.name}</span>
+                        </NextLink>
+                    );
+                })}
+
                 {menuList.map(group => {
                     const GroupIcon = group.icon;
                     if (rail) {
@@ -133,20 +154,12 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                             >
                                 <GroupIcon size={20} className="shrink-0" />
                                 <span className="text-sm font-medium flex-1 truncate text-left">{group.name}</span>
-                                {open ? <MdExpandLess size={18} /> : <MdExpandMore size={18} />}
+                                <ChevronRight size={18} className={`shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
                             </button>
 
                             {open && (
                                 <div className="flex flex-col gap-0.5 mt-0.5">
                                     {group.items.map(item => {
-                                        if (/^seperator_/.test(item.key)) {
-                                            return (
-                                                <div key={item.key}
-                                                    className="pl-10 pt-2 pb-0.5 text-[10px] uppercase tracking-wide text-gray-400 font-bold select-none">
-                                                    {item.name}
-                                                </div>
-                                            );
-                                        }
                                         const active = isActive(pathname, item.href);
                                         const ItemIcon = item.icon;
                                         return (
@@ -160,7 +173,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                                                     (active ? ACCENT : 'text-gray-600 hover:bg-bg-hover')
                                                 }
                                             >
-                                                {ItemIcon && <ItemIcon size={18} className="shrink-0" />}
+                                                <ItemIcon size={18} className="shrink-0" />
                                                 <span className="text-xs font-medium truncate">{item.name}</span>
                                             </NextLink>
                                         );
@@ -180,7 +193,7 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                     title={rail ? 'Expand sidebar' : 'Collapse sidebar'}
                     className="flex items-center justify-center h-9 w-9 mx-auto mt-1 rounded-lg text-gray-500 hover:bg-bg-hover shrink-0"
                 >
-                    {rail ? <MdChevronRight size={20} /> : <MdChevronLeft size={20} />}
+                    {rail ? <ChevronsRight size={20} /> : <ChevronsLeft size={20} />}
                 </button>
             )}
         </aside>

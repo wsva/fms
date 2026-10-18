@@ -1,4 +1,4 @@
-import { menuList } from "@/components/navbar/menu";
+import { menuList, rootMenuItems } from "@/components/navbar/menu";
 
 export type Crumb = {
     label: string;
@@ -11,27 +11,34 @@ export function hrefPath(href: string): string {
     return href.split("?")[0];
 }
 
+type MenuEntry = { name: string; href: string; path: string; group?: string };
+
 /**
  * Derive a breadcrumb trail from the current pathname using the sidebar menu as
- * the only source of human names. The deepest menu item whose path prefixes the
+ * the only source of human names. The deepest menu entry whose path prefixes the
  * pathname anchors the trail; any segments below it are appended as raw crumbs.
+ * Root entries carry no group, so their trail is one crumb shorter.
  */
 export function getBreadcrumbs(pathname: string): Crumb[] {
     const clean = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
     const segments = clean.split("/").filter(Boolean);
 
-    // Deepest menu item whose path is the pathname itself or a prefix of it.
-    let best: { name: string; href: string; group: string; path: string } | null = null;
-    for (const group of menuList) {
-        for (const item of group.items) {
-            if (/^seperator_/.test(item.key)) continue;
-            const path = hrefPath(item.href);
-            if (!path || path === "/") continue;
-            if (clean === path || clean.startsWith(path + "/")) {
-                if (!best || path.length > best.path.length) {
-                    best = { name: item.name, href: item.href, group: group.name, path };
-                }
-            }
+    const entries: MenuEntry[] = [
+        ...rootMenuItems.map(item => ({ name: item.name, href: item.href, path: hrefPath(item.href) })),
+        ...menuList.flatMap(group => group.items.map(item => ({
+            name: item.name,
+            href: item.href,
+            path: hrefPath(item.href),
+            group: group.name,
+        }))),
+    ];
+
+    // Deepest entry whose path is the pathname itself or a prefix of it.
+    let best: MenuEntry | null = null;
+    for (const entry of entries) {
+        if (!entry.path || entry.path === "/") continue;
+        if (clean === entry.path || clean.startsWith(entry.path + "/")) {
+            if (!best || entry.path.length > best.path.length) best = entry;
         }
     }
 
@@ -39,23 +46,17 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
 
     if (!best) {
         // Nothing in the menu matches: fall back to the raw path segments.
-        segments.forEach((seg, i) => {
-            const isLast = i === segments.length - 1;
-            crumbs.push({ label: decodeURIComponent(seg), href: isLast ? undefined : undefined });
-        });
-        return crumbs;
+        return [...crumbs, ...segments.map(seg => ({ label: decodeURIComponent(seg) }))];
     }
 
-    crumbs.push({ label: best.group });
+    if (best.group) crumbs.push({ label: best.group });
     const itemDepth = best.path.split("/").filter(Boolean).length;
     const onItem = clean === best.path;
     crumbs.push({ label: best.name, href: onItem ? undefined : best.href });
 
-    // Any path segments deeper than the matched item become raw trailing crumbs.
-    const rest = segments.slice(itemDepth);
-    rest.forEach((seg, i) => {
-        const isLast = i === rest.length - 1;
-        crumbs.push({ label: decodeURIComponent(seg), href: isLast ? undefined : undefined });
+    // Any path segments deeper than the matched entry become raw trailing crumbs.
+    segments.slice(itemDepth).forEach(seg => {
+        crumbs.push({ label: decodeURIComponent(seg) });
     });
 
     return crumbs;
