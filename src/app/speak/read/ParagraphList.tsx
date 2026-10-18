@@ -1,15 +1,10 @@
 'use client'
 
 import { useRef } from 'react'
-import { Button, Tooltip } from "@heroui/react"
-import { CirclePlay, Copy, FileArrowUp, TrashBin, Plus } from "@gravity-ui/icons"
-import { Paragraph, SentenceClient } from './types'
-import { BG_COLORS } from './SentenceDrawer'
-
-function sentenceBgClass(bgColor: string | null | undefined): string {
-    if (!bgColor) return ''
-    return BG_COLORS.find(c => c.key === bgColor)?.bg ?? ''
-}
+import { Copy, FileDown, Play, Plus, Trash2, Upload } from 'lucide-react'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { sentenceBgClass } from './types'
+import type { Paragraph, SentenceClient } from './types'
 
 type Props = {
     paragraphs: Paragraph[]
@@ -26,100 +21,94 @@ export default function ParagraphList({
     paragraphs, viewMode, saving, allowEdit, onEditSentence, onAddSentence, onDeleteParagraph, onParagraphAudio,
 }: Props) {
     const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
+    // Comfortable tap targets on narrow touch screens; compact on desktop.
+    const mobile = useIsMobile()
+    const iconPad = mobile ? 'p-2' : 'p-1'
+    const textBtnPad = mobile ? 'px-2 py-2' : 'px-2 py-1'
 
     return (
         <div className="flex flex-col gap-4">
             {paragraphs.map((para, pi) => (
                 <div key={pi}
-                    className={[
-                        'flex flex-col gap-2 p-3 rounded-lg',
-                        pi % 2 === 0 ? 'bg-bg-card' : 'bg-bg-body',
-                    ].join(' ')}
+                    className={`flex flex-col gap-2 p-3 rounded-lg border border-border-default ${pi % 2 === 0 ? 'bg-bg-card' : 'bg-bg-muted'}`}
                 >
                     {/* Paragraph badge + actions */}
                     <div className="flex flex-row items-center justify-between">
-                        <div className="text-xs font-semibold text-foreground-400 select-none">¶ {pi + 1}</div>
+                        <div className="text-xs font-semibold text-text-tertiary select-none">¶ {pi + 1}</div>
                         <div className="flex flex-row items-center gap-1">
-                            {allowEdit && (
-                                <input
-                                    type="file" accept="audio/*"
-                                    className="hidden"
-                                    ref={el => { fileInputRefs.current[pi] = el }}
-                                    onChange={e => {
-                                        const file = e.target.files?.[0]
-                                        if (file) {
-                                            if (para.breakSentence?.audio_path && !window.confirm('This paragraph already has audio. Replace it?')) {
-                                                e.target.value = ''
-                                                return
-                                            }
-                                            onParagraphAudio(para, file)
+                            <input
+                                type="file" accept="audio/*"
+                                className="hidden"
+                                ref={el => { fileInputRefs.current[pi] = el }}
+                                onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    if (file) {
+                                        if (para.breakSentence?.audio_path && !window.confirm('This paragraph already has audio. Replace it?')) {
+                                            e.target.value = ''
+                                            return
                                         }
-                                        e.target.value = ''
-                                    }}
-                                />
-                            )}
+                                        onParagraphAudio(para, file)
+                                    }
+                                    e.target.value = ''
+                                }}
+                            />
                             {para.sentences.length > 0 && (
-                                <Button isIconOnly size="sm" variant="tertiary"
-                                    onPress={() => navigator.clipboard.writeText(
+                                <button
+                                    title="Copy paragraph text"
+                                    className={`${iconPad} rounded hover:bg-bg-hover text-text-secondary cursor-pointer`}
+                                    onClick={() => navigator.clipboard.writeText(
                                         para.sentences.map(s => s.content.trim()).join(' ')
                                     )}
                                 >
-                                    <Copy />
-                                </Button>
+                                    <Copy size={16} />
+                                </button>
                             )}
                             {para.breakSentence?.play_url && (
-                                <Tooltip>
-                                    <Tooltip.Trigger>
-                                        <Button isIconOnly size="sm" variant="tertiary"
-                                            onPress={() => new Audio(para.breakSentence!.play_url!).play()}
-                                        >
-                                            <CirclePlay />
-                                        </Button>
-                                    </Tooltip.Trigger>
-                                    <Tooltip.Content>
-                                        play paragraph audio
-                                    </Tooltip.Content>
-                                </Tooltip>
-                            )}
-                            {allowEdit && (
-                                <Tooltip>
-                                    <Tooltip.Trigger>
-                                        <Button isIconOnly size="sm" variant='tertiary'
-                                            isDisabled={saving}
-                                            onPress={() => fileInputRefs.current[pi]?.click()}
-                                        >
-                                            <FileArrowUp color={para.breakSentence?.audio_path ? 'red' : ''} />
-                                        </Button>
-                                    </Tooltip.Trigger>
-                                    <Tooltip.Content>
-                                        {para.breakSentence?.audio_path ? 'replace audio' : 'upload audio'}
-                                    </Tooltip.Content>
-                                </Tooltip>
-                            )}
-                            {allowEdit && (para.sentences.length > 0 || para.breakSentence) && (
-                                <Button isIconOnly size="sm" variant='tertiary'
-                                    isDisabled={saving}
-                                    onPress={() => onDeleteParagraph(para)}
+                                <button
+                                    title="Play paragraph audio"
+                                    className={`${iconPad} rounded hover:bg-bg-hover text-text-secondary cursor-pointer`}
+                                    onClick={() => new Audio(para.breakSentence!.play_url!).play()}
                                 >
-                                    <TrashBin color='red' />
-                                </Button>
+                                    <Play size={16} />
+                                </button>
+                            )}
+                            <button
+                                title={allowEdit
+                                    ? (para.breakSentence?.audio_path ? 'Replace audio' : 'Upload audio')
+                                    : 'Audio upload is not available on the web yet'}
+                                disabled={saving || !allowEdit}
+                                className={`${iconPad} rounded hover:bg-bg-hover disabled:opacity-40 cursor-pointer`}
+                                style={{ color: para.breakSentence?.audio_path ? '#e5484d' : undefined }}
+                                onClick={() => fileInputRefs.current[pi]?.click()}
+                            >
+                                <Upload size={16} />
+                            </button>
+                            {(para.sentences.length > 0 || para.breakSentence) && (
+                                <button
+                                    title={allowEdit ? 'Delete paragraph' : 'Paragraph editing is not available on the web yet'}
+                                    disabled={saving || !allowEdit}
+                                    className={`${iconPad} rounded hover:bg-bg-hover text-red-500 disabled:opacity-40 cursor-pointer`}
+                                    onClick={() => onDeleteParagraph(para)}
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             )}
                         </div>
                     </div>
 
                     {/* Sentences */}
                     {para.sentences.length === 0 ? (
-                        <p className="text-sm text-foreground-400 italic">empty paragraph</p>
+                        <p className="text-sm text-text-tertiary italic">empty paragraph</p>
                     ) : viewMode === 'inline' ? (
-                        <p className="text-xl leading-relaxed">
+                        <p className="text-xl leading-relaxed text-text-primary">
                             {para.sentences.map(s => (
                                 <a
                                     key={s.uuid}
                                     onClick={() => onEditSentence(s)}
                                     className={[
                                         'inline cursor-pointer rounded px-0.5 transition-colors',
-                                        s.modified ? 'bg-bg-muted' : (sentenceBgClass(s.bg_color) || 'hover:bg-bg-hover'),
-                                        s.play_url || s.hasLocalAudio ? 'underline decoration-primary decoration-2' : '',
+                                        s.modified ? 'bg-bg-hover' : (sentenceBgClass(s.bg_color) || 'hover:bg-bg-hover'),
+                                        s.play_url || s.hasLocalAudio ? 'underline decoration-accent decoration-2' : '',
                                     ].join(' ')}
                                 >
                                     {s.content}{' '}
@@ -133,9 +122,9 @@ export default function ParagraphList({
                                     key={s.uuid}
                                     onClick={() => onEditSentence(s)}
                                     className={[
-                                        'text-left text-xl cursor-pointer rounded px-2 py-0.5 transition-colors',
-                                        s.modified ? 'bg-bg-muted' : (sentenceBgClass(s.bg_color) || 'hover:bg-bg-hover'),
-                                        s.play_url || s.hasLocalAudio ? 'border-l-2 border-primary' : '',
+                                        'text-left text-xl cursor-pointer rounded px-2 py-0.5 transition-colors text-text-primary',
+                                        s.modified ? 'bg-bg-hover' : (sentenceBgClass(s.bg_color) || 'hover:bg-bg-hover'),
+                                        s.play_url || s.hasLocalAudio ? 'border-l-2 border-accent' : '',
                                     ].join(' ')}
                                 >
                                     {s.content}
@@ -144,17 +133,26 @@ export default function ParagraphList({
                         </div>
                     )}
 
-                    {/* Add Sentence button */}
-                    {allowEdit && (
-                        <div className="flex justify-end">
-                            <Button size="sm" variant="ghost"
-                                onPress={() => onAddSentence(para)}
-                            >
-                                <Plus />
-                                Add Sentence
-                            </Button>
-                        </div>
-                    )}
+                    {/* Import + Add Sentence */}
+                    <div className="flex justify-end gap-1">
+                        <button
+                            title="Text import is not available on the web yet"
+                            disabled
+                            className={`flex items-center gap-1 ${textBtnPad} rounded text-sm text-text-secondary hover:bg-bg-hover cursor-pointer disabled:opacity-50`}
+                        >
+                            <FileDown size={14} />
+                            Import
+                        </button>
+                        <button
+                            title={allowEdit ? 'Add a sentence to this paragraph' : 'Sentence editing is not available on the web yet'}
+                            disabled={saving || !allowEdit}
+                            className={`flex items-center gap-1 ${textBtnPad} rounded text-sm text-text-secondary hover:bg-bg-hover cursor-pointer disabled:opacity-50`}
+                            onClick={() => onAddSentence(para)}
+                        >
+                            <Plus size={14} />
+                            Add Sentence
+                        </button>
+                    </div>
                 </div>
             ))}
         </div>

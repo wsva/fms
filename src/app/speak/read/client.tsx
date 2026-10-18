@@ -2,26 +2,37 @@
 
 /**
  * Dataset-backed Read a Book — the web twin of the app's Book reading flow
- * (`learning/fms-app/src-tauri/src/datasets/book.rs`).
- *
- * Two views keyed on dataset selection:
- *   datasets grid → book reader (chapter tree + paragraphs + drawer).
+ * (`learning/fms-app/src-tauri/src/datasets/book.rs`), now wearing the app's
+ * window chrome (`read_book/ReadBookPage.tsx` + `ReadingView.tsx` parity):
+ * full-bleed shell, flat kit Breadcrumb + Toolbar, and the app's three-level
+ * drill-down
+ *   books → chapters → reading
+ * instead of the old chapter-tree panel (drag-resizable selector deleted).
  *
  * Chapters and sentences are read from the dataset's data.sqlite3 via the
  * dataset_read actions; audio streams through /api/v1/file (relative
  * `media/<uuid>.wav` paths resolved to play_url client-side). Per-user chapter
  * completion lives in Postgres read_chapter_progress (never in the dataset).
  *
- * Sentence edits, inserts, deletes and recording are fully wired but dormant:
- * EDIT_ENABLED=false hides every mutating affordance, mirroring the dictation
- * page's convention.
+ * Sentence edits, inserts, deletes and paragraph audio are fully wired but
+ * dormant: EDIT_ENABLED=false renders every mutating affordance visibly
+ * disabled (app-parity decision), mirroring the dictation page's convention.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Chip, ProgressCircle, Spinner, toast, Tooltip } from "@heroui/react"
+import { ProgressCircle, toast } from "@heroui/react"
 import { useImmer } from 'use-immer'
-import { MdRefresh, MdViewHeadline, MdViewStream } from 'react-icons/md'
-import { BookOpen, Books } from '@gravity-ui/icons'
+import {
+    AlignJustify,
+    AlignLeft,
+    BookOpen,
+    Check,
+    Library,
+    RefreshCw,
+    Settings2,
+    StickyNote,
+    Zap,
+} from 'lucide-react'
 
 import {
     getDatasetBookChapters,
@@ -31,6 +42,8 @@ import {
     setDatasetChapterProgress,
     writeDatasetSentenceAudio,
 } from '@/app/actions/dataset_read'
+import { Breadcrumb, Toolbar, ToolbarButton } from '@/components/ui/toolbar'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import type { DatasetJson, DatasetListItem } from '@/lib/datasets/access'
 import type { BookChapterRow, BookSentenceDraft } from '@/lib/datasets/bookstore'
 import { toggleRecording } from '@/lib/recording'
@@ -86,29 +99,10 @@ export default function Client({ user_id }: Props) {
     const [stateRecording, setStateRecording] = useState(false)
     const [stateProcessing, setStateProcessing] = useState(false)
 
-    // ── selector layout ──
-    const [selectorHeight, setSelectorHeight] = useState<number>(200)
-    const handleSelectorHeightDrag = useCallback((e: React.MouseEvent) => {
-        e.preventDefault()
-        const startY = e.clientY
-        const startHeight = selectorHeight
-        const onMove = (ev: MouseEvent) => {
-            setSelectorHeight(Math.min(600, Math.max(80, startHeight + ev.clientY - startY)))
-        }
-        const onUp = () => {
-            document.removeEventListener('mousemove', onMove)
-            document.removeEventListener('mouseup', onUp)
-            document.body.style.cursor = ''
-            document.body.style.userSelect = ''
-        }
-        document.body.style.cursor = 'row-resize'
-        document.body.style.userSelect = 'none'
-        document.addEventListener('mousemove', onMove)
-        document.addEventListener('mouseup', onUp)
-    }, [selectorHeight])
-
+    const mobile = useIsMobile()
     const flatChapters = useMemo(() => flattenChapters(stateChaptersFlat), [stateChaptersFlat])
     const paragraphs = useMemo(() => groupIntoParagraphs(stateData), [stateData])
+    const currentChapter = flatChapters.find(c => c.uuid === stateChapterUUID) ?? null
 
     const chapterPath = useMemo(() => {
         if (!stateChapterUUID) return ''
@@ -124,22 +118,67 @@ export default function Client({ user_id }: Props) {
         return path.join(' --> ')
     }, [stateChapterUUID, stateChaptersFlat, stateDatasetInfo])
 
-    // ── View 1: datasets ──
-    useEffect(() => {
-        const load = async () => {
-            setStateLoading(true)
-            try {
-                const r = await listReadingDatasets()
-                if (r.status === 'success') setStateDatasetList(r.data)
-                else toastError(r.error)
-            } finally {
-                setStateLoading(false)
-            }
+    // ── loaders (shared by the level effects and the toolbar Refresh) ──
+    const loadDatasets = useCallback(async () => {
+        setStateLoading(true)
+        try {
+            const r = await listReadingDatasets()
+            if (r.status === 'success') setStateDatasetList(r.data)
+            else toastError(r.error)
+        } finally {
+            setStateLoading(false)
         }
-        load()
     }, [])
 
-    // ── View 2: on dataset change, load chapters + progress ──
+    const loadChapters = useCallback(async () => {
+        if (!stateDatasetUUID) return
+        setStateLoading(true)
+        try {
+            const r = await getDatasetBookChapters(stateDatasetUUID)
+            if (r.status === 'success') {
+                setStateDatasetInfo(r.data.dataset)
+                setStateChaptersFlat(r.data.chapters)
+                setStateProgress(r.data.progress)
+            } else {
+                toastError(r.error)
+            }
+        } finally {
+            setStateLoading(false)
+        }
+    }, [stateDatasetUUID])
+
+    const loadSentences = useCallback(async () => {
+        if (!stateDatasetUUID || !stateChapterUUID) return
+        setStateLoading(true)
+        try {
+            const r = await getDatasetChapterSentences(stateDatasetUUID, stateChapterUUID)
+            if (r.status === 'success') {
+                updateStateData(d => {
+                    d.length = 0
+                    r.data.sentences.forEach(s => {
+                        d.push({
+                            ...s,
+                            modified: false,
+                            hasLocalAudio: false,
+                            play_url: s.audio_path ? fileUrl(stateDatasetUUID, s.audio_path) : null,
+                        })
+                    })
+                })
+                setStateWordsMap(groupWordsBySentence(r.data.words))
+            } else {
+                toastError(r.error)
+            }
+        } finally {
+            setStateLoading(false)
+        }
+    }, [stateDatasetUUID, stateChapterUUID, updateStateData])
+
+    // ── Level 1: books ──
+    useEffect(() => {
+        loadDatasets()
+    }, [loadDatasets])
+
+    // ── Level 2: on dataset change, reset + load chapters + progress ──
     useEffect(() => {
         setStateChapterUUID('')
         setStateDatasetInfo(null)
@@ -148,56 +187,17 @@ export default function Client({ user_id }: Props) {
         updateStateData(d => { d.length = 0 })
         setStateWordsMap({})
         if (!stateDatasetUUID) return
-        const load = async () => {
-            setStateLoading(true)
-            try {
-                const r = await getDatasetBookChapters(stateDatasetUUID)
-                if (r.status === 'success') {
-                    setStateDatasetInfo(r.data.dataset)
-                    setStateChaptersFlat(r.data.chapters)
-                    setStateProgress(r.data.progress)
-                } else {
-                    toastError(r.error)
-                }
-            } finally {
-                setStateLoading(false)
-            }
-        }
-        load()
-    }, [stateDatasetUUID, updateStateData])
+        loadChapters()
+    }, [stateDatasetUUID, loadChapters, updateStateData])
 
-    // ── on chapter change, load sentences + words ──
+    // ── Level 3: on chapter change, reset + load sentences + words ──
     useEffect(() => {
         setStateDrawer(null)
         updateStateData(d => { d.length = 0 })
         setStateWordsMap({})
         if (!stateDatasetUUID || !stateChapterUUID) return
-        const load = async () => {
-            setStateLoading(true)
-            try {
-                const r = await getDatasetChapterSentences(stateDatasetUUID, stateChapterUUID)
-                if (r.status === 'success') {
-                    updateStateData(d => {
-                        d.length = 0
-                        r.data.sentences.forEach(s => {
-                            d.push({
-                                ...s,
-                                modified: false,
-                                hasLocalAudio: false,
-                                play_url: s.audio_path ? fileUrl(stateDatasetUUID, s.audio_path) : null,
-                            })
-                        })
-                    })
-                    setStateWordsMap(groupWordsBySentence(r.data.words))
-                } else {
-                    toastError(r.error)
-                }
-            } finally {
-                setStateLoading(false)
-            }
-        }
-        load()
-    }, [stateDatasetUUID, stateChapterUUID, updateStateData])
+        loadSentences()
+    }, [stateDatasetUUID, stateChapterUUID, loadSentences, updateStateData])
 
     // ── helpers ──
     function toastError(err: unknown) {
@@ -238,7 +238,7 @@ export default function Client({ user_id }: Props) {
         setStateDrawerBgColor(null)
     }
 
-    // ── Recording (dormant write path — gated by EDIT_ENABLED at the UI level) ──
+    // ── Recording (staged locally until Save; Save is dormant) ──
     const toggleRecordingLocal = async () => {
         const uuid = stateDrawerUUID
         const handleAudio = async (result: ActionResult<string>, audioBlob: Blob) => {
@@ -593,11 +593,15 @@ export default function Client({ user_id }: Props) {
         setStateSaving(false)
     }
 
-    // ── Refresh datasets ──
-    const handleRefreshDatasets = async () => {
-        const r = await listReadingDatasets()
-        if (r.status === 'success') setStateDatasetList(r.data)
-        else toastError(r.error)
+    // ── Toolbar refresh — scope follows the current level, like the app ──
+    const refreshCaption =
+        !stateDatasetUUID ? 'Refresh books' :
+            stateChapterUUID ? 'Refresh sentences' :
+                'Refresh chapters'
+    const handleRefresh = () => {
+        if (!stateDatasetUUID) loadDatasets()
+        else if (stateChapterUUID) loadSentences()
+        else loadChapters()
     }
 
     // ── Pre-computed drawer props ──
@@ -611,225 +615,286 @@ export default function Client({ user_id }: Props) {
         : false
     const drawerWords = editSentence ? (stateWordsMap[editSentence.uuid] ?? []) : []
 
-    const chapterBtnClass = (active: boolean, completed: boolean) =>
-        `w-full text-left px-2 py-1 rounded text-xs sm:text-lg transition-colors ${active ? 'bg-bg-muted font-semibold text-foreground' : completed ? 'bg-green-100 hover:bg-green-200 text-foreground-600' : 'hover:bg-bg-hover text-foreground-600'}`
+    const onChapterPage = !!stateChapterUUID
 
     // ── Render ──
     return (
-        <div className="flex flex-col w-full min-w-0 gap-3 my-4 mb-40">
-
-            {/* Breadcrumb navigation */}
-            <nav className="flex items-center gap-2 px-4 py-2 text-sm select-none min-w-0 overflow-x-auto rounded-xl bg-bg-card border border-border-default">
-                <button
-                    className={`shrink-0 cursor-pointer hover:underline text-left ${stateDatasetUUID ? 'text-blue-600' : 'font-semibold'}`}
-                    onClick={() => setStateDatasetUUID('')}
-                >
-                    Datasets
-                </button>
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-bg-body">
+            <Breadcrumb>
+                {stateDatasetUUID ? (
+                    <Breadcrumb.Link onClick={() => setStateDatasetUUID('')}>Books</Breadcrumb.Link>
+                ) : (
+                    <Breadcrumb.Current grow={false}>Books</Breadcrumb.Current>
+                )}
                 {stateDatasetInfo && (
                     <>
-                        <span className="shrink-0 text-gray-400">&rsaquo;</span>
-                        <span className="font-semibold truncate min-w-0 flex-1" title={stateDatasetInfo.name}>
-                            {stateDatasetInfo.name}
-                        </span>
+                        <Breadcrumb.Sep />
+                        {onChapterPage ? (
+                            <Breadcrumb.Link
+                                truncate
+                                title={stateDatasetInfo.name}
+                                onClick={() => setStateChapterUUID('')}
+                            >
+                                {stateDatasetInfo.name}
+                            </Breadcrumb.Link>
+                        ) : (
+                            <Breadcrumb.Current title={stateDatasetInfo.name}>
+                                {stateDatasetInfo.name}
+                            </Breadcrumb.Current>
+                        )}
                     </>
                 )}
-                {stateLoading && <ProgressCircle size="sm" aria-label="Loading" />}
-            </nav>
+                {currentChapter && (
+                    <>
+                        <Breadcrumb.Sep />
+                        <Breadcrumb.Current title={currentChapter.title ?? ''}>
+                            {currentChapter.title}
+                        </Breadcrumb.Current>
+                    </>
+                )}
+                {stateLoading && <ProgressCircle size="sm" aria-label="Loading" className="shrink-0 ml-auto" />}
+            </Breadcrumb>
 
-            {/* ── View 1: datasets grid ── */}
-            {!stateDatasetUUID && (
-                <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                        <Button size="sm" variant="ghost" isDisabled={stateLoading} onPress={handleRefreshDatasets}>
-                            <MdRefresh size={16} /> Refresh
-                        </Button>
-                        <span className="text-xs text-gray-500">
-                            {stateDatasetList.length} reading dataset{stateDatasetList.length !== 1 ? 's' : ''}
-                        </span>
-                    </div>
-                    {stateDatasetList.length === 0 && !stateLoading && (
-                        <p className="text-gray-600">No reading datasets available. Upload a book dataset in Dataset &rsaquo; Market.</p>
+            <Toolbar mobile={mobile}>
+                <div className="flex-1 min-w-0" />
+                <div className="flex items-center gap-1 shrink-0">
+                    {!onChapterPage && (
+                        <>
+                            <ToolbarButton
+                                variant="toggle"
+                                icon={Settings2}
+                                label={stateDatasetUUID ? 'Manage Chapters' : 'Manage Books'}
+                                disabled
+                                title="Book and chapter management is not available on the web yet"
+                            />
+                            {stateDatasetUUID && (
+                                <ToolbarButton
+                                    variant="toggle"
+                                    icon={Zap}
+                                    label="Advanced"
+                                    disabled
+                                    title="Advanced book tools are not available on the web yet"
+                                />
+                            )}
+                        </>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        {stateDatasetList.map((ds) => (
+                    {onChapterPage && !stateLoading && (
+                        <>
+                            <ToolbarButton
+                                variant="toggle"
+                                label="Save Order"
+                                disabled
+                                title="Sentence reordering is not available on the web yet"
+                            />
+                            <ToolbarButton
+                                variant="toggle"
+                                active={chapterCompleted}
+                                label={chapterCompleted ? 'Completed' : 'Mark Completed'}
+                                title="Toggle chapter completed"
+                                disabled={stateSaving}
+                                onClick={handleToggleChapterStatus}
+                            />
+                            <ToolbarButton
+                                variant="toggleSoft"
+                                active={stateViewMode === 'inline'}
+                                icon={stateViewMode === 'line' ? AlignJustify : AlignLeft}
+                                label={stateViewMode === 'line' ? 'Lines' : 'Inline'}
+                                title={stateViewMode === 'line' ? 'Switch to paragraph view' : 'Switch to line view'}
+                                onClick={() => setStateViewMode(m => m === 'line' ? 'inline' : 'line')}
+                            />
+                            <ToolbarButton
+                                variant="ghost"
+                                icon={StickyNote}
+                                label="Note"
+                                title="Open the blog note for this chapter"
+                                onClick={() => window.open(`/blog/${stateChapterUUID}?description=${encodeURIComponent(chapterPath)}`, '_blank')}
+                            />
+                        </>
+                    )}
+                    <ToolbarButton
+                        icon={RefreshCw}
+                        label={refreshCaption}
+                        title={refreshCaption}
+                        ariaLabel={refreshCaption}
+                        disabled={stateLoading}
+                        onClick={handleRefresh}
+                    />
+                </div>
+            </Toolbar>
+
+            {/* Content — the app's three drill-down levels */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden min-w-0">
+                {/* Level 1: books */}
+                {!stateDatasetUUID && (
+                    <div className="flex-1 min-h-0 overflow-y-auto p-4 min-w-0">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Library size={16} className="text-text-tertiary" />
+                            <span className="text-xs font-semibold text-text-tertiary tracking-wider">Library</span>
+                            <span className="text-xs text-text-tertiary">{stateDatasetList.length}</span>
+                        </div>
+                        {stateDatasetList.length === 0 && !stateLoading ? (
+                            <div className="text-center text-text-tertiary py-8 text-sm">
+                                No reading datasets available. Upload a book dataset in Dataset &rsaquo; Market.
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {stateDatasetList.map((ds) => (
+                                    <button
+                                        key={ds.uuid}
+                                        onClick={() => setStateDatasetUUID(ds.uuid)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border-default bg-bg-card hover:bg-bg-hover text-left cursor-pointer transition-colors"
+                                    >
+                                        <BookOpen size={18} className="text-text-tertiary shrink-0" />
+                                        <span className="text-base font-medium text-text-primary truncate">{ds.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Level 2: chapters */}
+                {stateDatasetUUID && !stateChapterUUID && (
+                    <div className="flex-1 min-h-0 overflow-y-auto p-4 min-w-0">
+                        <div className="flex items-center gap-2 mb-3">
+                            <BookOpen size={16} className="text-text-tertiary" />
+                            <span className="text-xs font-semibold text-text-tertiary tracking-wider truncate">
+                                {stateDatasetInfo?.name}
+                            </span>
+                            <span className="text-xs text-text-tertiary">{flatChapters.length}</span>
+                        </div>
+                        {flatChapters.length === 0 && !stateLoading && (
+                            <div className="text-center text-text-tertiary py-8 text-sm">
+                                No chapters in this book dataset.
+                            </div>
+                        )}
+                        <div className="flex flex-col gap-1">
+                            {flatChapters.map(c => {
+                                const completed = stateProgress[c.uuid] === 'completed'
+                                return (
+                                    <button
+                                        key={c.uuid}
+                                        onClick={() => setStateChapterUUID(c.uuid)}
+                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-base cursor-pointer transition-colors ${completed
+                                            ? 'bg-green-500/15 hover:bg-green-500/25 text-text-primary'
+                                            : 'bg-bg-card hover:bg-bg-hover text-text-primary'
+                                            }`}
+                                        style={{ paddingLeft: `${c.depth * 16 + 12}px` }}
+                                    >
+                                        <span className="line-clamp-1 flex-1">{c.depth > 0 ? '└ ' : ''}{c.title}</span>
+                                        {completed && <Check size={16} className="text-green-500 shrink-0" />}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Level 3: reading pane */}
+                {stateDatasetUUID && stateChapterUUID && (
+                    <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-4 overflow-y-auto p-4 pb-[50vh]">
+                        {stateLoading && (
+                            <div className="flex justify-center my-8 text-text-tertiary">Loading…</div>
+                        )}
+
+                        {!stateLoading && (
+                            <ParagraphList
+                                paragraphs={paragraphs}
+                                viewMode={stateViewMode}
+                                saving={stateSaving}
+                                allowEdit={EDIT_ENABLED}
+                                onEditSentence={openEditDrawer}
+                                onAddSentence={openAddDrawer}
+                                onDeleteParagraph={handleDeleteParagraph}
+                                onParagraphAudio={handleParagraphAudio}
+                            />
+                        )}
+
+                        {!stateLoading && (
+                            <div className="flex justify-center">
+                                <button
+                                    className="px-3 py-1.5 rounded-md text-sm text-text-secondary hover:bg-bg-hover border border-border-default disabled:opacity-50 cursor-pointer"
+                                    disabled={stateSaving || !EDIT_ENABLED}
+                                    title="Paragraph editing is not available on the web yet"
+                                    onClick={handleNewParagraph}
+                                >
+                                    + New Paragraph
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Delete paragraph dialog (dormant) */}
+            {stateDeleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                    onClick={() => setStateDeleteTarget(null)}
+                >
+                    <div className="bg-bg-card rounded-2xl shadow-2xl p-6 flex flex-col gap-4 w-72 border border-border-default"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <p className="font-semibold text-base text-text-primary">Delete paragraph?</p>
+                        <p className="text-sm text-text-secondary">
+                            {stateDeleteTarget.sentences.length} sentence(s)
+                        </p>
+                        <div className="flex flex-col gap-2">
                             <button
-                                key={ds.uuid}
-                                className="text-left p-4 border border-border-default rounded-xl bg-bg-card transition-colors hover:bg-bg-hover cursor-pointer flex flex-col gap-1"
-                                onClick={() => setStateDatasetUUID(ds.uuid)}
+                                className="px-3 py-2 rounded-md text-sm bg-red-500 text-white hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                                disabled={stateSaving}
+                                onClick={handleDeleteAll}
                             >
-                                <div className="flex items-center gap-2">
-                                    <BookOpen />
-                                    <span className="font-medium">{ds.name}</span>
-                                    {ds.language && <Chip size="sm" variant="secondary">{ds.language}</Chip>}
-                                </div>
-                                {ds.description && (
-                                    <span className="text-xs text-gray-500 line-clamp-2">{ds.description}</span>
-                                )}
-                                <span className="text-[11px] text-gray-400">
-                                    {ds.is_owner ? 'yours' : ds.visibility}
-                                    {ds.info_updated_at ? ` · ${ds.info_updated_at.slice(0, 10)}` : ''}
-                                </span>
+                                Delete all sentences
                             </button>
-                        ))}
+                            <button
+                                className="px-3 py-2 rounded-md text-sm text-red-500 border border-border-default hover:bg-bg-hover disabled:opacity-50 cursor-pointer"
+                                disabled={stateSaving || !stateDeleteTarget.breakSentence}
+                                onClick={handleDeleteBreakOnly}
+                            >
+                                Delete paragraph break only
+                            </button>
+                            <button
+                                className="px-3 py-2 rounded-md text-sm text-text-secondary hover:bg-bg-hover cursor-pointer"
+                                onClick={() => setStateDeleteTarget(null)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* ── View 2: book reader (selector + toolbar + paragraphs + drawer) ── */}
-            {stateDatasetUUID && (
-                <>
-                    {/* Chapter tree selector */}
-                    <div
-                        className="bg-bg-card rounded-xl flex flex-col shadow-sm"
-                        style={{ height: `${selectorHeight}px` }}
-                    >
-                        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">
-                            <div className="flex flex-row items-center justify-start px-1 mb-2">
-                                <Books />
-                                <span className="text-xs font-semibold text-foreground-400 tracking-wider px-2">Chapters</span>
-                                {stateLoading && <Spinner size="sm" />}
-                            </div>
-                            {flatChapters.length === 0 && !stateLoading && (
-                                <p className="text-sm text-gray-500 px-2">No chapters in this book dataset.</p>
-                            )}
-                            {flatChapters.map(c => (
-                                <button
-                                    key={c.uuid}
-                                    className={chapterBtnClass(stateChapterUUID === c.uuid, stateProgress[c.uuid] === 'completed')}
-                                    onClick={() => setStateChapterUUID(c.uuid)}
-                                    style={{ paddingLeft: `${c.depth * 20 + 8}px` }}
-                                >
-                                    <span className="line-clamp-1">{c.depth > 0 ? '└ ' : ''}{c.title}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <div
-                            className="shrink-0 h-3 cursor-row-resize flex items-center justify-center group"
-                            onMouseDown={handleSelectorHeightDrag}
-                        >
-                            <div className="h-0.5 w-12 rounded-full bg-bg-progress group-hover:bg-primary transition-colors" />
-                        </div>
-                    </div>
-
-                    {/* Toolbar */}
-                    {stateChapterUUID && !stateLoading && (
-                        <div className="flex flex-row items-center justify-end gap-2">
-                            <Button size="sm"
-                                variant={chapterCompleted ? 'primary' : 'ghost'}
-                                isDisabled={stateSaving}
-                                onPress={handleToggleChapterStatus}
-                            >
-                                {chapterCompleted ? '✓ Completed' : 'Mark Completed'}
-                            </Button>
-                            <Button size="sm" variant="ghost"
-                                onPress={() => window.open(`/blog/${stateChapterUUID}?description=${encodeURIComponent(chapterPath)}`, '_blank')}
-                            >
-                                note
-                            </Button>
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <Button isIconOnly size="sm" variant="ghost"
-                                        onPress={() => setStateViewMode(m => m === 'line' ? 'inline' : 'line')}
-                                    >
-                                        {stateViewMode === 'line' ? <MdViewStream size={18} /> : <MdViewHeadline size={18} />}
-                                    </Button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content>
-                                    {stateViewMode === 'line' ? 'Switch to paragraph view' : 'Switch to line view'}
-                                </Tooltip.Content>
-                            </Tooltip>
-                        </div>
-                    )}
-
-                    {stateLoading && (
-                        <div className="flex justify-center my-8"><Spinner /></div>
-                    )}
-
-                    {/* Paragraphs */}
-                    {stateChapterUUID && !stateLoading && (
-                        <ParagraphList
-                            paragraphs={paragraphs}
-                            viewMode={stateViewMode}
-                            saving={stateSaving}
-                            allowEdit={EDIT_ENABLED}
-                            onEditSentence={openEditDrawer}
-                            onAddSentence={openAddDrawer}
-                            onDeleteParagraph={handleDeleteParagraph}
-                            onParagraphAudio={handleParagraphAudio}
-                        />
-                    )}
-
-                    {/* New Paragraph button at bottom (dormant) */}
-                    {EDIT_ENABLED && stateChapterUUID && !stateLoading && (
-                        <div className="flex justify-center">
-                            <Button size="sm" variant="ghost" isDisabled={stateSaving} onPress={handleNewParagraph}>
-                                + New Paragraph
-                            </Button>
-                        </div>
-                    )}
-
-                    {/* Delete paragraph dialog */}
-                    {stateDeleteTarget && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-                            onClick={() => setStateDeleteTarget(null)}
-                        >
-                            <div className="bg-bg-card rounded-2xl shadow-2xl p-6 flex flex-col gap-4 w-72"
-                                onClick={e => e.stopPropagation()}
-                            >
-                                <p className="font-semibold text-base">Delete paragraph?</p>
-                                <p className="text-sm text-foreground-500">
-                                    {stateDeleteTarget.sentences.length} sentence(s)
-                                </p>
-                                <div className="flex flex-col gap-2">
-                                    <Button variant="danger" isDisabled={stateSaving} onPress={handleDeleteAll}>
-                                        Delete all sentences
-                                    </Button>
-                                    <Button variant="danger-soft"
-                                        isDisabled={stateSaving || !stateDeleteTarget.breakSentence}
-                                        onPress={handleDeleteBreakOnly}
-                                    >
-                                        Delete paragraph break only
-                                    </Button>
-                                    <Button variant="ghost" onPress={() => setStateDeleteTarget(null)}>Cancel</Button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Sentence drawer */}
-                    <SentenceDrawer
-                        drawer={stateDrawer}
-                        recognized={stateDrawerRecognized}
-                        content={stateDrawerContent}
-                        onContentChange={setStateDrawerContent}
-                        bgColor={stateDrawerBgColor}
-                        onBgColorChange={setStateDrawerBgColor}
-                        hasAudio={drawerHasAudio}
-                        allowEdit={EDIT_ENABLED}
-                        words={drawerWords}
-                        datasetUUID={stateDatasetUUID}
-                        chapterPath={chapterPath}
-                        saving={stateSaving}
-                        recording={stateRecording}
-                        processing={stateProcessing}
-                        onClose={closeDrawer}
-                        onPlay={() => playAudio(
-                            stateDrawerUUID,
-                            stateDrawer?.mode === 'edit' ? stateDrawer.sentence.play_url : null,
-                            stateDrawer?.mode === 'edit' ? stateDrawer.sentence.hasLocalAudio : stateDrawerHasLocalAudio,
-                        )}
-                        onToggleRecording={toggleRecordingLocal}
-                        onSaveAdd={handleSaveAdd}
-                        onSaveEdit={handleSaveEdit}
-                        onDelete={handleDelete}
-                        onInsertBefore={() => editSentence && openInsertDrawer(editSentence.uuid)}
-                        onInsertAfter={() => openInsertDrawer(nextUUID)}
-                        onParagraphBefore={() => editSentence && handleInsertParagraph(editSentence.uuid)}
-                        onParagraphAfter={() => handleInsertParagraph(nextUUID)}
-                    />
-                </>
-            )}
+            {/* Sentence drawer */}
+            <SentenceDrawer
+                drawer={stateDrawer}
+                recognized={stateDrawerRecognized}
+                content={stateDrawerContent}
+                onContentChange={setStateDrawerContent}
+                bgColor={stateDrawerBgColor}
+                onBgColorChange={setStateDrawerBgColor}
+                hasAudio={drawerHasAudio}
+                allowEdit={EDIT_ENABLED}
+                words={drawerWords}
+                datasetUUID={stateDatasetUUID}
+                chapterPath={chapterPath}
+                saving={stateSaving}
+                recording={stateRecording}
+                processing={stateProcessing}
+                onClose={closeDrawer}
+                onPlay={() => playAudio(
+                    stateDrawerUUID,
+                    stateDrawer?.mode === 'edit' ? stateDrawer.sentence.play_url : null,
+                    stateDrawer?.mode === 'edit' ? stateDrawer.sentence.hasLocalAudio : stateDrawerHasLocalAudio,
+                )}
+                onToggleRecording={toggleRecordingLocal}
+                onSaveAdd={handleSaveAdd}
+                onSaveEdit={handleSaveEdit}
+                onDelete={handleDelete}
+                onInsertBefore={() => editSentence && openInsertDrawer(editSentence.uuid)}
+                onInsertAfter={() => openInsertDrawer(nextUUID)}
+                onParagraphBefore={() => editSentence && handleInsertParagraph(editSentence.uuid)}
+                onParagraphAfter={() => handleInsertParagraph(nextUUID)}
+            />
         </div>
     )
 }

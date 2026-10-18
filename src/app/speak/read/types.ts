@@ -63,3 +63,18 @@ export function groupWordsBySentence(words: BookWordRow[]): WordsBySentence {
     for (const w of words) (map[w.sentence_uuid] ??= []).push(w)
     return map
 }
+
+/** Highlight background colors for sentences (app read_book/utils.ts table). */
+export const BG_COLORS: { key: string; label: string; description: string; swatch: string; bg: string }[] = [
+    { key: 'yellow', label: 'Yellow', description: 'New vocabulary', swatch: 'bg-yellow-300', bg: 'bg-yellow-200/70' },
+    { key: 'green', label: 'Green', description: 'Mastered', swatch: 'bg-green-300', bg: 'bg-green-200/70' },
+    { key: 'blue', label: 'Blue', description: 'Grammar note', swatch: 'bg-blue-300', bg: 'bg-blue-200/70' },
+    { key: 'pink', label: 'Pink', description: 'Key expression', swatch: 'bg-pink-300', bg: 'bg-pink-200/70' },
+    { key: 'orange', label: 'Orange', description: 'Needs review', swatch: 'bg-orange-300', bg: 'bg-orange-200/70' },
+]
+
+/** Map a stored bg_color key to a Tailwind background class. */
+export function sentenceBgClass(bgColor: string | null | undefined): string {
+    if (!bgColor) return ''
+    return BG_COLORS.find(c => c.key === bgColor)?.bg ?? ''
+}
