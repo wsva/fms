@@ -267,11 +267,11 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
 
     return (
         <div className={stateFullscreen
-            ? 'fixed inset-0 z-50 flex flex-col bg-sand-200 p-4 w-full'
-            : 'flex flex-col py-0.5 bg-sand-200 w-full'
+            ? 'fixed inset-0 z-50 flex flex-col bg-bg-body p-4 w-full'
+            : 'flex flex-col py-0.5 bg-bg-body w-full'
         }>
             {/* Header */}
-            <div className='flex items-center justify-between bg-sand-400 px-2 rounded-t-lg'>
+            <div className='flex items-center justify-between bg-bg-muted px-2 rounded-t-lg'>
                 <div className='flex gap-1 items-center'>
                     <label className='text-foreground-500 text-small'>{label}</label>
                     <Button
@@ -338,7 +338,7 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
             {/* TextArea */}
             <textarea
                 className={[
-                    'w-full text-xl leading-tight font-roboto p-1.5 outline-none resize-none overflow-hidden bg-sand-300 rounded-b-lg',
+                    'w-full text-xl leading-tight font-roboto p-1.5 outline-none resize-none overflow-hidden bg-bg-card rounded-b-lg',
                     stateFullscreen ? 'flex-1 min-h-0' : 'min-h-40',
                     statePreview ? 'hidden' : '',
                 ].join(' ')}
@@ -366,7 +366,7 @@ const MdEditor = forwardRef<HTMLTextAreaElement, Props>(({ defaultValue, label =
             {/* Preview */}
             {statePreview && (
                 <div className={[
-                    'text-xl bg-sand-300 rounded-md p-2',
+                    'text-xl bg-bg-card rounded-md p-2',
                     stateFullscreen ? 'flex-1 overflow-y-auto' : 'min-h-40',
                 ].join(' ')}>
                     <Markdown2Html content={stateValue} withTOC />

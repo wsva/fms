@@ -20,14 +20,10 @@ export function useTheme() {
 const STORAGE_KEY = 'fms-theme'
 
 export function applyTheme(theme: ThemeDef) {
-    const root = document.documentElement
-    for (const [n, v] of Object.entries(theme.scale)) {
-        root.style.setProperty(`--color-sand-${n}`, v)
-    }
-    if (theme.dark) {
-        root.classList.add('dark')
+    if (theme.id === 'light') {
+        delete document.documentElement.dataset.theme
     } else {
-        root.classList.remove('dark')
+        document.documentElement.dataset.theme = theme.id
     }
 }
 

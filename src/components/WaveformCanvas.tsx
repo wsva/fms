@@ -25,8 +25,12 @@ type Props = {
     ) => void
 }
 
-const UNPLAYED = '#b8a48e'
-const PLAYED = '#b8a48e' // b45309
+const WAVE_FALLBACK = '#b8a48e'
+
+function resolveWaveColor(): string {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--text-tertiary').trim()
+    return v || WAVE_FALLBACK
+}
 const SELECTION_FILL = 'rgba(34,197,94,0.20)'
 const SELECTION_EDGE = '#16a34a'
 const HOVER_LINE = 'rgba(37,99,235,0.75)'
@@ -85,6 +89,7 @@ export default function WaveformCanvas({
     const hoverXRef = useRef<number | null>(null)
     const drawRafRef = useRef<number>(0)
     const seekRafRef = useRef<number>(0)
+    const waveColorRef = useRef<string>(WAVE_FALLBACK)
 
     const draw = useCallback(() => {
         const canvas = canvasRef.current
@@ -159,7 +164,7 @@ export default function WaveformCanvas({
             const yTop = Math.floor(height / 2 - max * (height / 2) * 0.9)
             const yBottom = Math.ceil(height / 2 - min * (height / 2) * 0.9)
 
-            ctx.fillStyle = px <= playheadX ? PLAYED : UNPLAYED
+            ctx.fillStyle = waveColorRef.current
             ctx.fillRect(px, yTop, 1, Math.max(1, yBottom - yTop))
         }
 
@@ -173,7 +178,7 @@ export default function WaveformCanvas({
             ctx.fillRect(x1 - 1, 0, 2, height)
         }
 
-        ctx.fillStyle = PLAYED
+        ctx.fillStyle = waveColorRef.current
         ctx.fillRect(Math.max(0, playheadX - 1), 0, 2, height)
 
         if (hoverXRef.current !== null && duration > 0) {
@@ -245,6 +250,17 @@ export default function WaveformCanvas({
     useEffect(() => {
         scheduleDraw()
     }, [peaks, scheduleDraw])
+
+    useEffect(() => {
+        const update = () => {
+            waveColorRef.current = resolveWaveColor()
+            scheduleDraw()
+        }
+        update()
+        const mo = new MutationObserver(update)
+        mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+        return () => mo.disconnect()
+    }, [scheduleDraw])
 
     useEffect(() => {
         if (!selection) return

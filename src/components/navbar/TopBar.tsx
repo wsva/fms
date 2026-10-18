@@ -21,10 +21,10 @@ export default function TopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
         !(i < trail.length - 1 && !c.href && menuList.some(g => g.name === c.label)));
 
     return (
-        <nav className="sticky top-0 z-40 w-full h-12 flex items-center gap-1 sm:gap-2 px-2 sm:px-4 bg-linear-to-b from-sand-300 to-sand-200 border-b border-sand-300">
+        <nav className="sticky top-0 z-40 w-full h-12 flex items-center gap-1 sm:gap-2 px-2 sm:px-4 bg-bg-card border-b border-border-default">
             {/* Left: hamburger (mobile) + back/forward */}
             <button
-                className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-sand-300"
+                className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-bg-hover"
                 aria-label="Open menu"
                 onClick={onOpenDrawer}
             >

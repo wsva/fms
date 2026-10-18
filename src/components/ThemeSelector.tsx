@@ -23,7 +23,7 @@ export default function ThemeSelector() {
                     {themes.map(t => (
                         <Dropdown.Item id={t.id} textValue={t.name} key={t.id}>
                             <span
-                                className="w-4 h-4 rounded-full inline-block shrink-0 border border-sand-300"
+                                className="w-4 h-4 rounded-full inline-block shrink-0 border border-border-default"
                                 style={{ backgroundColor: t.swatch }}
                             />
                             <Label>{t.name}</Label>

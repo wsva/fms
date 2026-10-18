@@ -48,7 +48,7 @@ export default function Card({ user_id, card, tag_list }: Props) {
                 {isOwner && (
                     <Dropdown>
                         <Button variant="ghost">familiarity - {stateFamiliarity}</Button>
-                        <Dropdown.Popover placement="bottom end" className="bg-sand-200 rounded-lg">
+                        <Dropdown.Popover placement="bottom end" className="bg-bg-card rounded-lg">
                             <Dropdown.Menu
                                 disallowEmptySelection
                                 className="w-full"
@@ -87,7 +87,7 @@ export default function Card({ user_id, card, tag_list }: Props) {
                 {isOwner && (
                     <Popover isOpen={stateOpenTag} onOpenChange={(open) => setStateOpenTag(open)}>
                         <Button variant="ghost">edit tag</Button>
-                        <Popover.Content placement='bottom end' className='bg-sand-200 w-2/3 rounded-lg'>
+                        <Popover.Content placement='bottom end' className='bg-bg-card w-2/3 rounded-lg'>
                             <Popover.Dialog>
                                 <SetTag user_id={user_id} card={card} tag_list={tag_list} onSuccess={() => setStateOpenTag(false)} />
                             </Popover.Dialog>

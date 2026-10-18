@@ -23,7 +23,7 @@ type Props = { email: string };
 type Row = DatasetJson & { journal_role: string; journal_epoch: number; tags: DatasetTagRef[] };
 
 const LINK_BUTTON =
-    'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-sand-300 bg-sand-100 hover:bg-sand-200';
+    'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border-default bg-bg-card hover:bg-bg-hover';
 
 export default function Client({ email }: Props) {
     const router = useRouter();
@@ -136,7 +136,7 @@ export default function Client({ email }: Props) {
                 {stateRows.map((row) => (
                     <div
                         key={row.uuid}
-                        className="flex flex-col gap-2 bg-sand-100 border border-sand-300 rounded-xl px-5 py-4"
+                        className="flex flex-col gap-2 bg-bg-card border border-border-default rounded-xl px-5 py-4"
                     >
                         <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div className="flex flex-col gap-1 min-w-0">
@@ -296,7 +296,7 @@ export default function Client({ email }: Props) {
                         )}
 
                         {stateEditing === row.uuid && (
-                            <div className="flex gap-1.5 flex-wrap items-center border-t border-sand-300 pt-2">
+                            <div className="flex gap-1.5 flex-wrap items-center border-t border-border-default pt-2">
                                 <span className="text-xs text-foreground-400">tags:</span>
                                 {stateTags.length === 0 && (
                                     <span className="text-xs text-foreground-400 italic">

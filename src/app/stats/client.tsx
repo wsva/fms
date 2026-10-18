@@ -28,7 +28,7 @@ function fmtTime(raw: string): string {
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
     return (
-        <div className="flex flex-col bg-sand-100 rounded-xl p-4 gap-1 min-w-36">
+        <div className="flex flex-col bg-bg-card rounded-xl p-4 gap-1 min-w-36">
             <span className="text-sm opacity-70">{label}</span>
             <span className="text-2xl font-bold">{value}</span>
             {hint && <span className="text-xs opacity-60">{hint}</span>}
@@ -114,7 +114,7 @@ export default function Client({ user_id }: Props) {
 
                 {/* XP: lifetime total, app-parity level curve, per-source breakdown, recent ledger */}
                 <Tabs.Panel id="xp" className="flex flex-col w-full gap-4">
-                    <div className="flex flex-col bg-sand-100 rounded-xl p-4 gap-2">
+                    <div className="flex flex-col bg-bg-card rounded-xl p-4 gap-2">
                         <div className="flex flex-row items-baseline gap-3">
                             <span className="text-3xl font-bold">Lv.{d.level.level}</span>
                             <span className="text-lg">{d.lifetime_xp} XP</span>
@@ -122,7 +122,7 @@ export default function Client({ user_id }: Props) {
                                 {d.level.next - d.lifetime_xp > 0 ? `${d.level.next - d.lifetime_xp} XP to Lv.${d.level.level + 1}` : 'max level band'}
                             </span>
                         </div>
-                        <div className="w-full h-2 bg-sand-300 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-bg-progress rounded-full overflow-hidden">
                             <div className="h-full bg-blue-400 rounded-full" style={{ width: `${xpPct}%` }} />
                         </div>
                     </div>
@@ -131,7 +131,7 @@ export default function Client({ user_id }: Props) {
                         <div className="flex flex-col gap-1">
                             <span className="text-sm font-bold opacity-70">By source (all time)</span>
                             {d.xp_by_source.map(s => (
-                                <div key={s.source} className="flex flex-row items-center gap-3 bg-sand-100 rounded-md px-3 py-1.5">
+                                <div key={s.source} className="flex flex-row items-center gap-3 bg-bg-card rounded-md px-3 py-1.5">
                                     <Chip size="sm" variant="secondary">{s.source}</Chip>
                                     <span className="font-bold">{s.total} XP</span>
                                     <span className="text-xs opacity-60">{s.count} awards</span>
@@ -145,7 +145,7 @@ export default function Client({ user_id }: Props) {
                         {d.recent_xp.length === 0
                             ? <Empty text="No XP yet — practice in the app and it syncs here." />
                             : d.recent_xp.map((r, i) => (
-                                <div key={i} className="flex flex-row items-center gap-3 bg-sand-100 rounded-md px-3 py-1.5 text-sm">
+                                <div key={i} className="flex flex-row items-center gap-3 bg-bg-card rounded-md px-3 py-1.5 text-sm">
                                     <span className="font-bold min-w-14 text-right">+{r.amount}</span>
                                     <Chip size="sm" variant="secondary">{r.source}</Chip>
                                     <DatasetName name={r.dataset_name} uuid={r.dataset_uuid} />
@@ -167,7 +167,7 @@ export default function Client({ user_id }: Props) {
                         {d.dictation.recent.length === 0
                             ? <Empty text="No dictation progress yet." />
                             : d.dictation.recent.map((r, i) => (
-                                <div key={i} className="flex flex-row items-center gap-3 bg-sand-100 rounded-md px-3 py-1.5 text-sm">
+                                <div key={i} className="flex flex-row items-center gap-3 bg-bg-card rounded-md px-3 py-1.5 text-sm">
                                     <Chip size="sm" color={r.status === 'complete' ? 'success' : undefined} variant={r.status === 'complete' ? 'primary' : 'secondary'}>
                                         {r.status === 'complete' ? 'complete' : r.status === 'in_progress' ? 'in progress' : (r.status || 'unknown')}
                                     </Chip>
@@ -200,7 +200,7 @@ export default function Client({ user_id }: Props) {
                                         return (
                                             <div key={q} className="flex flex-row items-center gap-2 text-xs">
                                                 <span className="w-4 text-right opacity-70">{q}</span>
-                                                <div className="flex-1 h-4 bg-sand-100 rounded overflow-hidden">
+                                                <div className="flex-1 h-4 bg-bg-card rounded overflow-hidden">
                                                     <div className={`h-full rounded ${q >= 3 ? 'bg-green-400' : 'bg-red-300'}`}
                                                         style={{ width: `${Math.round((count / max) * 100)}%` }} />
                                                 </div>
@@ -218,7 +218,7 @@ export default function Client({ user_id }: Props) {
                         {d.reviews.recent.length === 0
                             ? <Empty text="No card reviews yet." />
                             : d.reviews.recent.map((r, i) => (
-                                <div key={i} className="flex flex-row items-center gap-3 bg-sand-100 rounded-md px-3 py-1.5 text-sm">
+                                <div key={i} className="flex flex-row items-center gap-3 bg-bg-card rounded-md px-3 py-1.5 text-sm">
                                     <Chip size="sm" color={(r.quality ?? 0) >= 3 ? 'success' : 'danger'} variant="secondary">
                                         q{r.quality ?? '?'}
                                     </Chip>
@@ -246,7 +246,7 @@ export default function Client({ user_id }: Props) {
                         {d.attempts.recent.length === 0
                             ? <Empty text="No read-aloud practice yet." />
                             : d.attempts.recent.map((r, i) => (
-                                <div key={i} className="flex flex-col bg-sand-100 rounded-md px-3 py-1.5 gap-0.5">
+                                <div key={i} className="flex flex-col bg-bg-card rounded-md px-3 py-1.5 gap-0.5">
                                     <div className="flex flex-row items-center gap-3 text-sm">
                                         <Chip size="sm" variant="secondary"
                                             color={r.score >= SCORE_GOOD ? 'success' : r.score >= SCORE_PASS ? 'warning' : 'danger'}>

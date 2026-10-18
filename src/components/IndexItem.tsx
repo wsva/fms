@@ -12,7 +12,7 @@ type Props = {
 export const IndexItem = ({ href, label, description }: Props) => {
   return (
     <Link href={href} className="block max-w-[400px] m-2">
-      <Card className="flex bg-sand-300 hover:bg-sand-400 transition-colors cursor-pointer h-full">
+      <Card className="flex bg-bg-card hover:bg-bg-muted transition-colors cursor-pointer h-full">
         <Card.Header>
           <Card.Title className="font-bold text-blue-600 select-none">{label}</Card.Title>
         </Card.Header>

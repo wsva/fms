@@ -85,9 +85,9 @@ export default function Client({ user_id }: Props) {
 
     return (
         <div className="flex flex-col gap-4 my-4">
-            <div className='flex flex-col gap-1 bg-sand-200 p-2 rounded-md'>
+            <div className='flex flex-col gap-1 bg-bg-body p-2 rounded-md'>
                 <div className='flex flex-row items-center gap-2'>
-                    <Input className='flex-1 bg-sand-100 rounded-sm'
+                    <Input className='flex-1 bg-bg-card rounded-sm'
                         placeholder="Plan content"
                         value={statePlanContent}
                         onChange={(e) => setStatePlanContent(e.target.value)}

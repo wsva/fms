@@ -1,5 +1,5 @@
 export default function NavIcon({ size = 40 }: { size?: number }) {
-    const teal = '#0EA89A'
+    const teal = 'var(--accent)'
     const tealLight = '#D6F5F2'
     const tealMid = '#A8E8E3'
     const yellow = '#F5C842'

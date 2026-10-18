@@ -18,16 +18,11 @@ export default async function RootLayout({
     children: React.ReactNode;
 }>) {
     const cookieStore = await cookies();
-    const themeId = cookieStore.get('fms-theme')?.value;
-    const theme = findTheme(themeId);
-
-    const themeVars = Object.fromEntries(
-        Object.entries(theme.scale).map(([n, v]) => [`--color-sand-${n}`, v])
-    ) as React.CSSProperties;
+    const theme = findTheme(cookieStore.get('fms-theme')?.value);
 
     return (
-        <html lang="en" suppressHydrationWarning className={theme.dark ? 'dark' : ''} style={themeVars}>
-            <body className="min-h-svh font-roboto bg-sand-200">
+        <html lang="en" suppressHydrationWarning data-theme={theme.id === 'light' ? undefined : theme.id}>
+            <body className="min-h-svh font-roboto bg-bg-body text-text-primary">
                 <Providers>
                     <AppShell>
                         {children}

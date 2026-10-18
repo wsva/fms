@@ -352,8 +352,8 @@ export default function Client({ user_id }: Props) {
             key={cue.uuid}
             data-cue-index={stateCues.indexOf(cue)}
             className={`cursor-text rounded-xl border-2 py-1.5 px-2 transition-colors
-                ${cue.active ? 'border-green-500' : stateFocusedCueUUID === cue.uuid ? 'border-blue-400' : 'border-sand-300'}
-                ${cue.deleted ? 'bg-red-300' : stateDictSuccessSet.has(cue.uuid) ? 'bg-green-100' : cue.modified ? 'bg-orange-300' : 'bg-sand-100'}`}
+                ${cue.active ? 'border-green-500' : stateFocusedCueUUID === cue.uuid ? 'border-blue-400' : 'border-border-default'}
+                ${cue.deleted ? 'bg-red-300' : stateDictSuccessSet.has(cue.uuid) ? 'bg-green-100' : cue.modified ? 'bg-orange-300' : 'bg-bg-card'}`}
             onMouseDown={(e) => {
                 if (stateFocusedCueUUID === cue.uuid) return
                 const t = e.target as HTMLElement
@@ -438,7 +438,7 @@ export default function Client({ user_id }: Props) {
     return (
         <div className="flex flex-col w-full min-w-0 gap-3">
             {/* Breadcrumb navigation */}
-            <nav className="flex items-center gap-2 px-4 py-2 text-sm select-none min-w-0 overflow-x-auto rounded-xl bg-sand-100 border border-sand-300">
+            <nav className="flex items-center gap-2 px-4 py-2 text-sm select-none min-w-0 overflow-x-auto rounded-xl bg-bg-card border border-border-default">
                 <button
                     className={`shrink-0 cursor-pointer hover:underline text-left ${stateDatasetUUID ? 'text-blue-600' : 'font-semibold'}`}
                     onClick={() => setStateDatasetUUID('')}
@@ -472,7 +472,7 @@ export default function Client({ user_id }: Props) {
             </nav>
 
             {/* Toolbar */}
-            <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-xl bg-sand-100 border border-sand-300">
+            <div className="flex flex-row items-center gap-3 px-4 py-2 rounded-xl bg-bg-card border border-border-default">
                 {!stateDatasetUUID && (
                     <Button size="sm" variant="ghost" isDisabled={stateLoading}
                         onPress={async () => {
@@ -538,7 +538,7 @@ export default function Client({ user_id }: Props) {
                         {stateDatasetList.map((ds) => (
                             <button
                                 key={ds.uuid}
-                                className="text-left p-4 border border-sand-300 rounded-xl bg-sand-100 transition-colors hover:bg-sand-300 cursor-pointer flex flex-col gap-1"
+                                className="text-left p-4 border border-border-default rounded-xl bg-bg-card transition-colors hover:bg-bg-hover cursor-pointer flex flex-col gap-1"
                                 onClick={() => setStateDatasetUUID(ds.uuid)}
                             >
                                 <div className="flex items-center gap-2">
@@ -565,7 +565,7 @@ export default function Client({ user_id }: Props) {
                         <p className="text-gray-600">No media in this dataset.</p>
                     )}
                     {stateMediaList.map((m) => (
-                        <div key={m.uuid} className="p-4 border border-sand-300 rounded-xl bg-sand-100 flex flex-col gap-2">
+                        <div key={m.uuid} className="p-4 border border-border-default rounded-xl bg-bg-card flex flex-col gap-2">
                             <div className="flex items-center gap-2">
                                 <span className="font-medium">{m.source}</span>
                                 {m.duration_ms !== null && (
@@ -578,7 +578,7 @@ export default function Client({ user_id }: Props) {
                                     {m.subtitles.map((s) => (
                                         <button
                                             key={s.uuid}
-                                            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-sand-300 border border-sand-300 cursor-pointer transition-colors hover:border-blue-400"
+                                            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-bg-muted border border-border-default cursor-pointer transition-colors hover:border-blue-400"
                                             title={`Open dictation for "${s.name || s.uuid}"`}
                                             onClick={() => selectMediaSubtitle(m.uuid, s.uuid)}
                                         >
@@ -599,7 +599,7 @@ export default function Client({ user_id }: Props) {
             {!!stateMediaUUID && (
                 <div className="flex flex-col gap-3">
                     {mediaSrc && (
-                        <div className="flex flex-col gap-1 w-full sticky top-12 z-10 bg-sand-200 rounded-xl p-2">
+                        <div className="flex flex-col gap-1 w-full sticky top-12 z-10 bg-bg-body rounded-xl p-2">
                             {audioMode ? (
                                 <HlsPlayer className="w-full" videoRef={videoRef} src={mediaSrc} audioMode={true} />
                             ) : (
@@ -608,7 +608,7 @@ export default function Client({ user_id }: Props) {
                                 </div>
                             )}
                             {stateWaveformPeaks && (
-                                <div className="hidden lg:block bg-sand-100 border-t border-sand-200 p-1 shadow-lg rounded-lg">
+                                <div className="hidden lg:block bg-bg-card border-t border-border-default p-1 shadow-lg rounded-lg">
                                     <WaveformCanvas
                                         peaks={stateWaveformPeaks}
                                         videoRef={videoRef}

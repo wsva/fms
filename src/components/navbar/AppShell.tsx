@@ -111,7 +111,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         aria-hidden
                         onMouseDown={startDrag}
                         title="Drag to resize"
-                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-[#0EA89A]/50"
+                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-accent/50"
                     />
                 )}
             </div>

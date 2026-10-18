@@ -199,7 +199,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
 
             {/* Revealed: hint */}
             {stateSuggestion && (
-                <div className="rounded-xl bg-sand-100 border border-sand-300 p-4">
+                <div className="rounded-xl bg-bg-card border border-border-default p-4">
                     <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide mb-2">Hint</div>
                     <div className="text-2xl leading-tight font-roboto whitespace-pre-wrap">{stateCard.card.suggestion}</div>
                 </div>
@@ -207,7 +207,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
 
             {/* Revealed: answer */}
             {stateAnswer && (
-                <div className="rounded-xl bg-sand-100 border border-sand-300 p-4">
+                <div className="rounded-xl bg-bg-card border border-border-default p-4">
                     <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide mb-2">Answer</div>
                     <div className="text-xl">
                         <Markdown2Html content={stateCard.card.answer} withTOC />
@@ -217,7 +217,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
 
             {/* Revealed: note */}
             {stateAnswer && stateCard.card.note && (
-                <div className="rounded-xl bg-sand-100 border border-sand-300 p-4">
+                <div className="rounded-xl bg-bg-card border border-border-default p-4">
                     <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide mb-2">Note</div>
                     <div className="text-2xl leading-tight font-roboto whitespace-pre-wrap">{stateCard.card.note}</div>
                 </div>
@@ -228,7 +228,7 @@ export default function TestForm({ user_id, tag_uuid, card_uuid }: Props) {
                 <div className="flex flex-col gap-3">
                     <div className="text-xs font-semibold text-foreground-400 uppercase tracking-wide">Examples</div>
                     {stateExamples.map((v, i) => (
-                        <div key={i} className="flex flex-col bg-sand-100 border border-sand-300 rounded-xl p-4 gap-2">
+                        <div key={i} className="flex flex-col bg-bg-card border border-border-default rounded-xl p-4 gap-2">
                             <div className="text-xl whitespace-pre-wrap">{v}</div>
                             <div className="flex justify-end">
                                 <Link

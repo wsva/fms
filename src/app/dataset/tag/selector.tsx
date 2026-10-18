@@ -109,15 +109,15 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
     }
 
     return (
-        <div className="rounded-lg border border-sand-300 bg-sand-100 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 bg-sand-200 border-b border-sand-300 cursor-pointer" onClick={() => setStateHide(!stateHide)}>
-                <span className="text-xs font-semibold text-sand-500 tracking-wider shrink-0 select-none">
+        <div className="rounded-lg border border-border-default bg-bg-card shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-body border-b border-border-default cursor-pointer" onClick={() => setStateHide(!stateHide)}>
+                <span className="text-xs font-semibold text-text-tertiary tracking-wider shrink-0 select-none">
                     Dataset Tags:
                 </span>
                 <div className="flex-1 flex flex-wrap gap-1 min-w-0">
                     {stateSelected.size > 0 && (
                         stateData.filter(t => stateSelected.has(t.uuid)).map(t => (
-                            <span key={t.uuid} className="text-xs bg-sand-300 text-sand-700 rounded px-1.5 py-0.5 font-medium">
+                            <span key={t.uuid} className="text-xs bg-bg-card text-text-secondary rounded px-1.5 py-0.5 font-medium">
                                 {t.tag}
                             </span>
                         ))
@@ -160,7 +160,7 @@ export default function TagSelector({ user_id, scope, selectionMode, hideSelecto
                         </div>
                     )}
                     {stateData.length === 0 && !stateLoading && (
-                        <span className="text-xs text-sand-400 italic">No tags available</span>
+                        <span className="text-xs text-text-tertiary italic">No tags available</span>
                     )}
                 </div>
             )}

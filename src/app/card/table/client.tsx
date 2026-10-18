@@ -91,7 +91,7 @@ export default function CardTable({ user_id }: Props) {
                     {pager}
                     <table className="w-full text-sm border-collapse">
                         <thead>
-                            <tr className="bg-sand-100 dark:bg-zinc-700">
+                            <tr className="bg-bg-card">
                                 <th className="border border-slate-300 dark:border-zinc-600 px-3 py-2 text-left w-1/2">Question</th>
                                 <th className="border border-slate-300 dark:border-zinc-600 px-3 py-2 text-left w-1/2">Answer</th>
                             </tr>

@@ -11,7 +11,7 @@ type Props = {
 
 export default function Page({ user_id, item, handleDelete }: Props) {
     return (
-        <div className={`flex flex-col w-full items-start rounded-md p-1 bg-sand-300`}>
+        <div className={`flex flex-col w-full items-start rounded-md p-1 bg-bg-card`}>
             <div className='flex flex-row w-full items-center justify-start gap-2'>
                 <Link target='_blank'
                     href={`/speak/practice/${item.uuid}`}

@@ -221,7 +221,7 @@ export default function VoiceInputFloat() {
             style={{ left: pos.x, top: pos.y }}
         >
             {processing && (
-                <div className="pointer-events-auto bg-background shadow-lg rounded-full px-3 py-1.5 flex items-center gap-2 text-sm text-foreground-500 border border-sand-300">
+                <div className="pointer-events-auto bg-background shadow-lg rounded-full px-3 py-1.5 flex items-center gap-2 text-sm text-foreground-500 border border-border-default">
                     <Spinner size="sm" />
                     <span>Transcribing…</span>
                 </div>

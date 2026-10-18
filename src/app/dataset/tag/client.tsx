@@ -19,7 +19,7 @@ function ScopeChips({ allScopes, selectedUuids, onChange, disabled }: {
     onChange: (uuids: string[]) => void;
     disabled?: boolean;
 }) {
-    if (allScopes.length === 0) return <span className="text-xs text-sand-400 italic">No scopes defined</span>;
+    if (allScopes.length === 0) return <span className="text-xs text-text-tertiary italic">No scopes defined</span>;
     return (
         <div className="flex gap-1.5 flex-wrap">
             {allScopes.map(s => {
@@ -86,7 +86,7 @@ function Item({ item, allTags, allScopes, scopeMap, childrenOf, getDescendantUui
     return (
         <div className="flex flex-col gap-1.5">
             <div
-                className="tag-card group flex flex-col w-full bg-sand-300 border border-sand-400 rounded-lg px-4 py-2.5 gap-1.5 transition-all duration-300 hover:shadow-md hover:bg-sand-200 hover:border-sand-500"
+                className="tag-card group flex flex-col w-full bg-bg-card border border-border-light rounded-lg px-4 py-2.5 gap-1.5 transition-all duration-300 hover:shadow-md hover:bg-bg-hover hover:border-accent"
                 style={{ animationDelay: `${index * 45}ms` }}
             >
                 {/* Main row */}
@@ -95,14 +95,14 @@ function Item({ item, allTags, allScopes, scopeMap, childrenOf, getDescendantUui
                         <TextField className='flex-1'>
                             <Label>Tag Name</Label>
                             <Input
-                                className='bg-sand-50 border border-sand-300 tag-name-font'
+                                className='bg-bg-input border border-border-default tag-name-font'
                                 value={stateData.tag}
                                 onChange={(e) => setStateData({ ...stateData, tag: e.target.value })}
                             />
                         </TextField>
                     ) : (
                         <div className="flex flex-row text-center justify-start gap-2 flex-1">
-                            <h3 className={`text-sand-900 leading-tight tag-name-font truncate ${textSize}`}>
+                            <h3 className={`text-text-primary leading-tight tag-name-font truncate ${textSize}`}>
                                 {stateData.tag}
                             </h3>
                             {stateData.shared === "Y" && (
@@ -175,7 +175,7 @@ function Item({ item, allTags, allScopes, scopeMap, childrenOf, getDescendantUui
                         <Select.Popover>
                             <ListBox>
                                 <ListBox.Item id="" key="none" textValue="None (root tag)">
-                                    <span className="text-sand-400 italic">None (root tag)</span>
+                                    <span className="text-text-tertiary italic">None (root tag)</span>
                                 </ListBox.Item>
                                 {parentOptions.map(t => (
                                     <ListBox.Item id={t.uuid} key={t.uuid} textValue={t.tag}>{t.tag}</ListBox.Item>
@@ -190,25 +190,25 @@ function Item({ item, allTags, allScopes, scopeMap, childrenOf, getDescendantUui
                     <TextField className='w-full'>
                         <Label>Description</Label>
                         <TextArea
-                            className="bg-sand-50 border border-sand-300 text-sm text-sand-800"
+                            className="bg-bg-input border border-border-default text-sm text-text-primary"
                             value={stateData.description}
                             onChange={(e) => setStateData({ ...stateData, description: e.target.value })}
                         />
                     </TextField>
                 ) : (
                     stateData.description && (
-                        <p className="text-sm text-sand-600 leading-relaxed">{stateData.description}</p>
+                        <p className="text-sm text-text-secondary leading-relaxed">{stateData.description}</p>
                     )
                 )}
 
-                <div className="text-xs text-sand-400 font-mono pt-1 border-t border-sand-400">
+                <div className="text-xs text-text-tertiary font-mono pt-1 border-t border-border-light">
                     UUID: {stateData.uuid}
                 </div>
             </div>
 
             {/* Children */}
             {children.length > 0 && (
-                <div className="ml-5 pl-4 border-l-2 border-sand-400 flex flex-col gap-1.5">
+                <div className="ml-5 pl-4 border-l-2 border-border-light flex flex-col gap-1.5">
                     {children.map((child, i) => (
                         <Item
                             key={child.uuid}
@@ -372,9 +372,9 @@ export default function Page({ user_id }: Props) {
             `}</style>
 
             {/* Page header */}
-            <div className="page-header flex items-end justify-between pb-4 border-b-2 border-sand-300">
+            <div className="page-header flex items-end justify-between pb-4 border-b-2 border-border-default">
                 <div>
-                    <h1 className="page-title-font text-4xl text-sand-900 leading-tight">Tag Management</h1>
+                    <h1 className="page-title-font text-4xl text-text-primary leading-tight">Tag Management</h1>
                 </div>
                 <Button
                     variant={stateShowForm ? 'ghost' : 'primary'}
@@ -388,7 +388,7 @@ export default function Page({ user_id }: Props) {
             {/* Scope filter */}
             {stateScopes.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold text-sand-500 uppercase tracking-widest shrink-0">Scope:</span>
+                    <span className="text-xs font-semibold text-text-tertiary uppercase tracking-widest shrink-0">Scope:</span>
                     <Chip
                         variant={stateScopeFilter === null ? "primary" : "secondary"}
                         color={stateScopeFilter === null ? "success" : "default"}
@@ -413,7 +413,7 @@ export default function Page({ user_id }: Props) {
 
             {Object.keys(stateHubCounts).length > 0 && (
                 <div className='flex gap-1.5 flex-wrap items-center'>
-                    <span className="text-xs text-sand-500">datasets per tag:</span>
+                    <span className="text-xs text-text-tertiary">datasets per tag:</span>
                     {stateData.filter(t => stateHubCounts[t.uuid]).map(t => (
                         <Link key={t.uuid} href={`/dataset/market?tag=${t.uuid}`} className="hover:opacity-80">
                             <Chip size="sm" variant="secondary">{t.tag} · {stateHubCounts[t.uuid]}</Chip>
@@ -434,20 +434,20 @@ export default function Page({ user_id }: Props) {
 
             {/* New tag form */}
             {stateShowForm && (
-                <div className='form-expand flex flex-col w-full gap-4 p-5 rounded-xl bg-sand-200 border border-sand-300'>
-                    <p className="text-xs font-semibold text-sand-500 uppercase tracking-widest">New Tag</p>
+                <div className='form-expand flex flex-col w-full gap-4 p-5 rounded-xl bg-bg-body border border-border-default'>
+                    <p className="text-xs font-semibold text-text-tertiary uppercase tracking-widest">New Tag</p>
                     <div className="flex items-end gap-4">
                         <TextField className='flex-1'>
                             <Label>Tag Name</Label>
                             <Input
-                                className="bg-sand-100"
+                                className="bg-bg-card"
                                 value={stateNew.tag ?? ""}
                                 onChange={(e) => setStateNew({ ...stateNew, tag: e.target.value })}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
                             />
                         </TextField>
                         <div className="flex flex-col gap-1">
-                            <span className="text-xs text-sand-500 font-medium">Scope</span>
+                            <span className="text-xs text-text-tertiary font-medium">Scope</span>
                             <ScopeChips
                                 allScopes={stateScopes}
                                 selectedUuids={stateNew.scopeUuids ?? []}
@@ -476,7 +476,7 @@ export default function Page({ user_id }: Props) {
                     <TextField className='w-full'>
                         <Label>Description</Label>
                         <TextArea
-                            className="bg-sand-100"
+                            className="bg-bg-card"
                             value={stateNew.description ?? ""}
                             onChange={(e) => setStateNew({ ...stateNew, description: e.target.value })}
                         />
@@ -508,7 +508,7 @@ export default function Page({ user_id }: Props) {
                     />
                 ))}
                 {allRootTags.length === 0 && (
-                    <p className="text-sm text-sand-400 italic">No tags yet</p>
+                    <p className="text-sm text-text-tertiary italic">No tags yet</p>
                 )}
             </div>
         </div>

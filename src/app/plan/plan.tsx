@@ -70,7 +70,7 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
     }, [item, stateReload]);
 
     return (
-        <div className="flex flex-col items-center justify-center w-full rounded-md p-1 bg-sand-300">
+        <div className="flex flex-col items-center justify-center w-full rounded-md p-1 bg-bg-card">
             <div className="flex flex-row items-center w-full px-2 py-1 gap-2">
 
                 {/* Title + duration badge */}
@@ -78,7 +78,7 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
                     <span className={`font-bold truncate ${simple ? 'text-base' : 'text-lg'}`}>
                         {item.content}
                     </span>
-                    {/* <span className="shrink-0 text-xs font-semibold text-sand-700 bg-sand-200 rounded-full px-2 py-0.5">
+                    {/* <span className="shrink-0 text-xs font-semibold text-text-secondary bg-bg-body rounded-full px-2 py-0.5">
                         {item.minutes}m
                     </span> */}
                 </div>
@@ -102,7 +102,7 @@ export default function Page({ item, user_id, simple, handleDelete, handleUpdate
                             <Button isIconOnly variant='ghost'
                                 onPress={() => handleUpdate({ ...item, favorite: item.favorite === "Y" ? "N" : "Y" })}
                             >
-                                {item.favorite === "Y" ? <StarFill color='text-sand-600' /> : <Star />}
+                                {item.favorite === "Y" ? <StarFill color='text-text-secondary' /> : <Star />}
                             </Button>
                             {item.favorite !== "Y" && (
                                 <Button isIconOnly variant='ghost'

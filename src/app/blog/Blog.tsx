@@ -35,7 +35,7 @@ export default function Blog({ list }: Props) {
                             target="_blank"
                             className="block group w-full"
                         >
-                            <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-sand-300 bg-sand-100 hover:bg-sand-200 hover:border-sand-400 transition-colors">
+                            <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-border-default bg-bg-card hover:bg-bg-hover hover:border-border-light transition-colors">
                                 <span className="text-xl font-semibold text-primary group-hover:underline leading-snug">
                                     {item.title}
                                 </span>

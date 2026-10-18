@@ -17,7 +17,7 @@ import { formatBytes, formatStamp, shortHash } from '@/lib/datasets/format';
 type Props = { uuid: string };
 
 const LINK_BUTTON =
-    'inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-sand-300 bg-sand-100 hover:bg-sand-200';
+    'inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-border-default bg-bg-card hover:bg-bg-hover';
 
 function Field({ label, value }: { label: string; value: string }) {
     return (
@@ -191,7 +191,7 @@ export default function Client({ uuid }: Props) {
 
             {item.description && <p className="text-sm text-foreground-600">{item.description}</p>}
 
-            <div className="bg-sand-100 border border-sand-300 rounded-xl px-5 py-4 grid gap-4 sm:grid-cols-3">
+            <div className="bg-bg-card border border-border-default rounded-xl px-5 py-4 grid gap-4 sm:grid-cols-3">
                 <Field label="owner" value={item.is_owner ? 'you' : item.user_id} />
                 <Field label="size" value={formatBytes(item.total_bytes)} />
                 <Field label="files" value={String(item.file_count)} />
@@ -208,7 +208,7 @@ export default function Client({ uuid }: Props) {
 
             <div className="flex flex-col gap-2">
                 <h2 className="text-lg font-semibold text-foreground">Integrity</h2>
-                <div className="bg-sand-100 border border-sand-300 rounded-xl px-5 py-4 grid gap-4 sm:grid-cols-2">
+                <div className="bg-bg-card border border-border-default rounded-xl px-5 py-4 grid gap-4 sm:grid-cols-2">
                     <Field label="overall_hash" value={shortHash(item.overall_hash)} />
                     <Field label="archive sha256" value={shortHash(item.archive_sha256)} />
                 </div>
@@ -243,7 +243,7 @@ export default function Client({ uuid }: Props) {
                         return (
                             <div
                                 key={v.version}
-                                className="flex items-center gap-3 bg-sand-100 border border-sand-300 rounded-lg px-4 py-2 text-xs text-foreground-500 flex-wrap"
+                                className="flex items-center gap-3 bg-bg-card border border-border-default rounded-lg px-4 py-2 text-xs text-foreground-500 flex-wrap"
                             >
                                 <span className="font-semibold text-foreground">v{v.version}</span>
                                 {isCurrent && (

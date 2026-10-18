@@ -19,7 +19,7 @@ function canDownload(item: DatasetListItem): boolean {
 
 const VISIBILITY_COLOR = { private: 'danger', shared: 'warning', public: 'success' } as const;
 const LINK_BUTTON =
-    'inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-sand-300 bg-sand-100 hover:bg-sand-200';
+    'inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-border-default bg-bg-card hover:bg-bg-hover';
 
 export default function Client({ email, initialTag, initialType }: Props) {
     const router = useRouter();
@@ -150,7 +150,7 @@ export default function Client({ email, initialTag, initialType }: Props) {
                 {stateItems.map((item) => (
                     <div
                         key={item.uuid}
-                        className="flex flex-col gap-2 bg-sand-100 border border-sand-300 rounded-xl px-5 py-4"
+                        className="flex flex-col gap-2 bg-bg-card border border-border-default rounded-xl px-5 py-4"
                     >
                         <div className="flex items-start justify-between gap-2">
                             <Link

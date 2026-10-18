@@ -33,7 +33,7 @@ export default function ParagraphList({
                 <div key={pi}
                     className={[
                         'flex flex-col gap-2 p-3 rounded-lg',
-                        pi % 2 === 0 ? 'bg-sand-100' : 'bg-sand-200',
+                        pi % 2 === 0 ? 'bg-bg-card' : 'bg-bg-body',
                     ].join(' ')}
                 >
                     {/* Paragraph badge + actions */}
@@ -118,7 +118,7 @@ export default function ParagraphList({
                                     onClick={() => onEditSentence(s)}
                                     className={[
                                         'inline cursor-pointer rounded px-0.5 transition-colors',
-                                        s.modified ? 'bg-sand-400' : (sentenceBgClass(s.bg_color) || 'hover:bg-sand-300'),
+                                        s.modified ? 'bg-bg-muted' : (sentenceBgClass(s.bg_color) || 'hover:bg-bg-hover'),
                                         s.play_url || s.hasLocalAudio ? 'underline decoration-primary decoration-2' : '',
                                     ].join(' ')}
                                 >
@@ -134,7 +134,7 @@ export default function ParagraphList({
                                     onClick={() => onEditSentence(s)}
                                     className={[
                                         'text-left text-xl cursor-pointer rounded px-2 py-0.5 transition-colors',
-                                        s.modified ? 'bg-sand-400' : (sentenceBgClass(s.bg_color) || 'hover:bg-sand-300'),
+                                        s.modified ? 'bg-bg-muted' : (sentenceBgClass(s.bg_color) || 'hover:bg-bg-hover'),
                                         s.play_url || s.hasLocalAudio ? 'border-l-2 border-primary' : '',
                                     ].join(' ')}
                                 >

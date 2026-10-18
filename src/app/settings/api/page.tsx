@@ -121,21 +121,21 @@ export default function Page() {
             <div>
                 <h1 className="text-xl font-semibold">API Reference</h1>
                 <p className="text-sm text-foreground-500 mt-1">
-                    Authenticate with <code className="font-mono bg-sand-100 px-1 rounded">x-api-key: fms_...</code> header.
+                    Authenticate with <code className="font-mono bg-bg-card px-1 rounded">x-api-key: fms_...</code> header.
                     Write operations (POST / PATCH / PUT / DELETE) require a <span className="font-medium">write</span>-scoped key.
-                    The full machine-readable spec is at <code className="font-mono bg-sand-100 px-1 rounded">/api</code>.
+                    The full machine-readable spec is at <code className="font-mono bg-bg-card px-1 rounded">/api</code>.
                 </p>
             </div>
             {API_SECTIONS.map((section) => (
                 <div key={section.section} className="flex flex-col gap-0.5">
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground-400 mb-1">{section.section}</h2>
-                    <div className="border border-sand-200 rounded-lg overflow-hidden">
+                    <div className="border border-border-default rounded-lg overflow-hidden">
                         {section.entries.map((entry, i) => (
                             <div
                                 key={i}
-                                className={`flex flex-row items-start gap-3 px-3 py-2 ${i < section.entries.length - 1 ? 'border-b border-sand-100' : ''}`}
+                                className={`flex flex-row items-start gap-3 px-3 py-2 ${i < section.entries.length - 1 ? 'border-b border-border-default' : ''}`}
                             >
-                                <span className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded w-14 text-center shrink-0 mt-0.5 ${METHOD_COLOR[entry.method] ?? 'text-foreground-500 bg-sand-50'}`}>
+                                <span className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded w-14 text-center shrink-0 mt-0.5 ${METHOD_COLOR[entry.method] ?? 'text-foreground-500 bg-bg-input'}`}>
                                     {entry.method}
                                 </span>
                                 <code className="text-sm font-mono text-foreground-700 w-72 shrink-0">{entry.path}</code>

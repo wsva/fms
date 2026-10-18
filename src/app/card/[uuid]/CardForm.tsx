@@ -291,7 +291,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                 </div>
                 {stateEdit ? (
                     <>
-                        <TextArea className='w-full rounded-lg bg-sand-300 text-xl leading-tight font-roboto'
+                        <TextArea className='w-full rounded-lg bg-bg-card text-xl leading-tight font-roboto'
                             placeholder='question'
                             {...register('question')}
                         />
@@ -321,7 +321,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             setStateSelected={setStateTagSelected}
                         />
                         {!simple && (
-                            <TextArea className='w-full rounded-lg bg-sand-300 text-xl leading-tight font-roboto'
+                            <TextArea className='w-full rounded-lg bg-bg-card text-xl leading-tight font-roboto'
                                 placeholder='suggestion'
                                 {...register('suggestion')}
                             />
@@ -331,14 +331,14 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             {...restAnswer}
                             ref={refAnswer}
                         />
-                        <TextArea className='w-full rounded-lg bg-sand-300 text-xl leading-tight font-roboto'
+                        <TextArea className='w-full rounded-lg bg-bg-card text-xl leading-tight font-roboto'
                             placeholder='note'
                             {...register('note')}
                         />
                     </>
                 ) : (
                     <>
-                        <div className='text-xl bg-sand-300 rounded-md p-2'>
+                        <div className='text-xl bg-bg-card rounded-md p-2'>
                             <Markdown2Html content={watch('question', getDefault('question') as string)} />
                         </div>
                         {stateDuplicates.length > 0 && (
@@ -368,7 +368,7 @@ export default function CardForm({ card_ext, email, edit_view, simple, create_ne
                             {watch('suggestion', getDefault('suggestion') as string || '')}
                         </div>
                         <Separator />
-                        <div className='text-xl bg-sand-300 rounded-md px-2'>
+                        <div className='text-xl bg-bg-card rounded-md px-2'>
                             <Markdown2Html content={watch('answer', getDefault('answer') as string)} withTOC />
                         </div>
                         <Separator />

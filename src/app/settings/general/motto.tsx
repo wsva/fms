@@ -29,7 +29,7 @@ export default function MottoSetting() {
             <p className="text-xs text-foreground-400">A motivational message shown as a popup when you open the website.</p>
             <div className="flex flex-col gap-2">
                 <TextArea
-                    className="bg-sand-100 border border-sand-300"
+                    className="bg-bg-card border border-border-default"
                     value={motto}
                     rows={3}
                     placeholder="Enter your motto..."

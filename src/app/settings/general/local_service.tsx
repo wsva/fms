@@ -31,7 +31,7 @@ export default function LocalServiceSetting() {
             <div className="flex gap-2 items-end">
                 <TextField className="flex-1">
                     <Input
-                        className="bg-sand-100 border border-sand-300"
+                        className="bg-bg-card border border-border-default"
                         value={localService}
                         type="text"
                         onChange={e => setLocalService(e.target.value)}

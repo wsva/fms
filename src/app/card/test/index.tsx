@@ -51,11 +51,11 @@ export default function CardTestPage({ user_id }: Props) {
                             target="_blank"
                             className={`group flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-lg border transition-colors`}
                         >
-                            <span className="font-semibold text-sand-900 group-hover:text-primary">
+                            <span className="font-semibold text-text-primary group-hover:text-primary">
                                 {tag.tag}
                             </span>
                             {!!tag.description && (
-                                <span className="text-xs text-sand-500 leading-snug">{tag.description}</span>
+                                <span className="text-xs text-text-tertiary leading-snug">{tag.description}</span>
                             )}
                         </Link>
                     ))}

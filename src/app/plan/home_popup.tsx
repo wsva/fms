@@ -44,7 +44,7 @@ export default function HomePopup({ user_id }: Props) {
     const body = (
         <div className="flex flex-col gap-1">
             <div className="flex justify-end">
-                <Link href="/plan" className="text-sm text-sand-600 hover:text-sand-800 hover:underline">
+                <Link href="/plan" className="text-sm text-text-secondary hover:text-text-primary hover:underline">
                     open plan →
                 </Link>
             </div>
@@ -70,7 +70,7 @@ export default function HomePopup({ user_id }: Props) {
             isOpen={isOpen}
             onClose={() => setIsOpen(false)}
             body={body}
-            className="bg-sand-100"
+            className="bg-bg-card"
         />
     )
 }

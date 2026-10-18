@@ -54,7 +54,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                     <div className='flex flex-row items-center justify-start w-full gap-1'>
                         <Input aria-label='input answer' autoComplete="one-time-code"
                             id={`d-s-i-${cue.uuid}`}
-                            className='text-xl font-bold border-b-2 border-b-gray-400 bg-sand-100 rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
+                            className='text-xl font-bold border-b-2 border-b-gray-400 bg-bg-card rounded-none p-0 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
                             value={stateInput}
                             onFocus={onFocusInput}
                             onChange={(e) => {
@@ -101,7 +101,7 @@ function Dictation({ cue, media, stateSuccess, setStateSuccess, onSuccess, onFoc
                     <div className='flex flex-row items-center justify-start w-full gap-1'>
                         <TextArea aria-label='input answer' autoComplete="one-time-code"
                             id={`d-s-i-${cue.uuid}`}
-                            className='text-4xl font-bold border-b-2 border-b-gray-400 bg-sand-300 rounded-lg p-2 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
+                            className='text-4xl font-bold border-b-2 border-b-gray-400 bg-bg-card rounded-lg p-2 my-1 w-full shadow-none focus:ring-0 focus:border-b-blue-400'
                             value={stateInput}
                             rows={5}
                             onFocus={onFocusInput}
@@ -198,7 +198,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
     const timeEditorEl = () => {
         return (
             <InputGroup className="w-xs shadow-none data-focus-within:border-x-2 data-focus-within:ring-0">
-                <InputGroup.Prefix className="p-0 bg-sand-100">
+                <InputGroup.Prefix className="p-0 bg-bg-card">
                     <Button isIconOnly variant="ghost" size="sm" className="w-min px-2" isDisabled={isDisabled} onPress={onExpandStart}>
                         <ArrowLeftToLine />
                     </Button>
@@ -215,7 +215,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                     </Button>
                 </InputGroup.Prefix>
                 <InputGroup.Input data-no-voice aria-label="start time" autoComplete="one-time-code"
-                    className={`text-center font-normal bg-sand-100 w-min ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
+                    className={`text-center font-normal bg-bg-card w-min ${!(!!validateVttTime(stateStart) && !!validateVttTime(stateEnd)) ? 'text-red-500' : ''}`}
                     value={`${stateStart} ➔ ${stateEnd}`}
                     disabled={isDisabled}
                     onChange={(e) => {
@@ -230,7 +230,7 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                             onUpdate({ ...cue, end_ms: parseVttTime(stateEnd) })
                     }}
                 />
-                <InputGroup.Suffix className="p-0 bg-sand-100">
+                <InputGroup.Suffix className="p-0 bg-bg-card">
                     <Button isIconOnly variant="ghost" size="sm" className="w-min px-2"
                         isDisabled={isDisabled}
                         onPress={() => {

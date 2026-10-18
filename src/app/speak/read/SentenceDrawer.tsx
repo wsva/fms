@@ -153,11 +153,11 @@ export default function SentenceDrawer({
     return (
         <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
             <div
-                className={`bg-sand-300 rounded-t-2xl shadow-2xl w-full max-h-[75vh] overflow-y-auto transition-[min-height] duration-300 ${expanded ? 'min-h-[50vh]' : ''}`}
+                className={`bg-bg-card rounded-t-2xl shadow-2xl w-full max-h-[75vh] overflow-y-auto transition-[min-height] duration-300 ${expanded ? 'min-h-[50vh]' : ''}`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex flex-row items-center justify-between px-4 pt-4 pb-2 border-b border-sand-300">
+                <div className="flex flex-row items-center justify-between px-4 pt-4 pb-2 border-b border-border-default">
                     <span className="font-semibold text-base">
                         {drawer.mode === 'edit' ? 'Edit Sentence' : 'New Sentence'}
                     </span>
@@ -239,7 +239,7 @@ export default function SentenceDrawer({
 
                     {/* STT diff */}
                     {hasAudio && (
-                        <div className={`items-center bg-sand-100 rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
+                        <div className={`items-center bg-bg-card rounded p-2 ${expanded ? 'text-xl' : 'text-sm'}`}>
                             {highlightDifferences(content, recognized)}
                         </div>
                     )}
@@ -262,7 +262,7 @@ export default function SentenceDrawer({
                                 <button
                                     key={char}
                                     title={hint}
-                                    className="px-2 py-0.5 text-sm rounded bg-sand-100 hover:bg-sand-200 border border-sand-300 font-mono"
+                                    className="px-2 py-0.5 text-sm rounded bg-bg-card hover:bg-bg-hover border border-border-default font-mono"
                                     onClick={() => insertAtCursor(char)}
                                 >
                                     {label}
@@ -321,8 +321,8 @@ export default function SentenceDrawer({
                                 title="None"
                                 onClick={() => onBgColorChange(null)}
                                 className={[
-                                    'w-6 h-6 rounded-full border-2 bg-sand-50',
-                                    bgColor === null ? 'border-sand-500' : 'border-sand-300',
+                                    'w-6 h-6 rounded-full border-2 bg-bg-card',
+                                    bgColor === null ? 'border-accent' : 'border-border-default',
                                 ].join(' ')}
                             />
                             {BG_COLORS.map(c => (
@@ -333,7 +333,7 @@ export default function SentenceDrawer({
                                     className={[
                                         'w-6 h-6 rounded-full border-2',
                                         c.swatch,
-                                        bgColor === c.key ? 'border-sand-500' : 'border-transparent',
+                                        bgColor === c.key ? 'border-accent' : 'border-transparent',
                                     ].join(' ')}
                                 />
                             ))}
@@ -342,11 +342,11 @@ export default function SentenceDrawer({
 
                     {/* Words */}
                     {words.length > 0 && (
-                        <div className="flex flex-row flex-wrap gap-1.5 pt-1 border-t border-sand-200">
+                        <div className="flex flex-row flex-wrap gap-1.5 pt-1 border-t border-border-default">
                             {words.map(w => (
                                 <Tooltip key={w.uuid}>
                                     <Tooltip.Trigger>
-                                        <span className="inline-flex flex-col items-center px-2 py-0.5 rounded bg-sand-100 border border-sand-200 text-xs leading-tight">
+                                        <span className="inline-flex flex-col items-center px-2 py-0.5 rounded bg-bg-card border border-border-default text-xs leading-tight">
                                             <span className="font-medium cursor-pointer hover:text-blue-600" onMouseDown={handleWordMouseDown}>{w.word}</span>
                                             {w.word_type && <span className="text-foreground-400 text-[10px]">{w.word_type}</span>}
                                         </span>
@@ -365,12 +365,12 @@ export default function SentenceDrawer({
                 <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40"
                     onClick={() => setShowRulesEditor(false)}
                 >
-                    <div className="bg-sand-50 rounded-2xl shadow-2xl p-5 flex flex-col gap-3 w-96 max-w-[90vw]"
+                    <div className="bg-bg-card rounded-2xl shadow-2xl p-5 flex flex-col gap-3 w-96 max-w-[90vw]"
                         onClick={e => e.stopPropagation()}
                     >
                         <p className="font-semibold text-base">Auto-replace Rules</p>
                         <textarea
-                            className="w-full h-48 text-sm font-mono border border-sand-300 rounded p-2 resize-none focus:outline-none focus:border-sand-500 overflow-x-auto whitespace-pre bg-sand-50"
+                            className="w-full h-48 text-sm font-mono border border-border-default rounded p-2 resize-none focus:outline-none focus:border-accent overflow-x-auto whitespace-pre bg-bg-input"
                             value={rulesText}
                             onChange={e => setRulesText(e.target.value)}
                             spellCheck={false}

@@ -54,17 +54,17 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
 
             <div className="flex flex-row gap-2 items-center">
                 <input
-                    className="border border-sand-300 rounded px-3 py-1.5 text-sm flex-1 focus:outline-none focus:border-sand-500 bg-sand-50"
+                    className="border border-border-default rounded px-3 py-1.5 text-sm flex-1 focus:outline-none focus:border-accent bg-bg-input"
                     placeholder="Key name (optional)"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCreate()}
                 />
-                <div className="flex flex-row rounded border border-sand-300 overflow-hidden text-sm shrink-0">
+                <div className="flex flex-row rounded border border-border-default overflow-hidden text-sm shrink-0">
                     {(['write', 'read'] as const).map(s => (
                         <button
                             key={s}
-                            className={`px-3 py-1.5 transition-colors ${newScope === s ? 'bg-sand-700 text-white' : 'bg-sand-50 text-foreground-600 hover:bg-sand-100'}`}
+                            className={`px-3 py-1.5 transition-colors ${newScope === s ? 'bg-accent-bg text-white' : 'bg-bg-input text-foreground-600 hover:bg-bg-hover'}`}
                             onClick={() => setNewScope(s)}
                         >
                             {s}
@@ -96,10 +96,10 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
             ) : (
                 <div className="flex flex-col gap-2">
                     {keys.map(k => (
-                        <div key={k.uuid} className="flex flex-row items-center justify-between border border-sand-200 rounded px-3 py-2">
+                        <div key={k.uuid} className="flex flex-row items-center justify-between border border-border-default rounded px-3 py-2">
                             <div className="flex flex-row items-center gap-2">
                                 <span className="text-sm font-medium">{k.name}</span>
-                                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${k.scope === 'write' ? 'bg-blue-50 text-blue-700' : 'bg-sand-100 text-foreground-500'}`}>
+                                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${k.scope === 'write' ? 'bg-blue-50 text-blue-700' : 'bg-bg-card text-foreground-500'}`}>
                                     {k.scope ?? 'write'}
                                 </span>
                                 <span className="text-xs text-foreground-400">{new Date(k.created_at).toLocaleDateString()}</span>
@@ -114,7 +114,7 @@ export default function ApiKeysSetting({ user_id }: { user_id: string }) {
 
             <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-400 mb-1 mt-1">Usage</h3>
-                <pre className="text-xs bg-sand-50 border border-sand-200 rounded p-3 overflow-x-auto whitespace-pre">{`curl https://your-domain/api/card \\
+                <pre className="text-xs bg-bg-input border border-border-default rounded p-3 overflow-x-auto whitespace-pre">{`curl https://your-domain/api/card \\
   -H "x-api-key: fms_..."
 
 curl -X POST https://your-domain/api/card \\
@@ -125,7 +125,7 @@ curl -X POST https://your-domain/api/card \\
 
             <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-400 mb-1 mt-1">MCP (Claude Code)</h3>
-                <pre className="text-xs bg-sand-50 border border-sand-200 rounded p-3 overflow-x-auto whitespace-pre">{`# .claude/mcp.json
+                <pre className="text-xs bg-bg-input border border-border-default rounded p-3 overflow-x-auto whitespace-pre">{`# .claude/mcp.json
 {
   "mcpServers": {
     "fms": {

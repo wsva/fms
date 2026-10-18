@@ -173,7 +173,7 @@ export default function Item({ uuid, user_id }: Props) {
             )}
 
             {stateText?.user_id === user_id ? (
-                <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300'>
+                <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-bg-card'>
                     <div className='flex flex-row w-full items-end justify-end'>
                         <Button variant="primary" size="sm"
                             isDisabled={!stateNeedSave || stateSaving} onPress={handleSaveText}
@@ -181,7 +181,7 @@ export default function Item({ uuid, user_id }: Props) {
                             Save
                         </Button>
                     </div>
-                    <TextArea className='w-full text-xl bg-sand-200'
+                    <TextArea className='w-full text-xl bg-bg-input'
                         defaultValue={stateText.text}
                         onChange={(e) => {
                             setStateText({ ...stateText, text: e.target.value })
@@ -190,7 +190,7 @@ export default function Item({ uuid, user_id }: Props) {
                     />
                 </div>
             ) : (
-                <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-sand-300 text-xl'>
+                <div className='flex flex-col w-full gap-2 my-4 p-2 rounded-lg bg-bg-card text-xl'>
                     {stateText?.text}
                 </div>
             )}
@@ -213,7 +213,7 @@ export default function Item({ uuid, user_id }: Props) {
 
             {stateCurrent && (
                 <div className='flex flex-col items-center justify-center w-full gap-2 my-4'>
-                    <div className='flex flex-col w-full p-2 rounded-lg bg-sand-300'>
+                    <div className='flex flex-col w-full p-2 rounded-lg bg-bg-card'>
                         <div className="flex flex-row items-center justify-start">
                             <div className="text-md text-foreground-400">recognized from audio:</div>
                             <Button isIconOnly variant='ghost' className='h-fit'
@@ -253,7 +253,7 @@ export default function Item({ uuid, user_id }: Props) {
             )}
 
             {stateData.length > 0 && (
-                <div className="flex flex-col w-full gap-4 my-4 bg-sand-300">
+                <div className="flex flex-col w-full gap-4 my-4 bg-bg-card">
                     {stateData.map((v, i) =>
                         <div key={`${i}-${v.uuid}`} className='flex flex-col w-full ps-2'>
                             <div className="flex flex-row items-center justify-start">

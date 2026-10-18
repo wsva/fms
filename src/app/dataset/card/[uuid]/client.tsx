@@ -160,7 +160,7 @@ export default function Client({ uuid }: Props) {
             )}
 
             {editable && (
-                <div className="flex flex-col gap-3 bg-sand-100 border border-sand-300 rounded-xl p-4">
+                <div className="flex flex-col gap-3 bg-bg-card border border-border-default rounded-xl p-4">
                     <div className="flex flex-row items-center justify-between">
                         <h2 className="text-sm font-bold opacity-80">{stateEditing ? 'Edit card (propose)' : 'New card (propose)'}</h2>
                         {stateEditing && <Button size="sm" variant="ghost" onPress={cancel}>Cancel</Button>}
@@ -193,7 +193,7 @@ export default function Client({ uuid }: Props) {
                 {stateEditor.cards.length === 0
                     ? <div className="text-sm opacity-60 py-4 text-center">no live cards yet</div>
                     : stateEditor.cards.map((c) => (
-                        <div key={c.uuid} className="flex flex-col gap-1 bg-sand-100 rounded-md px-3 py-2 text-sm">
+                        <div key={c.uuid} className="flex flex-col gap-1 bg-bg-card rounded-md px-3 py-2 text-sm">
                             <div className="flex flex-row items-start gap-3">
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <span className="font-medium truncate">{c.question || '(no question)'}</span>
@@ -232,7 +232,7 @@ export default function Client({ uuid }: Props) {
                 {statePending.length === 0
                     ? <div className="text-sm opacity-60 py-4 text-center">nothing pending</div>
                     : statePending.map((p) => (
-                        <div key={p.change_id} className="flex flex-row items-center gap-3 bg-sand-100 rounded-md px-3 py-1.5 text-sm">
+                        <div key={p.change_id} className="flex flex-row items-center gap-3 bg-bg-card rounded-md px-3 py-1.5 text-sm">
                             <Chip size="sm" color={p.op === 'delete' ? 'danger' : 'default'} variant="secondary">{p.kind}</Chip>
                             <span className="font-mono text-xs opacity-70">{shortUuid(p.object_id)}</span>
                             <span className="text-xs opacity-50 ml-auto shrink-0">{p.edit_time}</span>
@@ -253,7 +253,7 @@ export default function Client({ uuid }: Props) {
                         : stateOutcomes.map((o) => {
                             const l = outcomeLabel(o)
                             return (
-                                <div key={o.change_id} className="flex flex-row items-center gap-3 bg-sand-100 rounded-md px-3 py-1.5 text-sm">
+                                <div key={o.change_id} className="flex flex-row items-center gap-3 bg-bg-card rounded-md px-3 py-1.5 text-sm">
                                     <Chip size="sm" color={l.color} variant={l.variant}>{l.text}</Chip>
                                     <Chip size="sm" variant="tertiary">{o.kind}</Chip>
                                     <span className="font-mono text-xs opacity-70">{shortUuid(o.object_id)}</span>

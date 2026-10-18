@@ -18,12 +18,12 @@ export default function FamiliaritySelector({ hideSelector = false, readOnly = f
     const selected = FamiliarityList.find(v => v.value === stateSelected)
 
     return (
-        <div className="rounded-lg border border-sand-300 bg-sand-100 shadow-sm overflow-hidden">
+        <div className="rounded-lg border border-border-default bg-bg-card shadow-sm overflow-hidden">
             <div
-                className="flex items-center gap-2 px-3 py-2 bg-sand-200 border-b border-sand-300 cursor-pointer"
+                className="flex items-center gap-2 px-3 py-2 bg-bg-body border-b border-border-default cursor-pointer"
                 onClick={() => setStateHide(!stateHide)}
             >
-                <span className="text-xs font-semibold text-sand-500 tracking-wider shrink-0 select-none">
+                <span className="text-xs font-semibold text-text-tertiary tracking-wider shrink-0 select-none">
                     Familiarity:
                 </span>
                 <div className="flex-1 flex flex-wrap gap-1 min-w-0">
@@ -45,7 +45,7 @@ export default function FamiliaritySelector({ hideSelector = false, readOnly = f
                             key={v.value}
                             size="lg"
                             variant="primary"
-                            className={`font-semibold select-none ${readOnly ? '' : 'cursor-pointer'} ${v.value === stateSelected ? 'ring-2 ring-sand-500' : v.color}`}
+                            className={`font-semibold select-none ${readOnly ? '' : 'cursor-pointer'} ${v.value === stateSelected ? 'ring-2 ring-accent' : v.color}`}
                             onClick={readOnly ? undefined : () => setStateSelected(v.value === stateSelected ? null : v.value)}
                         >
                             {v.value} – {v.label}

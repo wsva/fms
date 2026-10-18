@@ -1,22 +1,31 @@
-import sand from './sand'
-import slate from './slate'
-import zinc from './zinc'
-import ocean from './ocean'
-
-export type ThemeId = 'sand' | 'slate' | 'zinc' | 'ocean'
+export type ThemeId = 'light' | 'dark' | 'solarized' | 'gruvbox'
 
 export type ThemeDef = {
     id: ThemeId
     name: string
-    dark: boolean
     swatch: string
-    scale: Record<'50'|'100'|'200'|'300'|'400'|'500'|'600'|'700'|'800'|'900', string>
 }
 
-export const themes: ThemeDef[] = [sand, slate, zinc, ocean]
+export const themes: ThemeDef[] = [
+    { id: 'light', name: 'Light', swatch: '#fbfbfb' },
+    { id: 'dark', name: 'Dark', swatch: '#1a1a1a' },
+    { id: 'solarized', name: 'Solarized', swatch: '#fdf6e3' },
+    { id: 'gruvbox', name: 'Gruvbox', swatch: '#282828' },
+]
 
-export const defaultTheme = sand
+export const defaultTheme = themes[0]
+
+// stored values from the retired scale-based themes (sand/slate/zinc/ocean)
+const LEGACY: Record<string, ThemeId> = {
+    sand: 'light',
+    slate: 'light',
+    zinc: 'dark',
+    ocean: 'dark',
+}
 
 export function findTheme(id: string | null | undefined): ThemeDef {
-    return themes.find(t => t.id === id) ?? defaultTheme
+    if (!id) {
+        return defaultTheme
+    }
+    return themes.find(t => t.id === id) ?? themes.find(t => t.id === LEGACY[id]) ?? defaultTheme
 }

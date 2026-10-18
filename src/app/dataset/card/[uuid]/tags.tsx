@@ -86,7 +86,7 @@ export function TagPanel({ datasetUuid, tags, onProposed, busy }: PanelProps) {
     }
 
     return (
-        <div className="flex flex-col gap-3 bg-sand-100 border border-sand-300 rounded-xl p-4">
+        <div className="flex flex-col gap-3 bg-bg-card border border-border-default rounded-xl p-4">
             <h2 className="text-sm font-bold opacity-80">
                 {draft.uuid ? 'Edit tag (propose)' : 'New tag (propose)'}
             </h2>
@@ -109,7 +109,7 @@ export function TagPanel({ datasetUuid, tags, onProposed, busy }: PanelProps) {
                 : (
                     <div className="flex flex-row gap-2 flex-wrap">
                         {tags.map((t) => (
-                            <div key={t.uuid} className="flex flex-row items-center gap-1 bg-sand-200 rounded-md px-2 py-1 text-sm">
+                            <div key={t.uuid} className="flex flex-row items-center gap-1 bg-bg-body rounded-md px-2 py-1 text-sm">
                                 {t.color && (
                                     <span aria-hidden className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
                                         style={{ backgroundColor: t.color }} />

@@ -170,11 +170,11 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
                 )}
                 {stateEdit ? (
                     <>
-                        <Input className='text-2xl leading-tight font-roboto bg-sand-300 w-full'
+                        <Input className='text-2xl leading-tight font-roboto bg-bg-card w-full'
                             placeholder='title'
                             {...register('title')}
                         />
-                        <TextArea className='text-2xl leading-tight font-roboto bg-sand-300 w-full'
+                        <TextArea className='text-2xl leading-tight font-roboto bg-bg-card w-full'
                             placeholder='description'
                             {...register('description')}
                         />
@@ -191,7 +191,7 @@ export default function BlogForm({ blog_init, email, edit_view, create_new }: Pr
                         <div className='text-xl font-roboto'>
                             {watch('description')}
                         </div>
-                        <div className='text-xl bg-sand-300 rounded-md px-2'>
+                        <div className='text-xl bg-bg-card rounded-md px-2'>
                             <Markdown2Html content={watch('content')} withTOC />
                         </div>
                     </>

@@ -10,7 +10,7 @@
     z-index: 200;
     max-height: 80vh;
     overflow: hidden;
-    background: var(--color-sand-200);
+    background: var(--bg-card);
     box-shadow: 0 0 1em rgba(0, 0, 0, 0.15);
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.08);
@@ -21,7 +21,7 @@
 #table-of-contents h2 {
     font-size: 1rem;
     font-weight: 600;
-    color: #0EA89A;
+    color: var(--accent);
     padding: 0.35em 0.7em;
     margin: 0;
     cursor: default;
@@ -40,7 +40,7 @@
 }
 
 #table-of-contents a {
-    color: #0EA89A;
+    color: var(--accent);
     text-decoration: none;
 }
 
@@ -65,7 +65,7 @@
 
 #table-of-contents .toc-section-number {
    font-weight: 500;
-   color: black;
+   color: var(--text-primary);
    margin-right: 0.1em;
 }
 
@@ -90,27 +90,27 @@
 .md-body h1 {
     font-size: 2em;
     font-weight: 800;
-    color: #0EA89A;
+    color: var(--accent);
     margin: 1.4em 0 0.5em 0;
     line-height: 1.2;
-    border-bottom: 2px solid #0EA89A;
+    border-bottom: 2px solid var(--accent);
     padding-bottom: 0.25em;
 }
 
 .md-body h2 {
     font-size: 1.5em;
     font-weight: 700;
-    color: #0EA89A;
+    color: var(--accent);
     margin: 1.4em 0 0.5em 0;
     line-height: 1.3;
-    border-bottom: 1px solid rgba(14, 168, 154, 0.35);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     padding-bottom: 0.2em;
 }
 
 .md-body h3 {
     font-size: 1.25em;
     font-weight: 600;
-    color: #0EA89A;
+    color: var(--accent);
     margin: 1.2em 0 0.4em 0;
     line-height: 1.3;
 }
@@ -118,7 +118,7 @@
 .md-body h4 {
     font-size: 1.1em;
     font-weight: 600;
-    color: #0EA89A;
+    color: var(--accent);
     margin: 1em 0 0.35em 0;
     line-height: 1.3;
 }
@@ -126,7 +126,7 @@
 .md-body h5 {
     font-size: 1em;
     font-weight: 500;
-    color: #0EA89A;
+    color: var(--accent);
     margin: 0.9em 0 0.3em 0;
     line-height: 1.3;
 }
@@ -134,7 +134,7 @@
 .md-body h6 {
     font-size: 0.9em;
     font-weight: 500;
-    color: #0EA89A;
+    color: var(--accent);
     margin: 0.8em 0 0.25em 0;
     line-height: 1.3;
 }
@@ -153,15 +153,15 @@
 }
 
 .md-body a {
-    color: #0EA89A;
+    color: var(--accent);
     text-decoration: underline;
-    text-decoration-color: rgba(14, 168, 154, 0.4);
+    text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
     text-underline-offset: 2px;
     transition: text-decoration-color 0.15s;
 }
 
 .md-body a:hover {
-    text-decoration-color: #0EA89A;
+    text-decoration-color: var(--accent);
 }
 
 /* ─── Code ───────────────────────────────────────────────────── */
@@ -200,8 +200,8 @@
 .md-body th {
     text-align: center;
     font-weight: 600;
-    color: #0EA89A;
-    background-color: rgba(14, 168, 154, 0.1);
+    color: var(--accent);
+    background-color: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .md-body tbody tr:nth-child(even) {
@@ -209,15 +209,15 @@
 }
 
 .md-body tbody tr:hover {
-    background-color: rgba(14, 168, 154, 0.06);
+    background-color: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 /* ─── Blockquote ─────────────────────────────────────────────── */
 .md-body blockquote {
-    border-left: 4px solid #0EA89A;
+    border-left: 4px solid var(--accent);
     margin: 0.8em 0;
     padding: 0.4em 1em;
-    background-color: rgba(14, 168, 154, 0.06);
+    background-color: color-mix(in srgb, var(--accent) 6%, transparent);
     border-radius: 0 6px 6px 0;
     color: inherit;
 }
@@ -239,7 +239,7 @@
 
 .md-body ul li::before {
     content: "➤";
-    color: #0EA89A;
+    color: var(--accent);
     display: inline-block;
     width: 1em;
     margin-right: 0.5em;
@@ -248,27 +248,27 @@
 }
 
 /* ─── Dark mode ──────────────────────────────────────────────── */
-.dark .md-body pre {
+:is([data-theme="dark"], [data-theme="gruvbox"]) .md-body pre {
     background-color: rgba(255, 255, 255, 0.07);
     border-color: rgba(255, 255, 255, 0.1);
 }
 
-.dark .md-body th, .dark .md-body td {
+:is([data-theme="dark"], [data-theme="gruvbox"]) .md-body th, :is([data-theme="dark"], [data-theme="gruvbox"]) .md-body td {
     border-color: rgba(255, 255, 255, 0.12);
 }
 
-.dark .md-body th {
-    background-color: rgba(14, 168, 154, 0.15);
+:is([data-theme="dark"], [data-theme="gruvbox"]) .md-body th {
+    background-color: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
-.dark .md-body tbody tr:nth-child(even) {
+:is([data-theme="dark"], [data-theme="gruvbox"]) .md-body tbody tr:nth-child(even) {
     background-color: rgba(255, 255, 255, 0.04);
 }
 
-.dark .md-body tbody tr:hover {
-    background-color: rgba(14, 168, 154, 0.1);
+:is([data-theme="dark"], [data-theme="gruvbox"]) .md-body tbody tr:hover {
+    background-color: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-.dark .md-body blockquote {
-    background-color: rgba(14, 168, 154, 0.08);
+:is([data-theme="dark"], [data-theme="gruvbox"]) .md-body blockquote {
+    background-color: color-mix(in srgb, var(--accent) 8%, transparent);
 }

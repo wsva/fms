@@ -5,7 +5,7 @@ import { plan_record } from "@/generated/prisma/client";
 import { MdClose, MdDone } from 'react-icons/md';
 
 const BorderMap = new Map<string, string>([
-    ["pending", "border-sand-400"],
+    ["pending", "border-border-light"],
     ["completed", "border-green-400"],
     ["failed", "border-red-400"],
 ]);
@@ -43,7 +43,7 @@ export default function Page({ item, handleUpdate }: Props) {
     }
 
     return (
-        <div className={`flex flex-row items-center justify-start w-full px-2 py-1 border-l-4 bg-sand-300 ${BorderMap.get(item.status)}`}>
+        <div className={`flex flex-row items-center justify-start w-full px-2 py-1 border-l-4 bg-bg-card ${BorderMap.get(item.status)}`}>
             <div className="flex flex-row items-center gap-3 flex-1">
                 <div className="text-sm text-foreground-500 select-none">
                     {item.start_at ? `${getDay(item.start_at)} ${formatTime(item.start_at)}` : ''}

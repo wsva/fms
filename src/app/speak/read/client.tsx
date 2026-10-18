@@ -612,14 +612,14 @@ export default function Client({ user_id }: Props) {
     const drawerWords = editSentence ? (stateWordsMap[editSentence.uuid] ?? []) : []
 
     const chapterBtnClass = (active: boolean, completed: boolean) =>
-        `w-full text-left px-2 py-1 rounded text-xs sm:text-lg transition-colors ${active ? 'bg-sand-300 font-semibold text-foreground' : completed ? 'bg-green-100 hover:bg-green-200 text-foreground-600' : 'hover:bg-sand-200 text-foreground-600'}`
+        `w-full text-left px-2 py-1 rounded text-xs sm:text-lg transition-colors ${active ? 'bg-bg-muted font-semibold text-foreground' : completed ? 'bg-green-100 hover:bg-green-200 text-foreground-600' : 'hover:bg-bg-hover text-foreground-600'}`
 
     // ── Render ──
     return (
         <div className="flex flex-col w-full min-w-0 gap-3 my-4 mb-40">
 
             {/* Breadcrumb navigation */}
-            <nav className="flex items-center gap-2 px-4 py-2 text-sm select-none min-w-0 overflow-x-auto rounded-xl bg-sand-100 border border-sand-300">
+            <nav className="flex items-center gap-2 px-4 py-2 text-sm select-none min-w-0 overflow-x-auto rounded-xl bg-bg-card border border-border-default">
                 <button
                     className={`shrink-0 cursor-pointer hover:underline text-left ${stateDatasetUUID ? 'text-blue-600' : 'font-semibold'}`}
                     onClick={() => setStateDatasetUUID('')}
@@ -655,7 +655,7 @@ export default function Client({ user_id }: Props) {
                         {stateDatasetList.map((ds) => (
                             <button
                                 key={ds.uuid}
-                                className="text-left p-4 border border-sand-300 rounded-xl bg-sand-100 transition-colors hover:bg-sand-300 cursor-pointer flex flex-col gap-1"
+                                className="text-left p-4 border border-border-default rounded-xl bg-bg-card transition-colors hover:bg-bg-hover cursor-pointer flex flex-col gap-1"
                                 onClick={() => setStateDatasetUUID(ds.uuid)}
                             >
                                 <div className="flex items-center gap-2">
@@ -681,7 +681,7 @@ export default function Client({ user_id }: Props) {
                 <>
                     {/* Chapter tree selector */}
                     <div
-                        className="bg-sand-100 rounded-xl flex flex-col shadow-sm"
+                        className="bg-bg-card rounded-xl flex flex-col shadow-sm"
                         style={{ height: `${selectorHeight}px` }}
                     >
                         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">
@@ -708,7 +708,7 @@ export default function Client({ user_id }: Props) {
                             className="shrink-0 h-3 cursor-row-resize flex items-center justify-center group"
                             onMouseDown={handleSelectorHeightDrag}
                         >
-                            <div className="h-0.5 w-12 rounded-full bg-sand-300 group-hover:bg-primary transition-colors" />
+                            <div className="h-0.5 w-12 rounded-full bg-bg-progress group-hover:bg-primary transition-colors" />
                         </div>
                     </div>
 
@@ -774,7 +774,7 @@ export default function Client({ user_id }: Props) {
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
                             onClick={() => setStateDeleteTarget(null)}
                         >
-                            <div className="bg-sand-50 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 w-72"
+                            <div className="bg-bg-card rounded-2xl shadow-2xl p-6 flex flex-col gap-4 w-72"
                                 onClick={e => e.stopPropagation()}
                             >
                                 <p className="font-semibold text-base">Delete paragraph?</p>

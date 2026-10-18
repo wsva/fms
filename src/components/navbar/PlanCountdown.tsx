@@ -190,7 +190,7 @@ export default function PlanCountdown({ user_id }: { user_id: string }) {
 
             {/* Navbar widget */}
             {phase === 'idle' && (
-                <Button size="sm" className="text-lg bg-sand-400" onPress={handleOpenSelector}>
+                <Button size="sm" className="text-lg bg-bg-muted" onPress={handleOpenSelector}>
                     start plan
                 </Button>
             )}

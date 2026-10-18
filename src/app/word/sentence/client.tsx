@@ -57,7 +57,7 @@ export default function Sentence({ word_id, keyword }: Props) {
                     {stateResult && (stateResult.status === 'success') && (
                         <div className="flex flex-col w-full gap-4 py-4" >
                             {stateResult.data.map((v, i) => (
-                                <div key={i} className="flex flex-col w-full items-start bg-sand-300 rounded-md p-1">
+                                <div key={i} className="flex flex-col w-full items-start bg-bg-card rounded-md p-1">
                                     <div className="text-xl whitespace-pre-wrap" >{v}</div>
                                     <div className="flex flex-row w-full items-end justify-end gap-4">
                                         <Link className='text-blue-600 hover:underline' target='_blank'
