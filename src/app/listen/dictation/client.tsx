@@ -599,7 +599,7 @@ export default function Client({ user_id }: Props) {
             {!!stateMediaUUID && (
                 <div className="flex flex-col gap-3">
                     {mediaSrc && (
-                        <div className="flex flex-col gap-1 w-full sticky top-16 z-10 bg-sand-200 rounded-xl p-2">
+                        <div className="flex flex-col gap-1 w-full sticky top-12 z-10 bg-sand-200 rounded-xl p-2">
                             {audioMode ? (
                                 <HlsPlayer className="w-full" videoRef={videoRef} src={mediaSrc} audioMode={true} />
                             ) : (

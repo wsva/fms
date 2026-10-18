@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { cookies } from "next/headers";
 import Providers from "@/components/Providers";
-import TopNav from "@/components/navbar/TopNav";
+import AppShell from "@/components/navbar/AppShell";
 import { findTheme } from "@/lib/themes";
 
 export const metadata: Metadata = {
@@ -27,12 +27,11 @@ export default async function RootLayout({
 
     return (
         <html lang="en" suppressHydrationWarning className={theme.dark ? 'dark' : ''} style={themeVars}>
-            <body className="min-h-svh font-roboto bg-sand-200 pb-20">
+            <body className="min-h-svh font-roboto bg-sand-200">
                 <Providers>
-                    <TopNav />
-                    <main className="container mx-auto">
+                    <AppShell>
                         {children}
-                    </main>
+                    </AppShell>
                 </Providers>
             </body>
         </html>

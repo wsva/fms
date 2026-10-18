@@ -1,6 +1,1 @@
-在手机上，将 用户头像和注销按钮放到menu中，节省有限的空间
-
-
-方案1：
-将所有菜单都收起来放在menu中
-用户自定义快捷方式放到topnav上
+App shell (fms-app style): `AppShell.tsx` owns the sidebar rail/mobile-drawer state and composes `Sidebar.tsx` (left navigation built from `menu.ts`) with `TopBar.tsx` (back/forward + breadcrumb from `src/lib/nav-crumbs.ts` + PlanCountdown, theme and user menus). On mobile the sidebar becomes a slide-in drawer; the user and sign-out live in the top bar.

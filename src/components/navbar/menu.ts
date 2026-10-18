@@ -1,11 +1,11 @@
-type MenuItem = {
+export type MenuItem = {
     key: string;
     name: string;
     description: string;
     href: string;
 }
 
-type MenuGroup = {
+export type MenuGroup = {
     name: string;
     items: MenuItem[];
 }

@@ -56,7 +56,7 @@ export default function PdfReader({ email: _email }: Props) {
     return (
         <div className="flex flex-col items-center w-full min-h-screen py-6 gap-4">
             {/* Header row */}
-            <div className="flex flex-wrap items-center w-full gap-3 p-2 sticky top-16 z-10 bg-sand-200">
+            <div className="flex flex-wrap items-center w-full gap-3 p-2 sticky top-12 z-10 bg-sand-200">
                 <label className="flex items-center gap-3 cursor-pointer">
                     <div className="px-4 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium hover:bg-amber-100 transition-colors">
                         {pdfUrl ? 'Change PDF' : 'Open PDF'}
