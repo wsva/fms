@@ -43,8 +43,12 @@ export const config = {
          * - api (API routes)
          * - _next/static (static files)
          * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
+         * - any path containing a dot, i.e. files served straight out of
+         *   public/ (favicon.ico, manifest.webmanifest, icon-512.png, ...).
+         * Static assets are not pages: gating them turns a logged-out visitor's
+         * <img src="/icon-512.png"> into a 302 to /unauthorized, which renders
+         * as a broken image instead of the logo.
          */
-        '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest).*)',
+        '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\..*).*)',
     ],
 }
