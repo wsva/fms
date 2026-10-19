@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Button, Input, InputGroup, Link, TextArea, Tooltip } from '@heroui/react'
+import { Button, Input, InputGroup, TextArea, Tooltip } from '@heroui/react'
 import { formatVttTime, parseVttTime, validateVttTime } from '@/lib/listen/subtitle'
 import { hideWord, playMediaPart, pureContent, splitContent } from '@/lib/listen/utils'
 import {
@@ -15,7 +15,6 @@ import {
     Mic,
     Pencil,
     Play,
-    SquarePlus,
     Star,
     Trash2,
     X,
@@ -531,18 +530,6 @@ export default function CueEditor({ cue, media, allowEdit, mode, isDisabled, onU
                             </div>
                         )}
                         <div className="flex items-center gap-1 ms-auto sm:ms-0 sm:order-first sm:flex-col">
-                            {isDictationMode && isActive && (
-                                <Tooltip>
-                                    <Tooltip.Trigger>
-                                        <Link href={`/card/add?edit=y&question=${encodeURIComponent(cue.content)}`} target='_blank'>
-                                            <Button isIconOnly variant="ghost" size="sm" aria-label="Add card">
-                                                <SquarePlus size={16} />
-                                            </Button>
-                                        </Link>
-                                    </Tooltip.Trigger>
-                                    <Tooltip.Content>add card</Tooltip.Content>
-                                </Tooltip>
-                            )}
                             {showEditButton && (
                                 <Tooltip>
                                     <Tooltip.Trigger>

@@ -2,7 +2,6 @@ import type { ComponentType } from 'react';
 import {
     Headphones, BookOpen, Layers, BookOpenText,
     Languages, Star, Quote,
-    SquareStack, FilePlus, Library, SlidersHorizontal, GraduationCap, TrendingUp, Table,
     Newspaper, FileText, SquarePen, Users,
     Database, Tag, Store, Cloud,
     Wrench, CalendarDays, ChartColumn, FileType,
@@ -33,9 +32,8 @@ export type MenuGroup = {
 /**
  * Top-level entries, rendered above the groups and reachable in one click.
  * Mirrors fms-app's rootTabs (Sidebar.tsx:89-96), down to the icons: the first
- * five are the ones the app uses for the same five tabs. The card pages
- * under /card/* are the old pre-dataset system, distinct from the
- * dataset-based /cards.
+ * five are the ones the app uses for the same five tabs. /cards is the only
+ * card surface — the old pre-dataset pages under /card/* were removed.
  */
 export const rootMenuItems: MenuItem[] = [
     { key: "listen_dictation", name: "Dictation", description: "dictation practice from datasets", href: "/listen/dictation", icon: Headphones },
@@ -52,18 +50,6 @@ export const menuList: MenuGroup[] = [
         items: [
             { key: "word_top", name: "Top Words", description: "top words", href: "/word/top", icon: Star },
             { key: "word_sentence", name: "Sentence", description: "search sentences", href: "/word/sentence", icon: Quote },
-        ],
-    },
-    {
-        name: "Card",
-        icon: SquareStack,
-        items: [
-            { key: "card_add", name: "Add Card", description: "add new card", href: "/card/add?edit=y", icon: FilePlus },
-            { key: "card_my", name: "My Cards", description: "my cards", href: "/card/my", icon: Library },
-            { key: "card_manage", name: "Manage Cards", description: "manage cards", href: "/card/manage", icon: SlidersHorizontal },
-            { key: "card_test", name: "Card Test", description: "learn cards", href: "/card/test", icon: GraduationCap },
-            { key: "card_improve", name: "Improve Cards", description: "review AI-suggested improvements", href: "/card/improve", icon: TrendingUp },
-            { key: "card_table", name: "Card Table", description: "all cards in a table view", href: "/card/table", icon: Table },
         ],
     },
     {

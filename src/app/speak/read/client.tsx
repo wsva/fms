@@ -875,8 +875,6 @@ export default function Client({ user_id }: Props) {
                 hasAudio={drawerHasAudio}
                 allowEdit={EDIT_ENABLED}
                 words={drawerWords}
-                datasetUUID={stateDatasetUUID}
-                chapterPath={chapterPath}
                 saving={stateSaving}
                 recording={stateRecording}
                 processing={stateProcessing}

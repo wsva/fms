@@ -161,7 +161,7 @@ Returns cards owned by the authenticated user whose `answer` field is empty. Opt
 
 ## Card Improvements
 
-The improvement workflow: an external script fetches cards that need processing, runs AI, and writes improvements back via the API. The web UI at `/card/improve` is used to review and accept/reject each suggestion.
+The improvement workflow: an external script fetches cards that need processing, runs AI, and writes improvements back via the API. The old `/card/improve` web UI has been removed along with the pre-dataset card pages; the endpoints below remain the only interface for this workflow.
 
 ### List cards needing improvement
 
@@ -251,4 +251,4 @@ requests.post("https://your-host/api/card/improve", headers=headers,
 **Notes:**
 - `user_id` is set from the session.
 - `uuid` is generated server-side.
-- `status` is always set to `"pending"` — use the `/card/improve` web UI to accept or reject.
+- `status` is always set to `"pending"` — the `/card/improve` web UI that used to accept or reject suggestions was removed with the pre-dataset card pages, so approving and rejecting currently has no interface.

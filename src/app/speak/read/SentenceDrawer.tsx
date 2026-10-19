@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Link2, MoreVertical, Play, Settings2, Sparkles, Trash2, X } from 'lucide-react'
+import { Copy, MoreVertical, Play, Settings2, Sparkles, Trash2, X } from 'lucide-react'
 import { MicGlyph } from '@/components/ui/toolbar'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { highlightDifferences } from '@/app/speak/lcs'
@@ -89,8 +89,6 @@ type Props = {
     onBgColorChange: (v: string | null) => void
     /** Vocab words for the open sentence (supplied by the parent's bulk load). */
     words: BookWordRow[]
-    datasetUUID?: string
-    chapterPath?: string
     onClose: () => void
     onPlay: () => void
     onToggleRecording: () => void
@@ -107,7 +105,6 @@ export default function SentenceDrawer({
     drawer, recognized, content, onContentChange,
     bgColor, onBgColorChange, words,
     hasAudio, allowEdit, saving, recording, processing,
-    datasetUUID, chapterPath,
     onClose, onPlay, onToggleRecording,
     onSaveAdd, onSaveEdit, onDelete,
     onInsertBefore, onInsertAfter, onParagraphBefore, onParagraphAfter,
@@ -131,7 +128,6 @@ export default function SentenceDrawer({
 
     if (!drawer) return null
 
-    const sentenceUUID = drawer.mode === 'edit' ? drawer.sentence.uuid : null
     const selectedColor = BG_COLORS.find(c => c.key === bgColor) ?? null
 
     const applyRules = () => {
@@ -268,18 +264,6 @@ export default function SentenceDrawer({
                                             }}
                                         >
                                             <Copy size={15} /> Copy
-                                        </button>
-                                        <button
-                                            className={menuItem}
-                                            onClick={() => {
-                                                if (!sentenceUUID) return
-                                                const tags = datasetUUID ? `&tags=${datasetUUID}` : ''
-                                                const note = chapterPath ? `&note=${encodeURIComponent(chapterPath)}` : ''
-                                                window.open(`/card/${sentenceUUID}?question=${encodeURIComponent(content)}&edit=y${tags}${note}`, '_blank')
-                                                setMenuOpen(false)
-                                            }}
-                                        >
-                                            <Link2 size={15} /> Link Card
                                         </button>
                                         <button className={menuItem} disabled title={dormantTitle}
                                             onClick={() => { onInsertBefore(); setMenuOpen(false) }}>

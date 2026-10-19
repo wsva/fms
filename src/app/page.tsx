@@ -35,19 +35,8 @@ export default async function Home() {
                 />
                 <div className="m-4 col-span-full"></div>
 
-                <IndexItem href='/card/add?edit=y' label='New Card'
-                    description='Card is for words, sentences or others.'
-                />
-                <IndexItem href='/card/test' label='Card Test'
-                    description='Learn cards through tests and set familiarity.'
-                />
-                <div className="m-4 col-span-full"></div>
-
-                <IndexItem href='/card/my' label='My Cards'
-                    description='View my cards.'
-                />
-                <IndexItem href='/card/table' label='Cards Table'
-                    description='View all cards as a table.'
+                <IndexItem href='/cards' label='Cards'
+                    description='Review, tag and edit dataset flashcards.'
                 />
                 <div className="m-4 col-span-full"></div>
 

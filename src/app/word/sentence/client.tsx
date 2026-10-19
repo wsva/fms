@@ -3,7 +3,7 @@
 import { getExample, searchExample } from '@/app/actions/word'
 import { useEffect, useState } from 'react'
 import { ActionResult } from '@/lib/types';
-import { ProgressCircle, InputGroup, Link } from "@heroui/react";
+import { ProgressCircle, InputGroup } from "@heroui/react";
 import { BiSearch } from 'react-icons/bi';
 
 type Props = {
@@ -59,13 +59,6 @@ export default function Sentence({ word_id, keyword }: Props) {
                             {stateResult.data.map((v, i) => (
                                 <div key={i} className="flex flex-col w-full items-start bg-bg-card rounded-md p-1">
                                     <div className="text-xl whitespace-pre-wrap" >{v}</div>
-                                    <div className="flex flex-row w-full items-end justify-end gap-4">
-                                        <Link className='text-blue-600 hover:underline' target='_blank'
-                                            href={`/card/add?edit=y&question=${encodeURIComponent(v)}`}
-                                        >
-                                            Add to Card
-                                        </Link>
-                                    </div>
                                 </div>
                             ))}
                         </div>
