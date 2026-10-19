@@ -1,4 +1,3 @@
-import Image from "next/image";
 import {
     Headphones,
     Layers,
@@ -30,7 +29,9 @@ import LanguageToggle from "./LanguageToggle";
 // locale, session state, latest release and detected platform are all resolved on
 // the server (see app/(site)/page.tsx) and baked into the HTML, so the copy is
 // crawlable and there is no client-side flash. The only client island is the
-// language toggle. The logo mark is /icon-512.png from public/.
+// language toggle. The logo mark is /icon-512.png from public/, served as a
+// plain <img>: the standalone deployment has no `sharp`, so /_next/image would
+// answer 400 (the rest of the site already avoids next/image for the same reason).
 
 const LOGO = "/icon-512.png";
 const LOGIN_HREF = "/oauth2/login?return_to=%2Fhome";
@@ -80,7 +81,8 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
             <header className="sticky top-0 z-40 border-b border-border-default bg-bg-body/80 backdrop-blur">
                 <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
                     <a href="#top" className="flex items-center gap-2 font-semibold">
-                        <Image src={LOGO} alt="" width={28} height={28} className="h-7 w-7 rounded-lg" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={LOGO} alt="" width={28} height={28} className="h-7 w-7 rounded-lg" draggable={false} />
                         <span>{t("brand.name")}</span>
                         <span className="hidden text-sm font-normal text-text-tertiary sm:inline">{t("brand.tagline")}</span>
                     </a>
@@ -181,7 +183,8 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
             <footer className="border-t border-border-default px-6 py-10">
                 <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-text-tertiary sm:flex-row">
                     <div className="flex items-center gap-2">
-                        <Image src={LOGO} alt="" width={24} height={24} className="h-6 w-6 rounded-md" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={LOGO} alt="" width={24} height={24} className="h-6 w-6 rounded-md" draggable={false} />
                         <span>© {new Date().getFullYear()} {t("brand.name")}. {t("footer.rights")}</span>
                     </div>
                     <div className="flex items-center gap-5">
