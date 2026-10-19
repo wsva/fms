@@ -21,11 +21,18 @@ import {
     canReadDataset,
     datasetCatalogFields,
     serializeDataset,
+    tagsByDataset,
     type DatasetCatalog,
     type DatasetJson,
     type DatasetListItem,
     type DatasetTagRef,
 } from '@/lib/datasets/access';
+import {
+    listMarketRows,
+    setMarketVisibility,
+    subscribeMarketDataset,
+    unsubscribeMarketDataset,
+} from '@/lib/datasets/market';
 import { applyHandover, type HandoverRole } from '@/lib/sync/handover';
 import { publishDatasetVersionTx, setVersionAvailabilityTx } from '@/lib/datasets/publish';
 import type { dataset_tag } from '@/generated/prisma/client';
@@ -78,67 +85,23 @@ async function requireOwned(uuid: string, email: string | null): Promise<Dataset
     return ds;
 }
 
-async function tagsByDataset(uuids: string[]): Promise<Map<string, DatasetTagRef[]>> {
-    const map = new Map<string, DatasetTagRef[]>();
-    if (uuids.length === 0) return map;
-    const links = await prisma.dataset_tag_link.findMany({ where: { dataset_uuid: { in: uuids } } });
-    const tagUuids = [...new Set(links.map((l) => l.tag_uuid))];
-    const tags = tagUuids.length
-        ? await prisma.dataset_tag.findMany({ where: { uuid: { in: tagUuids } }, select: { uuid: true, tag: true } })
-        : [];
-    const names = new Map(tags.map((t) => [t.uuid, t.tag]));
-    for (const link of links) {
-        const name = names.get(link.tag_uuid);
-        if (!name) continue;
-        const list = map.get(link.dataset_uuid) ?? [];
-        list.push({ uuid: link.tag_uuid, name });
-        map.set(link.dataset_uuid, list);
-    }
-    return map;
-}
-
-/** Market list: everything visible to the caller, plus their own private rows. */
+/** Market list: everything visible to the caller, plus their own private rows.
+ * Delegates to the shared market core so the REST `/api/v1/market` routes and
+ * this UI can never diverge on visibility/subscription semantics (market.md §4). */
 export async function listMarketDatasets(
     types: string[] = [],
     tagUuids: string[] = []
 ): Promise<ActionResult<DatasetListItem[]>> {
     try {
         const email = await currentEmail();
-        const linked = tagUuids.length
-            ? (
-                  await prisma.dataset_tag_link.findMany({
-                      where: { tag_uuid: { in: tagUuids } },
-                      select: { dataset_uuid: true },
-                  })
-              ).map((l) => l.dataset_uuid)
-            : null;
-        const rows = await prisma.dataset.findMany({
-            where: {
-                deleted: 'N',
-                status: 'ready',
-                ...(types.length ? { dataset_type: { in: types } } : {}),
-                ...(linked ? { uuid: { in: linked } } : {}),
-                OR: [{ visibility: { in: ['shared', 'public'] } }, ...(email ? [{ user_id: email }] : [])],
-            },
-            select: datasetCatalogFields,
-            orderBy: { info_updated_at: 'desc' },
-        });
-        const uuids = rows.map((r) => r.uuid);
-        const subs = email
-            ? await prisma.dataset_subscription.findMany({
-                  where: { user_id: email, dataset_uuid: { in: uuids } },
-                  select: { dataset_uuid: true },
-              })
-            : [];
-        const subscribed = new Set(subs.map((s) => s.dataset_uuid));
-        const tags = await tagsByDataset(uuids);
+        const rows = await listMarketRows(email, { types, tagUuids });
         return {
             status: 'success',
-            data: rows.map((r) => ({
-                ...serializeDataset(r),
-                is_owner: r.user_id === email,
-                is_subscribed: subscribed.has(r.uuid),
-                tags: tags.get(r.uuid) ?? [],
+            data: rows.map((row) => ({
+                ...serializeDataset(row.ds),
+                is_owner: row.is_owner,
+                is_subscribed: row.is_subscribed,
+                tags: row.tags,
             })),
         };
     } catch (error) {
@@ -248,33 +211,9 @@ export async function getDatasetHubDetail(uuid: string): Promise<ActionResult<Da
 export async function setDatasetVisibility(uuid: string, visibility: string): Promise<ActionResult<DatasetJson>> {
     try {
         const email = await currentEmail();
-        const owned = await requireOwned(uuid, email);
-        if ('error' in owned) return { status: 'error', error: owned.error };
-        if (!(VISIBILITIES as readonly string[]).includes(visibility)) {
-            return { status: 'error', error: `visibility must be one of ${VISIBILITIES.join(', ')}` };
-        }
-        // Sharing is the UI's publish act (sync-v2 INV-17): pin the newest uploaded
-        // version so registry reads resolve to what the owner just shared, not to the
-        // mutable live dir. Narrowing to `private` leaves the pin untouched — the
-        // visibility gate already blocks reads.
-        const publishing = visibility === 'shared' || visibility === 'public';
-        const latest = publishing
-            ? await prisma.dataset_version.findFirst({
-                  where: { dataset_uuid: uuid },
-                  orderBy: { version: 'desc' },
-                  select: { version: true },
-              })
-            : null;
-        const row = await prisma.dataset.update({
-            where: { uuid },
-            data: {
-                visibility,
-                ...(latest?.version != null ? { current_version: latest.version } : {}),
-                updated_at: new Date(),
-            },
-            select: datasetCatalogFields,
-        });
-        return { status: 'success', data: serializeDataset(row) };
+        const result = await setMarketVisibility(email, uuid, visibility);
+        if (!result.ok) return { status: 'error', error: result.error };
+        return { status: 'success', data: serializeDataset(result.row.ds) };
     } catch (error) {
         console.error(error);
         return { status: 'error', error: toErrorMessage(error) };
@@ -428,15 +367,8 @@ export async function setDatasetTags(uuid: string, tagUuids: string[]): Promise<
 export async function subscribeDataset(uuid: string): Promise<ActionResult<unknown>> {
     try {
         const email = await currentEmail();
-        if (!email) return { status: 'error', error: 'Unauthorized' };
-        const ds = await loadCatalog(uuid);
-        if (!ds || ds.deleted === 'Y') return { status: 'error', error: 'Dataset not found' };
-        if (ds.visibility === 'private') return { status: 'error', error: 'This dataset is private' };
-        await prisma.dataset_subscription.upsert({
-            where: { user_id_dataset_uuid: { user_id: email, dataset_uuid: uuid } },
-            create: { uuid: getUUID(), user_id: email, dataset_uuid: uuid },
-            update: {},
-        });
+        const result = await subscribeMarketDataset(email, uuid);
+        if (!result.ok) return { status: 'error', error: result.error };
         return { status: 'success', data: { uuid } };
     } catch (error) {
         console.error(error);
@@ -447,8 +379,8 @@ export async function subscribeDataset(uuid: string): Promise<ActionResult<unkno
 export async function unsubscribeDataset(uuid: string): Promise<ActionResult<unknown>> {
     try {
         const email = await currentEmail();
-        if (!email) return { status: 'error', error: 'Unauthorized' };
-        await prisma.dataset_subscription.deleteMany({ where: { user_id: email, dataset_uuid: uuid } });
+        const result = await unsubscribeMarketDataset(email, uuid);
+        if (!result.ok) return { status: 'error', error: result.error };
         return { status: 'success', data: { uuid } };
     } catch (error) {
         console.error(error);

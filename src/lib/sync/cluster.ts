@@ -15,6 +15,11 @@
  *     and `/snapshot?version=N`), which resolve to a *published* version instead of the
  *     mutable live dir, fixing §3's leak. The routes are live, so the capability is safe
  *     to advertise; the client gates its registry path on exactly this string.
+ *   - `market` — the rich online market REST routes (`GET /api/v1/market`,
+ *     `POST|DELETE /api/v1/market/{uuid}/subscribe`, `PATCH /api/v1/market/{uuid}`;
+ *     docs/design/market.md §1), all backed by the same `lib/datasets/market` core as
+ *     the `/dataset/market` UI. Without it the client default-denies (INV-20) and the
+ *     Pull tab degrades to the `?lite=1` catalog — advertising is the deploy switch.
  *
  * Still not advertised unconditionally: `dataset_journal` — the website hosts a
  * dataset-scope journal only for scopes it is the authority over
@@ -41,7 +46,7 @@
 export const PROTOCOL_VERSION = 6;
 
 /** The capabilities this website host actually serves routes for. */
-export const WEBSITE_FEATURES = ['app_journal', 'registry_reads'] as const;
+export const WEBSITE_FEATURES = ['app_journal', 'registry_reads', 'market'] as const;
 
 /**
  * Advertised only to a caller that hosts at least one dataset scope as authority

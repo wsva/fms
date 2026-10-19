@@ -316,7 +316,7 @@ reviewer should read this table before "fixing" one of these into a bug.
 | -------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
 | `cluster_contract`   | `authority_kind: "desktop_hub"`     | `"cloud_hub"`                                                                  |
 | `cluster_contract`   | `features: [dataset_journal, app_journal]` | those two **plus** `registry_reads`; `dataset_journal` is *conditional* (7b — advertised only when the account actually hosts an authority dataset; the harness passes `hostsDatasetJournal=true` so it is present for the parity claim) |
-| `features`           | 2 features                          | superset: `app_journal` always, `registry_reads` (the desktop hub has no registry), `dataset_journal` conditional |
+| `features`           | 2 features                          | superset: `app_journal` always, `registry_reads` (the desktop hub has no registry), `market` (the online market REST routes `GET /api/v1/market` + subscribe/visibility — the desktop hub serves no catalog, website-only like `registry_reads`), `dataset_journal` conditional |
 | `registry_contract`  | keys `uuid,current_version,overall_hash,row_hash,files` | those five **plus** `file_count,total_bytes,dataset_type,updated_at` (the live route's shipped body; the app's `serde` read tolerates the extras). `row_hash` is `null` on the website — a logical row hash must be byte-parity with the app's recipe before any client compares it (deferred). |
 | `protocol_version`   | `6`                                 | `6` — already at parity (phase 7a); asserted equal                             |
 

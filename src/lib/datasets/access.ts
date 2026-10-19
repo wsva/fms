@@ -147,6 +147,30 @@ export async function getDatasetView(uuid: string, email: string | null) {
     };
 }
 
+/**
+ * Batched tag refs for many datasets in two queries. Grouping only — tags
+ * never gate access here, visibility does. Shared by the market core and the
+ * hub UI actions so a tag list is assembled exactly one way.
+ */
+export async function tagsByDataset(uuids: string[]): Promise<Map<string, DatasetTagRef[]>> {
+    const map = new Map<string, DatasetTagRef[]>();
+    if (uuids.length === 0) return map;
+    const links = await prisma.dataset_tag_link.findMany({ where: { dataset_uuid: { in: uuids } } });
+    const tagUuids = [...new Set(links.map((l) => l.tag_uuid))];
+    const tags = tagUuids.length
+        ? await prisma.dataset_tag.findMany({ where: { uuid: { in: tagUuids } }, select: { uuid: true, tag: true } })
+        : [];
+    const names = new Map(tags.map((t) => [t.uuid, t.tag]));
+    for (const link of links) {
+        const name = names.get(link.tag_uuid);
+        if (!name) continue;
+        const list = map.get(link.dataset_uuid) ?? [];
+        list.push({ uuid: link.tag_uuid, name });
+        map.set(link.dataset_uuid, list);
+    }
+    return map;
+}
+
 /** JSON-safe catalog row — the shape the UI pages render. */
 export type DatasetJson = ReturnType<typeof serializeDataset>;
 /** A tag as a dataset carries it: the uuid filters, the name is what users read. */

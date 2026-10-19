@@ -41,7 +41,9 @@ const PAGE_LIMIT = 5000; // the routes' own default (`APP_CHANGES_PAGE_LIMIT || 
 // --- website's own contract values (the deltas from the desktop-authored vectors) ---
 const WEBSITE_AUTHORITY_KIND = 'cloud_hub';
 // Features allowed to appear beyond the vector's list, with the reason documented.
-const WEBSITE_EXTRA_FEATURE_ALLOW = new Set([DATASET_JOURNAL_FEATURE, 'registry_reads']);
+// 'market' is the online market REST surface (docs/design/market.md §1) — the desktop
+// hub serves no catalog routes, so it is website-only by design, like registry_reads.
+const WEBSITE_EXTRA_FEATURE_ALLOW = new Set([DATASET_JOURNAL_FEATURE, 'registry_reads', 'market']);
 
 const DATABASE_URL = process.env.DATABASE_URL ?? '';
 const haveDb = () => DATABASE_URL !== '';
