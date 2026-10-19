@@ -37,8 +37,7 @@ export default function SettingsNav({
 
     return (
         <nav
-            className="flex gap-1 overflow-x-auto p-2 bg-bg-card border border-border-default rounded-xl
-                       lg:flex-col lg:overflow-visible lg:sticky lg:top-16 lg:self-start lg:w-56 lg:shrink-0"
+            className="flex gap-1 overflow-x-auto p-2 bg-bg-card border border-border-default rounded-xl lg:flex-col lg:overflow-visible lg:sticky lg:top-16 lg:self-start lg:w-56 lg:shrink-0"
         >
             <div className="hidden lg:block text-xs font-semibold text-text-tertiary uppercase tracking-wide px-2 pt-1 pb-2 mb-1 border-b border-border-light">
                 Sections
