@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react';
 import {
     Headphones, BookOpen, Layers, BookOpenText,
-    Languages, Star, Quote,
     Newspaper, FileText, SquarePen, Users,
     Database, Tag, Store, Cloud,
     Wrench, CalendarDays, ChartColumn, FileType,
@@ -44,14 +43,6 @@ export const rootMenuItems: MenuItem[] = [
 ];
 
 export const menuList: MenuGroup[] = [
-    {
-        name: "Word",
-        icon: Languages,
-        items: [
-            { key: "word_top", name: "Top Words", description: "top words", href: "/word/top", icon: Star },
-            { key: "word_sentence", name: "Sentence", description: "search sentences", href: "/word/sentence", icon: Quote },
-        ],
-    },
     {
         name: "Blog",
         icon: Newspaper,
