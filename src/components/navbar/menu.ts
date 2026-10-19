@@ -74,8 +74,8 @@ export const menuList: MenuGroup[] = [
         name: "Settings",
         icon: Settings,
         items: [
-            { key: "settings_general", name: "General", description: "General settings", href: "/settings/general", icon: Settings2 },
-            { key: "settings_api", name: "API", description: "view APIs", href: "/settings/api", icon: KeyRound },
+            { key: "settings_general", name: "General", description: "General settings", href: "/settings", icon: Settings2 },
+            { key: "settings_api", name: "API", description: "view APIs", href: "/settings?section=api_reference", icon: KeyRound },
         ],
     },
 ];

@@ -1,9 +1,8 @@
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
-import Client from './client';
+import { redirect } from 'next/navigation';
 
-export default async function Page() {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const email = session?.user?.email || '';
-    return <Client user_id={email} />;
+// Settings is a single page now (section-filtered client-side). The old
+// /settings/general route is kept as a redirect so bookmarks and any stale
+// links keep working.
+export default function Page() {
+    redirect('/settings');
 }

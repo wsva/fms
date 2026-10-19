@@ -1,24 +1,13 @@
-import Link from 'next/link'
+import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
+import SettingsClient from './client';
 
-const SECTIONS = [
-    { href: '/settings/general', title: 'General', description: 'General settings and API key management' },
-    { href: '/settings/api',     title: 'API Reference', description: 'List of all available API endpoints' },
-]
+type Props = { searchParams: Promise<{ section?: string | string[] }> };
 
-export default function Page() {
-    return (
-        <div className="flex flex-col gap-4 my-4 max-w-xl">
-            <h1 className="text-xl font-semibold">Settings</h1>
-            <div className="flex flex-col gap-2">
-                {SECTIONS.map(s => (
-                    <Link key={s.href} href={s.href}
-                        className="flex flex-col gap-0.5 border border-border-default rounded-xl px-4 py-3 hover:bg-bg-hover"
-                    >
-                        <span className="font-medium">{s.title}</span>
-                        <span className="text-sm text-foreground-500">{s.description}</span>
-                    </Link>
-                ))}
-            </div>
-        </div>
-    )
+export default async function Page({ searchParams }: Props) {
+    const session = await auth.api.getSession({ headers: await headers() });
+    const sp = await searchParams;
+    const single = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined);
+    const email = session?.user?.email || '';
+    return <SettingsClient user_id={email} initial_section={single(sp.section)} />;
 }
