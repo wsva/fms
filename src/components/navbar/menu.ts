@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import {
     Headphones, BookOpen, Layers, BookOpenText,
     Newspaper, FileText, SquarePen, Users,
-    Database, Tag, Store, Cloud,
+    Database, Store, Cloud,
     Wrench, CalendarDays, ChartColumn, FileType,
     Settings, Settings2, KeyRound,
 } from 'lucide-react';
@@ -56,7 +56,6 @@ export const menuList: MenuGroup[] = [
         name: "Dataset",
         icon: Database,
         items: [
-            { key: "dataset_tag", name: "Tags", description: "manage tags for all features", href: "/dataset/tag", icon: Tag },
             { key: "dataset_market", name: "Market", description: "datasets shared by others", href: "/dataset/market", icon: Store },
             { key: "dataset_manage", name: "My Datasets", description: "visibility, tags and deletion", href: "/dataset/manage", icon: Cloud },
         ],

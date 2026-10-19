@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { getKey, setKey } from '@/app/actions/settings_general';
 import { dataset_tag } from "@/generated/prisma/client";
 import Section from './section';
-import TagSelector from "@/app/dataset/tag/selector";
+import TagSelector from "@/components/datasets/TagSelector";
 
 export default function DefaultCardTagsSetting({ user_id }: { user_id: string }) {
     const [stateTagSelected, setStateTagSelected] = useState<Map<string, dataset_tag | null>>(new Map());
