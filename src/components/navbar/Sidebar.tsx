@@ -28,7 +28,7 @@ function isActive(pathname: string, href: string): boolean {
 export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose }: Props) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const redirectUrl = searchParams.get('redirect_url') ?? '/';
+    const redirectUrl = searchParams.get('redirect_url') ?? '/home';
     const { user, signOut } = useSession();
     const isDrawer = !!onClose;
     const rail = collapsed && !isDrawer;

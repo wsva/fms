@@ -20,7 +20,7 @@ import {
     X,
 } from 'lucide-react'
 import type { Cue } from '@/lib/types'
-import { lcs } from '@/app/speak/lcs'
+import { lcs } from '@/app/(app)/speak/lcs'
 
 // Web port of the app's dictation CueEditor
 // (learning/fms-app src/components/listen_speak/dictation/components/CueEditor.tsx).

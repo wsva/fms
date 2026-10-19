@@ -49,8 +49,8 @@ import type { BookChapterRow, BookSentenceDraft } from '@/lib/datasets/bookstore
 import { toggleRecording } from '@/lib/recording'
 import type { ActionResult } from '@/lib/types'
 import { getUUID } from '@/lib/utils'
-import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/speak/idb-blob-store"
-import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/speak/weak-cache"
+import { saveBlobToIndexedDB, getBlobFromIndexedDB, deleteBlobFromIndexedDB } from "@/app/(app)/speak/idb-blob-store"
+import { cacheBlobInMemory, getBlobFromWeakCache, dropWeakCache } from "@/app/(app)/speak/weak-cache"
 import { flattenChapters, groupIntoParagraphs, groupWordsBySentence } from './types'
 import type { DrawerState, Paragraph, SentenceClient, WordsBySentence } from './types'
 import ParagraphList from './ParagraphList'

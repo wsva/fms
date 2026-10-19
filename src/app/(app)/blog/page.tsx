@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { getBlogAll } from '../actions/blog';
+import { getBlogAll } from '@/app/actions/blog';
 import Blog from './Blog';
 
 type Props = {

@@ -41,7 +41,7 @@ export default function SessionProvider({ children }: { children: React.ReactNod
         await authClient.signOut({
             fetchOptions: {
                 onSuccess: () => {
-                    router.push("/");
+                    router.push("/home");
                     setUser(undefined);
                 },
             },

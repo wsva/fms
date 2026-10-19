@@ -1,7 +1,7 @@
 import { IndexItem } from "@/components/IndexItem";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import HomePopup from '@/app/plan/home_popup';
+import HomePopup from '@/app/(app)/plan/home_popup';
 import MottoPopup from '@/app/motto_popup';
 import { getKey } from '@/app/actions/settings_general';
 

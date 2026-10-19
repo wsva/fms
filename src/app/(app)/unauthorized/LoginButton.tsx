@@ -6,7 +6,7 @@ import { authClient } from '@/lib/auth-client'
 
 export default function LoginButton() {
     const searchParams = useSearchParams()
-    const redirectUrl = searchParams.get('redirect_url') ?? '/'
+    const redirectUrl = searchParams.get('redirect_url') ?? '/home'
 
     return (
         <Button

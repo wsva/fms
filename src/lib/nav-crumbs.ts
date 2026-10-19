@@ -42,7 +42,7 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
         }
     }
 
-    const crumbs: Crumb[] = [{ label: "Home", href: "/" }];
+    const crumbs: Crumb[] = [{ label: "Home", href: "/home" }];
 
     if (!best) {
         // Nothing in the menu matches: fall back to the raw path segments.

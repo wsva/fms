@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast, Button, Separator, Tooltip } from '@heroui/react'
 import Record from './record';
 import { plan_plan, plan_record } from "@/generated/prisma/client";
-import { getRecordAll, saveRecord } from '../actions/plan';
+import { getRecordAll, saveRecord } from '@/app/actions/plan';
 import { getUUID } from '@/lib/utils';
 import { CircleChevronDownFill, CircleChevronUpFill, PlayFill, Star, StarFill, TrashBin } from '@gravity-ui/icons';
 

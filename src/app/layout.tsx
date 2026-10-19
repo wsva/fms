@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { cookies } from "next/headers";
 import Providers from "@/components/Providers";
-import AppShell from "@/components/navbar/AppShell";
 import { findTheme } from "@/lib/themes";
 
 export const metadata: Metadata = {
@@ -24,9 +23,7 @@ export default async function RootLayout({
         <html lang="en" suppressHydrationWarning data-theme={theme.id === 'light' ? undefined : theme.id}>
             <body className="min-h-svh font-roboto bg-bg-body text-text-primary">
                 <Providers>
-                    <AppShell>
-                        {children}
-                    </AppShell>
+                    {children}
                 </Providers>
             </body>
         </html>
