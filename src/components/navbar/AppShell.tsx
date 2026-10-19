@@ -142,9 +142,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 className="flex flex-col min-h-svh lg:ml-[var(--sidebar-w)]"
                 style={{ transition: dragging ? 'none' : 'margin-left 200ms' }}
             >
-                <TopBar onOpenDrawer={() => setDrawerAt(pathname)} />
+                {/* Full-bleed pages carry their own Breadcrumb + Toolbar bars, so the
+                    shell TopBar is redundant there — drop it on desktop and let the
+                    page bars be the whole chrome. Below lg it stays: the sidebar is
+                    hidden and its hamburger is the only drawer (and theme) access. */}
+                {fullBleed ? (
+                    <div className="lg:hidden">
+                        <TopBar onOpenDrawer={() => setDrawerAt(pathname)} />
+                    </div>
+                ) : (
+                    <TopBar onOpenDrawer={() => setDrawerAt(pathname)} />
+                )}
                 <main className={fullBleed
-                    ? "flex-1 min-h-0 w-full h-[calc(100dvh-3rem)] overflow-hidden flex flex-col"
+                    ? "flex-1 min-h-0 w-full h-[calc(100dvh-3rem)] lg:h-dvh overflow-hidden flex flex-col"
                     : "container mx-auto flex-1 w-full px-2 sm:px-4 py-4 pb-20"}>
                     {children}
                 </main>
