@@ -24,6 +24,7 @@ import {
     type Platform,
 } from "@/lib/github-release";
 import LanguageToggle from "./LanguageToggle";
+import SignInCta from "./SignInCta";
 
 // The public marketing landing rendered at `/`. This is a *server* component: the
 // locale, session state, latest release and detected platform are all resolved on
@@ -34,7 +35,6 @@ import LanguageToggle from "./LanguageToggle";
 // answer 400 (the rest of the site already avoids next/image for the same reason).
 
 const LOGO = "/icon-512.png";
-const LOGIN_HREF = "/oauth2/login?return_to=%2Fhome";
 const APP_HREF = "/home";
 
 const FEATURES: { titleKey: DictKey; descKey: DictKey; icon: LucideIcon }[] = [
@@ -71,7 +71,6 @@ export interface LandingProps {
 
 export default function Landing({ locale, signedIn, release, platform }: LandingProps) {
     const t = makeT(locale);
-    const ctaHref = signedIn ? APP_HREF : LOGIN_HREF;
     const ctaLabel = signedIn ? t("nav.openApp") : t("nav.signIn");
     const heroCtaLabel = signedIn ? t("hero.ctaOpenApp") : t("hero.ctaSignIn");
 
@@ -96,10 +95,10 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
 
                     <div className="flex items-center gap-3">
                         <LanguageToggle locale={locale} />
-                        <a href={ctaHref} className="hidden items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover sm:inline-flex">
+                        <SignInCta signedIn={signedIn} appHref={APP_HREF} className="hidden items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover sm:inline-flex">
                             {ctaLabel}
                             <ArrowRight className="h-4 w-4" />
-                        </a>
+                        </SignInCta>
                     </div>
                 </div>
             </header>
@@ -116,9 +115,9 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                                 {t("hero.ctaDownload")}
                                 <ArrowRight className="h-4 w-4" />
                             </a>
-                            <a href={ctaHref} className="inline-flex items-center gap-2 rounded-lg border border-border-default bg-bg-card px-5 py-3 font-medium text-text-primary transition-colors hover:border-accent">
+                            <SignInCta signedIn={signedIn} appHref={APP_HREF} className="inline-flex items-center gap-2 rounded-lg border border-border-default bg-bg-card px-5 py-3 font-medium text-text-primary transition-colors hover:border-accent">
                                 {heroCtaLabel}
-                            </a>
+                            </SignInCta>
                         </div>
                         <p className="mt-6 text-sm text-text-tertiary">{t("hero.note")}</p>
                     </div>
