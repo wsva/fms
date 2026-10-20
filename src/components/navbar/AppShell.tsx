@@ -132,7 +132,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <div className="absolute inset-0 bg-black/40"
                         onClick={() => setDrawerAt(null)}
                     />
-                    <div className="absolute inset-y-0 left-0 w-44 shadow-xl">
+                    <div className="absolute inset-y-0 left-0 w-[80%] shadow-xl">
                         <Sidebar onClose={() => setDrawerAt(null)} />
                     </div>
                 </div>
