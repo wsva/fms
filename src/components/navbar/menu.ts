@@ -2,9 +2,9 @@ import type { ComponentType } from 'react';
 import {
     Headphones, BookOpen, Layers, BookOpenText,
     Newspaper, FileText, SquarePen, Users,
-    Database, Store, Cloud,
+    Store, Cloud,
     Wrench, CalendarDays, ChartColumn, FileType,
-    Settings, Settings2, KeyRound,
+    Settings,
 } from 'lucide-react';
 import MicGlyph from '@/components/design/MicGlyph';
 
@@ -31,7 +31,9 @@ export type MenuGroup = {
 /**
  * Top-level entries, rendered above the groups and reachable in one click.
  * Mirrors fms-app's rootTabs (Sidebar.tsx:89-96), down to the icons: the first
- * five are the ones the app uses for the same five tabs. /cards is the only
+ * five are the ones the app uses for the same five tabs; Settings is appended as
+ * a single page entry (its sub-menu was dropped in favor of the in-page
+ * SettingsNav). /cards is the only
  * card surface — the old pre-dataset pages under /card/* were removed.
  */
 export const rootMenuItems: MenuItem[] = [
@@ -40,6 +42,8 @@ export const rootMenuItems: MenuItem[] = [
     { key: "speak_practice", name: "Read Aloud", description: "record yourself reading a text", href: "/speak/practice", icon: MicGlyph },
     { key: "cards", name: "Cards", description: "browse and review dataset cards", href: "/cards", icon: Layers },
     { key: "wiki", name: "Wiki", description: "browse, search and edit wiki datasets", href: "/wiki", icon: BookOpenText },
+    // Single entry: the in-page SettingsNav sections replace the old sub-menu.
+    { key: "settings", name: "Settings", description: "app settings", href: "/settings", icon: Settings },
 ];
 
 export const menuList: MenuGroup[] = [
@@ -53,29 +57,15 @@ export const menuList: MenuGroup[] = [
         ],
     },
     {
-        name: "Dataset",
-        icon: Database,
-        items: [
-            { key: "dataset_market", name: "Market", description: "datasets shared by others", href: "/dataset/market", icon: Store },
-            { key: "dataset_manage", name: "My Datasets", description: "visibility, tags and deletion", href: "/dataset/manage", icon: Cloud },
-        ],
-    },
-    {
         name: "Tools",
         icon: Wrench,
         items: [
             { key: "plan_main", name: "Plan", description: "make plans", href: "/plan", icon: CalendarDays },
             { key: "tools_stats", name: "Learning Stats", description: "XP, progress and practice history", href: "/stats", icon: ChartColumn },
             { key: "tools_pdf_reader", name: "PDF Reader", description: "PDF reader", href: "/tools/pdf_reader", icon: FileType },
-        ],
-    },
-    // Last on purpose: the app renders Settings at the bottom of the nav.
-    {
-        name: "Settings",
-        icon: Settings,
-        items: [
-            { key: "settings_general", name: "General", description: "General settings", href: "/settings", icon: Settings2 },
-            { key: "settings_api", name: "API", description: "view APIs", href: "/settings?section=api_reference", icon: KeyRound },
+            // Absorbed from the removed Dataset group.
+            { key: "dataset_market", name: "Datasets Market", description: "datasets shared by others", href: "/dataset/market", icon: Store },
+            { key: "dataset_manage", name: "My Datasets", description: "visibility, tags and deletion", href: "/dataset/manage", icon: Cloud },
         ],
     },
 ];

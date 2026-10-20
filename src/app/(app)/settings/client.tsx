@@ -34,7 +34,7 @@ const SECTIONS: SettingsSection[] = [
 
 export default function SettingsClient({ user_id, initial_section }: { user_id: string; initial_section?: string }) {
     // Deep link: /settings?section=api_reference opens straight on a section
-    // (the nav menu and the old /settings/api route use it). The server page
+    // (the old /settings/api route redirects here with it). The server page
     // reads and passes the param, so the SSR HTML already shows the right
     // section — no client-only flash, and no setState inside an effect.
     const [active, setActive] = useState(
