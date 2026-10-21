@@ -61,7 +61,7 @@ const DOWNLOAD_CARDS: { platform: Platform; labelKey: DictKey; icon: LucideIcon;
 
 export interface LandingProps {
     locale: Locale;
-    /** True when the visitor has an active session — swaps the CTA to "Open app". */
+    /** True when the visitor has an active session — swaps the CTA to "Open workspace". */
     signedIn: boolean;
     /** Latest GitHub release, or null when it could not be fetched. */
     release: GitHubRelease | null;

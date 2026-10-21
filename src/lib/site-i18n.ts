@@ -14,10 +14,22 @@
 
 export type Locale = "en" | "de";
 
-export const LOCALES: { code: Locale; label: string }[] = [
+/**
+ * Locales currently published on the site. Translations for other locales stay
+ * in the dictionary below; add a code here (and to `PUBLISHED_LOCALES`) to turn
+ * one back on. While only English is published, `resolveLocale` pins every
+ * request to English and `LanguageToggle` renders nothing.
+ */
+export const PUBLISHED_LOCALES: Locale[] = ["en"];
+
+const ALL_LOCALES: { code: Locale; label: string }[] = [
     { code: "en", label: "English" },
     { code: "de", label: "Deutsch" },
 ];
+
+export const LOCALES: { code: Locale; label: string }[] = ALL_LOCALES.filter(
+    ({ code }) => PUBLISHED_LOCALES.includes(code),
+);
 
 /** Cookie the language toggle writes; read back by the server on the next render. */
 export const LANG_COOKIE = "fms-lang";
@@ -43,7 +55,7 @@ const dict = {
         "nav.how": "How it works",
         "nav.download": "Download",
         "nav.privacy": "Privacy",
-        "nav.openApp": "Open app",
+        "nav.openApp": "Open workspace",
         "nav.signIn": "Sign in",
         "nav.language": "Language",
 
@@ -52,7 +64,7 @@ const dict = {
         "hero.subtitle":
             "FmS turns any audio into dictation practice. Import a dataset, generate subtitles locally with on-device speech recognition, and train your ear one cue at a time — with spaced-repetition cards, read-aloud scoring and cross-device sync.",
         "hero.ctaDownload": "Download for free",
-        "hero.ctaOpenApp": "Open the app",
+        "hero.ctaOpenApp": "Open the workspace",
         "hero.ctaSignIn": "Sign in",
         "hero.note": "No account required. Your audio and progress never leave your device.",
 
@@ -124,7 +136,7 @@ const dict = {
         "nav.how": "So funktioniert's",
         "nav.download": "Download",
         "nav.privacy": "Datenschutz",
-        "nav.openApp": "App öffnen",
+        "nav.openApp": "Workspace öffnen",
         "nav.signIn": "Anmelden",
         "nav.language": "Sprache",
 
@@ -133,7 +145,7 @@ const dict = {
         "hero.subtitle":
             "FmS verwandelt jedes Audio in Diktat-Training. Importiere ein Dataset, erzeuge Untertitel lokal mit On-Device-Spracherkennung und trainiere dein Gehör Cue für Cue — mit Spaced-Repetition-Karten, Vorlese-Bewertung und geräteübergreifender Synchronisation.",
         "hero.ctaDownload": "Kostenlos herunterladen",
-        "hero.ctaOpenApp": "App öffnen",
+        "hero.ctaOpenApp": "Workspace öffnen",
         "hero.ctaSignIn": "Anmelden",
         "hero.note": "Kein Konto nötig. Deine Audiodaten und dein Fortschritt bleiben auf deinem Gerät.",
 
@@ -211,20 +223,25 @@ export function makeT(locale: Locale): Translate {
 
 /**
  * Negotiates the locale for a request: an explicit `fms-lang` cookie wins, then
- * the Accept-Language header (any `de` variant), else English. Values are passed
- * in so this stays free of `next/headers` and is importable from the client.
+ * the Accept-Language header (any `de` variant), else English — but only among
+ * the currently `PUBLISHED_LOCALES` (unpublished resolutions fall back to
+ * English). Values are passed in so this stays free of `next/headers` and is
+ * importable from the client.
  */
 export function resolveLocale(
     cookieValue: string | undefined,
     acceptLanguage: string | null | undefined,
 ): Locale {
-    if (cookieValue === "en" || cookieValue === "de") return cookieValue;
+    const fallback: Locale = PUBLISHED_LOCALES[0] ?? "en";
+    const published = (candidate: Locale): Locale =>
+        PUBLISHED_LOCALES.includes(candidate) ? candidate : fallback;
+    if (cookieValue === "en" || cookieValue === "de") return published(cookieValue);
     if (acceptLanguage) {
         // Prefer the highest-weighted `de*` tag; a bare match is enough for us.
         const prefersGerman = acceptLanguage
             .split(",")
             .some((part) => /^\s*de(-|;|\s|$)/i.test(part));
-        if (prefersGerman) return "de";
+        if (prefersGerman) return published("de");
     }
-    return "en";
+    return published("en");
 }

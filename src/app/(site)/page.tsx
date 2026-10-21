@@ -9,7 +9,7 @@ import Landing from "@/components/site/Landing";
 // copy, the latest GitHub release download links and the session-aware CTA are
 // all in the initial HTML (crawlable, no client flash). The `(site)` group has no
 // AppShell chrome — the root layout no longer wraps children in it — so this page
-// owns the full viewport. Signed-in visitors get an "Open app" CTA to /home;
+// owns the full viewport. Signed-in visitors get an "Open workspace" CTA to /home;
 // everyone else gets "Sign in".
 
 export async function generateMetadata(): Promise<Metadata> {

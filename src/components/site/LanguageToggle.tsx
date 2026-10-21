@@ -4,6 +4,8 @@
 // cookie and is read back on the server, so switching writes the cookie and asks
 // Next to re-render the server components (`router.refresh()`). A local mirror
 // of the value keeps the pressed state responsive while the refresh is in flight.
+// When only one locale is published (`LOCALES` is a single entry) there is
+// nothing to toggle, so the component renders nothing.
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -14,6 +16,8 @@ export default function LanguageToggle({ locale }: { locale: Locale }) {
     const [pending, startTransition] = useTransition();
     const [optimistic, setOptimistic] = useState<Locale>(locale);
     const active = pending ? optimistic : locale;
+
+    if (LOCALES.length <= 1) return null;
 
     function select(next: Locale) {
         if (next === locale) return;
