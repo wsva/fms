@@ -1,6 +1,6 @@
 /**
  * Book dataset store — read (and, for the dormant record/edit path, write)
- * access to the per-dataset `data.sqlite3` written by the fms-app Read a Book
+ * access to the per-dataset `data.sqlite3` written by the fms-app Books
  * feature (`learning/fms-app/src-tauri/src/datasets/book.rs::open_book_db`).
  *
  * Table shape mirrors that schema (`book_chapter` / `book_sentence` /

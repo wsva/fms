@@ -1,6 +1,6 @@
 'use server';
 /**
- * Dataset-backed Read a Book — the data layer of /speak/read.
+ * Dataset-backed Books — the data layer of /speak/read.
  *
  * Chapters and sentences are read from a book dataset's `data.sqlite3`
  * (`src/lib/datasets/bookstore.ts`); every access goes through the hub's read

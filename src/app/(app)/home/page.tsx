@@ -30,7 +30,7 @@ export default async function Home() {
                 <IndexItem href='/listen/dictation' label='Listening'
                     description='Dictate cues from a dataset subtitle.'
                 />
-                <IndexItem href='/speak/read' label='Reading'
+                <IndexItem href='/speak/read' label='Books'
                     description='Read a book sentence by sentence.'
                 />
                 <div className="m-4 col-span-full"></div>

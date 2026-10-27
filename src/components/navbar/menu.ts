@@ -38,7 +38,9 @@ export type MenuGroup = {
  */
 export const rootMenuItems: MenuItem[] = [
     { key: "listen_dictation", name: "Dictation", description: "dictation practice from datasets", href: "/listen/dictation", icon: Headphones },
-    { key: "read_book_main", name: "Read a Book", description: "read a book from datasets", href: "/speak/read", icon: BookOpen },
+    // Named for the app's `books` tab. The URL stays /speak/read: it is public
+    // and there is no redirect layer to carry old links.
+    { key: "books_main", name: "Books", description: "read book datasets sentence by sentence", href: "/speak/read", icon: BookOpen },
     { key: "speak_practice", name: "Read Aloud", description: "record yourself reading a text", href: "/speak/practice", icon: MicGlyph },
     { key: "cards", name: "Cards", description: "browse and review dataset cards", href: "/cards", icon: Layers },
     { key: "wiki", name: "Wiki", description: "browse, search and edit wiki datasets", href: "/wiki", icon: BookOpenText },

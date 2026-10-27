@@ -2,7 +2,7 @@
 
 /**
  * The dataset tile used by every dataset-picker grid (Cards, Wiki, Dictation,
- * Read a Book). Mirrors the app's CardsPage dataset card exactly — same box,
+ * Books). Mirrors the app's CardsPage dataset card exactly — same box,
  * same visibility-chip colors, same type scale — so the pickers read as the
  * app's own. The app's `hover:border-accent-blue/40` is a dead utility there
  * (no accent-blue token exists in either codebase); the website resolves it to

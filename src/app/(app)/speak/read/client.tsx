@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Dataset-backed Read a Book — the web twin of the app's Book reading flow
+ * Dataset-backed Books — the web twin of the app's Book reading flow
  * (`learning/fms-app/src-tauri/src/datasets/book.rs`), now wearing the app's
- * window chrome (`read_book/ReadBookPage.tsx` + `ReadingView.tsx` parity):
+ * window chrome (`books/BooksPage.tsx` + `ReadingView.tsx` parity):
  * full-bleed shell, flat kit Breadcrumb + Toolbar, and the app's three-level
  * drill-down
  *   books → chapters → reading

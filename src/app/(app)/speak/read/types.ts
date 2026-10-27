@@ -64,7 +64,7 @@ export function groupWordsBySentence(words: BookWordRow[]): WordsBySentence {
     return map
 }
 
-/** Highlight background colors for sentences (app read_book/utils.ts table). */
+/** Highlight background colors for sentences (app books/utils.ts table). */
 export const BG_COLORS: { key: string; label: string; description: string; swatch: string; bg: string }[] = [
     { key: 'yellow', label: 'Yellow', description: 'New vocabulary', swatch: 'bg-yellow-300', bg: 'bg-yellow-200/70' },
     { key: 'green', label: 'Green', description: 'Mastered', swatch: 'bg-green-300', bg: 'bg-green-200/70' },
