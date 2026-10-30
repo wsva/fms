@@ -63,6 +63,13 @@ spec:
               value: "/fms_datasets"
             - name: MAX_DATASET_UPLOAD_MB
               value: "512"
+            # Bind the standalone server to every interface instead of the pod name.
+            # server.js uses `process.env.HOSTNAME || '0.0.0.0'`, and Kubernetes injects
+            # HOSTNAME=<pod name>, which makes Node bind the pod IP only -- so 127.0.0.1:3000
+            # refuses connection and the app cannot call its own OAuth2 endpoints in-process
+            # (see the loopback OAUTH2_TOKEN / OAUTH2_USERINFO below).
+            - name: HOSTNAME
+              value: "0.0.0.0"
           command:
             - sh
             - -c
@@ -74,8 +81,16 @@ spec:
               echo 'BETTER_AUTH_URL=https://lusworkshop.site' >> .env
               echo 'BETTER_AUTH_SECRET="${AUTH_SECRET}"' >> .env
               echo 'OAUTH2_AUTHORIZATION=https://lusworkshop.site/api/oauth2/authorize' >> .env
-              echo 'OAUTH2_TOKEN=https://lusworkshop.site/api/oauth2/token' >> .env
-              echo 'OAUTH2_USERINFO=https://lusworkshop.site/api/oauth2/userinfo' >> .env
+              # Server-to-server calls: reach our own endpoints over loopback, not through
+              # the public URL. A hairpin to lusworkshop.site resolves to the node's IP and is
+              # DNAT'ed by kube-proxy to the nginx pod IP before Calico evaluates the fms
+              # egress policy, whose ipBlock `except` covers 10.0.0.0/8 -- so the call is
+              # dropped and Better Auth reports oauth_code_verification_failed.
+              # Requires HOSTNAME=0.0.0.0 above. OAUTH2_AUTHORIZATION stays public: the
+              # browser navigates to it. BETTER_AUTH_URL stays public too, it builds the
+              # redirect_uri the provider must recognise.
+              echo 'OAUTH2_TOKEN=http://127.0.0.1:3000/api/oauth2/token' >> .env
+              echo 'OAUTH2_USERINFO=http://127.0.0.1:3000/api/oauth2/userinfo' >> .env
               echo 'OAUTH2_LOGOUT=https://lusworkshop.site/api/oauth2/logout' >> .env
               echo 'OAUTH2_CLIENT_ID=als_next.js' >> .env
               echo 'OAUTH2_CHECK_IP=false' >> .env
