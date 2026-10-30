@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { resolveLocale, makeT, LANG_COOKIE } from "@/lib/site-i18n";
-import { fetchLatestRelease, detectPlatformFromUA } from "@/lib/github-release";
+import { getLatestRelease, detectPlatformFromUA } from "@/lib/github-release";
 import Landing from "@/components/site/Landing";
 
 // Public marketing landing page at `/`. Rendered on the server so the localized
@@ -32,7 +32,7 @@ export default async function SiteHome() {
 
     // A missing/invalid session should never break the public landing.
     const session = await auth.api.getSession({ headers: headerStore }).catch(() => null);
-    const release = await fetchLatestRelease();
+    const release = await getLatestRelease();
 
     return (
         <Landing

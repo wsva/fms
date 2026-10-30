@@ -107,7 +107,7 @@ const dict = {
         "download.android": "Android",
         "download.experimental": "Experimental",
         "download.unavailable":
-            "Couldn't reach GitHub right now. You can still browse all releases manually.",
+            "Neither the download mirror nor GitHub could be reached right now. You can still browse all releases manually.",
         "download.viewAll": "View all releases",
         "download.version": "Latest version",
         "download.detectHint": "Detected your platform — the recommended build is highlighted.",
@@ -188,7 +188,7 @@ const dict = {
         "download.android": "Android",
         "download.experimental": "Experimentell",
         "download.unavailable":
-            "GitHub ist gerade nicht erreichbar. Du kannst alle Releases dennoch manuell durchsehen.",
+            "Weder der Download-Spiegel noch GitHub sind gerade erreichbar. Du kannst alle Releases dennoch manuell durchsehen.",
         "download.viewAll": "Alle Releases anzeigen",
         "download.version": "Neueste Version",
         "download.detectHint": "Plattform erkannt — der empfohlene Build ist hervorgehoben.",

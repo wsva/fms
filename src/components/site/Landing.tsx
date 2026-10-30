@@ -20,7 +20,7 @@ import {
     REPO_URL,
     RELEASES_URL,
     pickAsset,
-    type GitHubRelease,
+    type LatestRelease,
     type Platform,
 } from "@/lib/github-release";
 import LanguageToggle from "./LanguageToggle";
@@ -59,12 +59,18 @@ const DOWNLOAD_CARDS: { platform: Platform; labelKey: DictKey; icon: LucideIcon;
     { platform: "android", labelKey: "download.android", icon: Smartphone, experimental: true },
 ];
 
+/** Installer sizes are only shown for mirrored assets, where the byte count is a promise. */
+function formatSize(bytes: number): string {
+    const mb = bytes / (1024 * 1024);
+    return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
+}
+
 export interface LandingProps {
     locale: Locale;
     /** True when the visitor has an active session — swaps the CTA to "Open workspace". */
     signedIn: boolean;
-    /** Latest GitHub release, or null when it could not be fetched. */
-    release: GitHubRelease | null;
+    /** Latest release from the mirror (or GitHub if the mirror has not synced). */
+    release: LatestRelease | null;
     /** Platform guessed from the request User-Agent, for highlighting a card. */
     platform: Platform | null;
 }
@@ -206,7 +212,7 @@ function DownloadSection({
     platform,
 }: {
     t: (key: DictKey) => string;
-    release: GitHubRelease | null;
+    release: LatestRelease | null;
     platform: Platform | null;
 }) {
     const version = release?.name || release?.tag_name || null;
@@ -231,7 +237,7 @@ function DownloadSection({
                 <div className="mt-8 grid gap-4 sm:grid-cols-3">
                     {DOWNLOAD_CARDS.map(({ platform: p, labelKey, icon: Icon, experimental }) => {
                         const asset = release ? pickAsset(release.assets, p) : null;
-                        const href = asset?.browser_download_url ?? RELEASES_URL;
+                        const href = asset?.url ?? RELEASES_URL;
                         const isDetected = platform === p;
                         const disabled = !asset && !!release;
                         return (
@@ -265,6 +271,13 @@ function DownloadSection({
                                         </>
                                     )}
                                 </span>
+                                {/* Mirrored files are served by this site, so this site
+                                    publishes their checksums — GitHub links carry none. */}
+                                {asset?.sha256 && (
+                                    <span className="mt-1.5 truncate font-mono text-xs text-text-tertiary">
+                                        {formatSize(asset.size)} · SHA-256 {asset.sha256.slice(0, 12)}
+                                    </span>
+                                )}
                             </a>
                         );
                     })}

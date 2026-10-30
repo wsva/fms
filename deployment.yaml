@@ -61,6 +61,10 @@ spec:
                   key: SMTP_FROM
             - name: DATASET_ROOT
               value: "/fms_datasets"
+            # Release mirror volume (written by mirror_releases.py on the host,
+            # read by src/app/mirror + the landing's mirror-first release lookup).
+            - name: FMS_MIRROR_DIR
+              value: "/fms_mirror"
             - name: MAX_DATASET_UPLOAD_MB
               value: "512"
             # Bind the standalone server to every interface instead of the pod name.
@@ -110,6 +114,10 @@ spec:
               mountPath: /fms_data
             - name: fms-datasets
               mountPath: /fms_datasets
+            # Served read-only: only the host's cron sync writes this volume.
+            - name: fms-mirror
+              mountPath: /fms_mirror
+              readOnly: true
             - name: ssl
               mountPath: /ssl
       volumes:
@@ -120,6 +128,10 @@ spec:
         - name: fms-datasets
           hostPath:
             path: /wsva/data/fms_datasets
+            type: Directory
+        - name: fms-mirror
+          hostPath:
+            path: /wsva/data/fms_mirror
             type: Directory
         - name: ssl
           hostPath:
