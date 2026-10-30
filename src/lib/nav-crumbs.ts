@@ -1,4 +1,4 @@
-import { menuList, rootMenuItems } from "@/components/navbar/menu";
+import { bottomMenuItems, menuList, rootMenuItems } from "@/components/navbar/menu";
 
 export type Crumb = {
     label: string;
@@ -25,6 +25,9 @@ export function getBreadcrumbs(pathname: string): Crumb[] {
 
     const entries: MenuEntry[] = [
         ...rootMenuItems.map(item => ({ name: item.name, href: item.href, path: hrefPath(item.href) })),
+        // Pinned entries (Settings) are still pages with a name — the sidebar
+        // groups them differently, the breadcrumb should not notice.
+        ...bottomMenuItems.map(item => ({ name: item.name, href: item.href, path: hrefPath(item.href) })),
         ...menuList.flatMap(group => group.items.map(item => ({
             name: item.name,
             href: item.href,

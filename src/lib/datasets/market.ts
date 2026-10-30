@@ -172,12 +172,71 @@ export async function unsubscribeMarketDataset(email: string | null, uuid: strin
 }
 
 /**
- * Owner-only visibility toggle. Sharing is the UI's publish act (sync-v2
- * INV-17): pin the newest uploaded version so registry reads resolve to what
- * the owner just shared; narrowing to `private` leaves the pin untouched.
- * Returns the refreshed row (with the live pin) so the PATCH echo can carry
- * the §1.1 shape and the UI action its DatasetJson without a second read.
+ * Owner-only descriptor edit — the fields a dataset card's back face sets.
+ *
+ * `language`/`visibility` are optional in the patch because a card that was
+ * never given a field must not clear it: absent means "unchanged", empty means
+ * "clear it". A visibility change to `shared`/`public` pins the newest uploaded
+ * version for the same reason `setMarketVisibility` does — sharing is the
+ * publish act (sync-v2 INV-17).
  */
+export async function setMarketInfo(
+    email: string | null,
+    uuid: string,
+    patch: { name: string; description: string; language?: string; visibility?: string }
+): Promise<{ ok: true; row: MarketCatalogRow } | MarketFailure> {
+    if (!email) return { ok: false, status: 401, error: 'Unauthorized' };
+    const ds = await loadCatalog(uuid);
+    if (!ds || ds.deleted === 'Y') return { ok: false, status: 404, error: 'Dataset not found' };
+    if (ds.user_id !== email) return { ok: false, status: 403, error: 'Only the owner can edit this dataset' };
+
+    const name = patch.name.trim();
+    if (!name) return { ok: false, status: 400, error: 'name is required' };
+
+    const visibility = patch.visibility ?? ds.visibility;
+    if (!(VISIBILITIES as readonly string[]).includes(visibility)) {
+        return { ok: false, status: 400, error: `visibility must be one of ${VISIBILITIES.join(', ')}` };
+    }
+
+    const language = patch.language === undefined ? undefined : patch.language.trim();
+    if (language !== undefined && language.length > 10) {
+        // The column is VarChar(10); refuse here rather than let Postgres throw.
+        return { ok: false, status: 400, error: 'language must be 10 characters or fewer' };
+    }
+
+    const publishing = visibility === 'shared' || visibility === 'public';
+    const latest = publishing
+        ? await prisma.dataset_version.findFirst({
+              where: { dataset_uuid: uuid },
+              orderBy: { version: 'desc' },
+              select: { version: true },
+          })
+        : null;
+    const updated = await prisma.dataset.update({
+        where: { uuid },
+        data: {
+            name,
+            description: patch.description.trim(),
+            ...(language !== undefined ? { language } : {}),
+            ...(patch.visibility !== undefined ? { visibility } : {}),
+            ...(latest?.version != null ? { current_version: latest.version } : {}),
+            updated_at: new Date(),
+        },
+        select: { ...datasetCatalogFields, updated_at: true },
+    });
+    const { updated_at, ...catalog } = updated;
+    return {
+        ok: true,
+        row: {
+            ds: catalog as unknown as DatasetCatalog,
+            updated_at,
+            is_owner: true,
+            is_subscribed: await isSubscribed(uuid, email),
+            tags: (await tagsByDataset([uuid])).get(uuid) ?? [],
+        },
+    };
+}
+
 export async function setMarketVisibility(
     email: string | null,
     uuid: string,

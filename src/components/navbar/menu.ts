@@ -30,10 +30,10 @@ export type MenuGroup = {
 
 /**
  * Top-level entries, rendered above the groups and reachable in one click.
- * Mirrors fms-app's rootTabs (Sidebar.tsx:89-96), down to the icons: the first
- * five are the ones the app uses for the same five tabs; Settings is appended as
- * a single page entry (its sub-menu was dropped in favor of the in-page
- * SettingsNav). /cards is the only
+ * Mirrors fms-app's rootTabs (Sidebar.tsx:89-96), down to the icons: these are
+ * the five tabs the app keeps at the root. Settings is not one of them — like
+ * the app, it is pinned below the nav (see `bottomMenuItems`) so it stays one
+ * click away without sitting in the daily path. /cards is the only
  * card surface — the old pre-dataset pages under /card/* were removed.
  */
 export const rootMenuItems: MenuItem[] = [
@@ -44,7 +44,13 @@ export const rootMenuItems: MenuItem[] = [
     { key: "speak_practice", name: "Read Aloud", description: "record yourself reading a text", href: "/speak/practice", icon: MicGlyph },
     { key: "cards", name: "Cards", description: "browse and review dataset cards", href: "/cards", icon: Layers },
     { key: "wiki", name: "Wiki", description: "browse, search and edit wiki datasets", href: "/wiki", icon: BookOpenText },
-    // Single entry: the in-page SettingsNav sections replace the old sub-menu.
+];
+
+/**
+ * Pinned under the nav, next to the account footer: the app's arrangement. The
+ * in-page SettingsNav sections replace the old sub-menu, so this is one entry.
+ */
+export const bottomMenuItems: MenuItem[] = [
     { key: "settings", name: "Settings", description: "app settings", href: "/settings", icon: Settings },
 ];
 

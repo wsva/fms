@@ -42,6 +42,7 @@ import {
     setDatasetChapterProgress,
     writeDatasetSentenceAudio,
 } from '@/app/actions/dataset_read'
+import { DatasetCard, saveDatasetInfo, visibilityChipClass } from '@/components/ui/dataset'
 import { Breadcrumb, Toolbar, ToolbarButton } from '@/components/ui/toolbar'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import type { DatasetJson, DatasetListItem } from '@/lib/datasets/access'
@@ -739,14 +740,32 @@ export default function Client({ user_id }: Props) {
                         ) : (
                             <div className="flex flex-col gap-2">
                                 {stateDatasetList.map((ds) => (
-                                    <button
+                                    <DatasetCard
                                         key={ds.uuid}
-                                        onClick={() => setStateDatasetUUID(ds.uuid)}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border-default bg-bg-card hover:bg-bg-hover text-left cursor-pointer transition-colors"
-                                    >
-                                        <BookOpen size={18} className="text-text-tertiary shrink-0" />
-                                        <span className="text-base font-medium text-text-primary truncate">{ds.name}</span>
-                                    </button>
+                                        variant="row"
+                                        icon={BookOpen}
+                                        name={ds.name}
+                                        description={ds.description}
+                                        language={ds.language}
+                                        visibility={ds.visibility}
+                                        meta={`${ds.media_count} media`}
+                                        onOpen={() => setStateDatasetUUID(ds.uuid)}
+                                        // A dataset the caller does not own is a
+                                        // subscription, not a draft: no pencil.
+                                        onSave={
+                                            ds.is_owner
+                                                ? async (patch) => {
+                                                      await saveDatasetInfo(ds.uuid, patch)
+                                                      await loadDatasets()
+                                                  }
+                                                : undefined
+                                        }
+                                        chips={
+                                            <span className={visibilityChipClass(ds.visibility)}>
+                                                {ds.visibility}
+                                            </span>
+                                        }
+                                    />
                                 ))}
                             </div>
                         )}

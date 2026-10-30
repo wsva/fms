@@ -29,6 +29,7 @@ import {
 } from '@/lib/datasets/access';
 import {
     listMarketRows,
+    setMarketInfo,
     setMarketVisibility,
     subscribeMarketDataset,
     unsubscribeMarketDataset,
@@ -212,6 +213,30 @@ export async function setDatasetVisibility(uuid: string, visibility: string): Pr
     try {
         const email = await currentEmail();
         const result = await setMarketVisibility(email, uuid, visibility);
+        if (!result.ok) return { status: 'error', error: result.error };
+        return { status: 'success', data: serializeDataset(result.row.ds) };
+    } catch (error) {
+        console.error(error);
+        return { status: 'error', error: toErrorMessage(error) };
+    }
+}
+
+/**
+ * The dataset card's pencil: an owner-only descriptor edit (name, description,
+ * language, and visibility when the form sent one).
+ *
+ * Routed through the shared market core for the same reason as
+ * `setDatasetVisibility` — a visibility change here must pin the newest version
+ * exactly like the REST surface does, and market.md §4 forbids a second copy of
+ * that rule in the UI layer.
+ */
+export async function setDatasetInfo(
+    uuid: string,
+    patch: { name: string; description: string; language?: string; visibility?: string }
+): Promise<ActionResult<DatasetJson>> {
+    try {
+        const email = await currentEmail();
+        const result = await setMarketInfo(email, uuid, patch);
         if (!result.ok) return { status: 'error', error: result.error };
         return { status: 'success', data: serializeDataset(result.row.ds) };
     } catch (error) {

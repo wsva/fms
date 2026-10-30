@@ -27,6 +27,7 @@ import {
     CheckCircle,
     ChevronsDownUp,
     ChevronsUpDown,
+    Headphones,
     HelpCircle,
     Pencil,
     RefreshCw,
@@ -50,7 +51,7 @@ import {
 import { getDictation, saveDictation } from '@/app/actions/listen'
 import HlsPlayer from '@/components/HlsPlayer'
 import WaveformCanvas, { type WaveformData } from '@/components/WaveformCanvas'
-import DatasetCard from '@/components/datasets/DatasetCard'
+import { DatasetCard, saveDatasetInfo, visibilityChipClass } from '@/components/ui/dataset'
 import { Breadcrumb, Toolbar, ToolbarButton, ToolbarIconButton, ToolbarMenuItem, ToolbarOverflow } from '@/components/ui/toolbar'
 import { tbGhost } from '@/lib/ui/toolbar'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -663,11 +664,29 @@ export default function Client({ user_id }: Props) {
                             {stateDatasetList.map((ds) => (
                                 <DatasetCard
                                     key={ds.uuid}
+                                    variant="card"
+                                    icon={Headphones}
                                     name={ds.name}
                                     description={ds.description}
+                                    language={ds.language}
                                     visibility={ds.visibility}
-                                    footer={`${ds.media_count} media${ds.language ? ` · ${ds.language}` : ''}`}
-                                    onClick={() => setStateDatasetUUID(ds.uuid)}
+                                    meta={`${ds.media_count} media`}
+                                    onOpen={() => setStateDatasetUUID(ds.uuid)}
+                                    // A dataset the caller does not own is a
+                                    // subscription, not a draft: no pencil.
+                                    onSave={
+                                        ds.is_owner
+                                            ? async (patch) => {
+                                                  await saveDatasetInfo(ds.uuid, patch)
+                                                  await loadDatasets()
+                                              }
+                                            : undefined
+                                    }
+                                    chips={
+                                        <span className={visibilityChipClass(ds.visibility)}>
+                                            {ds.visibility}
+                                        </span>
+                                    }
                                 />
                             ))}
                         </div>

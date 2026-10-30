@@ -1,4 +1,4 @@
-export type ThemeId = 'light' | 'dark' | 'solarized' | 'gruvbox'
+export type ThemeId = 'light' | 'dark' | 'solarized' | 'code' | 'gruvbox'
 
 export type ThemeDef = {
     id: ThemeId
@@ -10,6 +10,7 @@ export const themes: ThemeDef[] = [
     { id: 'light', name: 'Light', swatch: '#fbfbfb' },
     { id: 'dark', name: 'Dark', swatch: '#1a1a1a' },
     { id: 'solarized', name: 'Solarized', swatch: '#fdf6e3' },
+    { id: 'code', name: 'Code', swatch: '#1e1e1c' },
     { id: 'gruvbox', name: 'Gruvbox', swatch: '#282828' },
 ]
 

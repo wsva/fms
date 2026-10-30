@@ -38,6 +38,7 @@ import {
     Frown,
     GraduationCap,
     Laugh,
+    Layers,
     Meh,
     Plus,
     RefreshCw,
@@ -62,7 +63,7 @@ import {
     type ReviewState,
 } from '@/app/actions/dataset_cards'
 import { proposeDeleteTag, proposeSaveTag } from '@/app/actions/card_editor'
-import DatasetCard from '@/components/datasets/DatasetCard'
+import { DatasetCard, saveDatasetInfo, visibilityChipClass } from '@/components/ui/dataset'
 import Markdown2Html from '@/components/markdown/markdown'
 import {
     Breadcrumb,
@@ -624,11 +625,29 @@ export default function Client() {
                             {datasets.map((ds) => (
                                 <DatasetCard
                                     key={ds.uuid}
+                                    variant="card"
+                                    icon={Layers}
                                     name={ds.name}
                                     description={ds.description}
+                                    language={ds.language}
                                     visibility={ds.visibility}
-                                    footer={`${ds.card_count} card${ds.card_count !== 1 ? 's' : ''}`}
-                                    onClick={() => openDataset(ds.uuid)}
+                                    meta={`${ds.card_count} card${ds.card_count !== 1 ? 's' : ''}`}
+                                    onOpen={() => openDataset(ds.uuid)}
+                                    // A dataset the caller does not own is a
+                                    // subscription, not a draft: no pencil.
+                                    onSave={
+                                        ds.is_owner
+                                            ? async (patch) => {
+                                                  await saveDatasetInfo(ds.uuid, patch)
+                                                  await loadDatasets()
+                                              }
+                                            : undefined
+                                    }
+                                    chips={
+                                        <span className={visibilityChipClass(ds.visibility)}>
+                                            {ds.visibility}
+                                        </span>
+                                    }
                                 />
                             ))}
                         </div>

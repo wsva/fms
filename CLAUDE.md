@@ -72,7 +72,7 @@ All user-created models use UUID primary keys.
 
 ### UI
 
-Uses HeroUI (`@heroui/react`) as the component library with Tailwind CSS v4. `src/components/Providers.tsx` wraps the app with `HeroUIProvider` and toast notifications. The color palette uses a "sand" theme.
+Uses HeroUI (`@heroui/react`) as the component library with Tailwind CSS v4. `src/components/Providers.tsx` wraps the app with `HeroUIProvider` and toast notifications. Five themes ship as CSS custom-property sets in `src/app/globals.css` (light, dark, solarized, code, gruvbox), selected by the `data-theme` attribute and listed in `src/lib/themes/index.ts`.
 
 ## Key Environment Variables
 

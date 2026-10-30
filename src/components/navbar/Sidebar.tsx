@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import NextLink from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ChevronRight, ChevronsLeft, ChevronsRight, LogOut, User, X } from 'lucide-react';
-import { menuList, rootMenuItems } from './menu';
+import { ChevronRight, ChevronsLeft, ChevronsRight, User, X } from 'lucide-react';
+import { menuList, rootMenuItems, bottomMenuItems, type MenuItem } from './menu';
+import AccountMenu from './AccountMenu';
 import { hrefPath } from '@/lib/nav-crumbs';
 import { useSession } from '@/components/SessionProvider';
 import { authClient } from '@/lib/auth-client';
@@ -44,6 +45,46 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
         await authClient.signIn.social({ provider: "wsva_oauth2", callbackURL: redirectUrl });
     };
 
+    /**
+     * One top-level entry: the icon rail and the full column differ in shape but
+     * not in behaviour, so both root items and the pinned Settings entry render
+     * through here.
+     */
+    const renderTopItem = (item: MenuItem) => {
+        const ItemIcon = item.icon;
+        const active = isActive(pathname, item.href);
+        if (rail) {
+            return (
+                <NextLink
+                    key={item.key}
+                    href={item.href}
+                    title={item.name}
+                    className={
+                        'flex items-center justify-center h-9 w-9 mx-auto rounded-lg transition-colors ' +
+                        (active ? ACCENT : 'text-gray-600 hover:bg-bg-hover')
+                    }
+                >
+                    <ItemIcon size={20} />
+                </NextLink>
+            );
+        }
+        return (
+            <NextLink
+                key={item.key}
+                href={item.href}
+                onClick={onClose}
+                title={item.description}
+                className={
+                    'flex items-center gap-2 w-full rounded-lg p-2 transition-colors ' +
+                    (active ? ACCENT : 'text-gray-600 hover:bg-bg-hover')
+                }
+            >
+                <ItemIcon size={20} className="shrink-0" />
+                <span className="text-sm font-medium flex-1 truncate text-left">{item.name}</span>
+            </NextLink>
+        );
+    };
+
     return (
         <aside className={
             `flex flex-col h-full w-full border-r border-border-default bg-bg-body select-none ` +
@@ -61,67 +102,10 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                 </div>
             )}
 
-            {/* Auth row */}
-            <div data-no-toggle className={`flex items-center w-full rounded-lg transition-colors shrink-0 ${
-                rail ? 'justify-center px-0 py-1.5' : 'gap-2 px-2 py-1.5'
-            } hover:bg-bg-hover ${user ? 'cursor-pointer' : ''}`}
-                title={user ? (rail ? `${user.name} (click to logout)` : 'Click to logout') : 'Login'}
-                onClick={() => (user ? signOut() : handleLogin())}
-            >
-                {user ? (
-                    <>
-                        <span className="w-6 h-6 rounded-full bg-accent text-white flex items-center justify-center text-xs font-bold shrink-0">
-                            {(user.name || user.email).charAt(0).toUpperCase()}
-                        </span>
-                        {!rail && <span className="text-xs font-medium truncate flex-1 text-left">{user.name}</span>}
-                        {!rail && <LogOut size={14} className="text-gray-400 shrink-0" />}
-                    </>
-                ) : (
-                    <>
-                        <User size={18} className="text-gray-500 shrink-0" />
-                        {!rail && <span className="text-xs font-medium text-gray-500">Login</span>}
-                    </>
-                )}
-            </div>
-            <div className="border-b border-border-default my-1 w-full shrink-0" />
-
             {/* Nav */}
             <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 w-full">
                 {/* Root entries: one click, no group to expand */}
-                {rootMenuItems.map(item => {
-                    const ItemIcon = item.icon;
-                    const active = isActive(pathname, item.href);
-                    if (rail) {
-                        return (
-                            <NextLink
-                                key={item.key}
-                                href={item.href}
-                                title={item.name}
-                                className={
-                                    'flex items-center justify-center h-9 w-9 mx-auto rounded-lg transition-colors ' +
-                                    (active ? ACCENT : 'text-gray-600 hover:bg-bg-hover')
-                                }
-                            >
-                                <ItemIcon size={20} />
-                            </NextLink>
-                        );
-                    }
-                    return (
-                        <NextLink
-                            key={item.key}
-                            href={item.href}
-                            onClick={onClose}
-                            title={item.description}
-                            className={
-                                'flex items-center gap-2 w-full rounded-lg p-2 transition-colors ' +
-                                (active ? ACCENT : 'text-gray-600 hover:bg-bg-hover')
-                            }
-                        >
-                            <ItemIcon size={20} className="shrink-0" />
-                            <span className="text-sm font-medium flex-1 truncate text-left">{item.name}</span>
-                        </NextLink>
-                    );
-                })}
+                {rootMenuItems.map(renderTopItem)}
 
                 {menuList.map(group => {
                     const GroupIcon = group.icon;
@@ -183,6 +167,10 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                         </div>
                     );
                 })}
+
+                {/* Pinned below the groups, as in the app: Settings is one click
+                    away without sitting in the daily path. */}
+                {bottomMenuItems.map(renderTopItem)}
             </nav>
 
             {/* Desktop collapse toggle */}
@@ -196,6 +184,31 @@ export default function Sidebar({ collapsed = false, onToggleCollapsed, onClose 
                     {rail ? <ChevronsRight size={20} /> : <ChevronsLeft size={20} />}
                 </button>
             )}
+
+            {/* Account footer — pinned, never scrolled away with the nav. The
+                identity row only opens the panel; logging out happens inside it. */}
+            <div className="border-t border-border-default pt-2 pb-1 w-full shrink-0">
+                {user ? (
+                    <AccountMenu
+                        collapsed={rail}
+                        name={user.name || user.email}
+                        email={user.email}
+                        onLogout={signOut}
+                    />
+                ) : (
+                    <button
+                        type="button"
+                        onClick={handleLogin}
+                        title="Login"
+                        className={`flex items-center w-full rounded-lg px-2 py-1.5 hover:bg-bg-hover transition-colors cursor-pointer ${
+                            rail ? 'justify-center' : 'gap-2'
+                        }`}
+                    >
+                        <User size={18} className="text-gray-500 shrink-0" />
+                        {!rail && <span className="text-xs font-medium text-gray-500">Login</span>}
+                    </button>
+                )}
+            </div>
         </aside>
     );
 }

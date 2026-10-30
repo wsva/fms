@@ -29,6 +29,7 @@ import { ProgressCircle, toast } from '@heroui/react'
 import {
     ArrowLeft,
     ArrowRight,
+    BookMarked,
     FilePlus,
     FileText,
     Folder,
@@ -55,7 +56,7 @@ import {
 } from '@/app/actions/dataset_wiki'
 import Markdown2Html from '@/components/markdown/markdown'
 import MdEditor from '@/components/MdEditor'
-import DatasetCard from '@/components/datasets/DatasetCard'
+import { DatasetCard, saveDatasetInfo, visibilityChipClass } from '@/components/ui/dataset'
 import {
     Breadcrumb,
     Toolbar,
@@ -644,11 +645,29 @@ export default function Client() {
                             {datasets.map((ds) => (
                                 <DatasetCard
                                     key={ds.uuid}
+                                    variant="card"
+                                    icon={BookMarked}
                                     name={ds.name}
                                     description={ds.description}
+                                    language={ds.language}
                                     visibility={ds.visibility}
-                                    footer={`${ds.file_count} files${ds.language ? ` · ${ds.language}` : ''}`}
-                                    onClick={() => goDir(ds.uuid, '')}
+                                    meta={`${ds.media_count} media`}
+                                    onOpen={() => goDir(ds.uuid, '')}
+                                    // A dataset the caller does not own is a
+                                    // subscription, not a draft: no pencil.
+                                    onSave={
+                                        ds.is_owner
+                                            ? async (patch) => {
+                                                  await saveDatasetInfo(ds.uuid, patch)
+                                                  await loadDatasets()
+                                              }
+                                            : undefined
+                                    }
+                                    chips={
+                                        <span className={visibilityChipClass(ds.visibility)}>
+                                            {ds.visibility}
+                                        </span>
+                                    }
                                 />
                             ))}
                         </div>
