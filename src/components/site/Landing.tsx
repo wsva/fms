@@ -1,13 +1,17 @@
 import {
     Headphones,
     BookOpen,
-    Layers,
     Mic,
+    Layers,
     NotebookPen,
     Bot,
+    Ear,
+    PenLine,
+    Upload,
+    Repeat,
+    ShieldCheck,
     Code2,
     ArrowRight,
-    ShieldCheck,
     Monitor,
     Terminal,
     Smartphone,
@@ -33,20 +37,42 @@ import SignInCta from "./SignInCta";
 // language toggle. The logo mark is /icon-512.png from public/, served as a
 // plain <img>: the standalone deployment has no `sharp`, so /_next/image would
 // answer 400 (the rest of the site already avoids next/image for the same reason).
+//
+// Content architecture (why it is ordered this way):
+//   hero      -> the promise + the offline/no-account differentiator, up front
+//   why       -> the three reasons to choose it over a phone language app
+//   skills    -> the four-skills frame (input: listening/reading, output: speaking/writing)
+//   features  -> the six tools, each tagged with the skill(s) it trains
+//   how       -> the first-session story in four steps
+//   download / faq / privacy -> friction questions answered before they block a decision
 
 const LOGO = "/icon-512.png";
 const APP_HREF = "/home";
-// The user manual lives in the fms-app repo under docs/manual; each feature card
-// links to the page that explains it in depth.
+// The user manual lives in the fms-app repo under docs/manual. It is written for
+// people who already run the app, so it is offered in the footer ("Documentation")
+// rather than from the mid-decision feature cards.
 const MANUAL_URL = `${REPO_URL}/blob/main/docs/manual`;
 
-const FEATURES: { titleKey: DictKey; descKey: DictKey; icon: LucideIcon; learn: string }[] = [
-    { titleKey: "features.dictation.title", descKey: "features.dictation.desc", icon: Headphones, learn: "dictation.md" },
-    { titleKey: "features.books.title", descKey: "features.books.desc", icon: BookOpen, learn: "books.md" },
-    { titleKey: "features.readaloud.title", descKey: "features.readaloud.desc", icon: Mic, learn: "read_aloud.md" },
-    { titleKey: "features.cards.title", descKey: "features.cards.desc", icon: Layers, learn: "cards.md" },
-    { titleKey: "features.wiki.title", descKey: "features.wiki.desc", icon: NotebookPen, learn: "wiki.md" },
-    { titleKey: "features.agent.title", descKey: "features.agent.desc", icon: Bot, learn: "agents.md" },
+const FEATURES: { titleKey: DictKey; descKey: DictKey; tagKey: DictKey; icon: LucideIcon }[] = [
+    { titleKey: "features.dictation.title", descKey: "features.dictation.desc", tagKey: "features.dictation.tag", icon: Headphones },
+    { titleKey: "features.books.title", descKey: "features.books.desc", tagKey: "features.books.tag", icon: BookOpen },
+    { titleKey: "features.readaloud.title", descKey: "features.readaloud.desc", tagKey: "features.readaloud.tag", icon: Mic },
+    { titleKey: "features.cards.title", descKey: "features.cards.desc", tagKey: "features.cards.tag", icon: Layers },
+    { titleKey: "features.wiki.title", descKey: "features.wiki.desc", tagKey: "features.wiki.tag", icon: NotebookPen },
+    { titleKey: "features.agent.title", descKey: "features.agent.desc", tagKey: "features.agent.tag", icon: Bot },
+];
+
+const WHY_CARDS: { titleKey: DictKey; descKey: DictKey; icon: LucideIcon }[] = [
+    { titleKey: "why.audio.title", descKey: "why.audio.desc", icon: Upload },
+    { titleKey: "why.private.title", descKey: "why.private.desc", icon: ShieldCheck },
+    { titleKey: "why.loop.title", descKey: "why.loop.desc", icon: Repeat },
+];
+
+const SKILLS: { groupKey: DictKey; titleKey: DictKey; descKey: DictKey; icon: LucideIcon }[] = [
+    { groupKey: "skills.input", titleKey: "skills.listening.title", descKey: "skills.listening.desc", icon: Ear },
+    { groupKey: "skills.input", titleKey: "skills.reading.title", descKey: "skills.reading.desc", icon: BookOpen },
+    { groupKey: "skills.output", titleKey: "skills.speaking.title", descKey: "skills.speaking.desc", icon: Mic },
+    { groupKey: "skills.output", titleKey: "skills.writing.title", descKey: "skills.writing.desc", icon: PenLine },
 ];
 
 const STEPS: { titleKey: DictKey; descKey: DictKey }[] = [
@@ -54,6 +80,13 @@ const STEPS: { titleKey: DictKey; descKey: DictKey }[] = [
     { titleKey: "how.step2.title", descKey: "how.step2.desc" },
     { titleKey: "how.step3.title", descKey: "how.step3.desc" },
     { titleKey: "how.step4.title", descKey: "how.step4.desc" },
+];
+
+const FAQ_ITEMS: { qKey: DictKey; aKey: DictKey }[] = [
+    { qKey: "faq.q1", aKey: "faq.a1" },
+    { qKey: "faq.q2", aKey: "faq.a2" },
+    { qKey: "faq.q3", aKey: "faq.a3" },
+    { qKey: "faq.q4", aKey: "faq.a4" },
 ];
 
 const DOWNLOAD_CARDS: { platform: Platform; labelKey: DictKey; icon: LucideIcon; experimental?: boolean }[] = [
@@ -90,6 +123,7 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                     </a>
 
                     <nav className="hidden items-center gap-6 text-sm text-text-secondary md:flex">
+                        <a href="#why" className="hover:text-text-primary">{t("nav.why")}</a>
                         <a href="#features" className="hover:text-text-primary">{t("nav.features")}</a>
                         <a href="#how" className="hover:text-text-primary">{t("nav.how")}</a>
                         <a href="#download" className="hover:text-text-primary">{t("nav.download")}</a>
@@ -123,30 +157,70 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                             </SignInCta>
                         </div>
                         <p className="mt-6 text-sm text-text-tertiary">{t("hero.note")}</p>
-                        <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-text-tertiary">
-                            <ShieldCheck className="h-4 w-4 text-accent" />
-                            {t("hero.techStrip")}
+                        <p className="mx-auto mt-10 max-w-xl border-t border-border-default pt-6 text-base italic text-text-secondary">
+                            {t("hero.problem")}
                         </p>
                     </div>
                 </section>
 
+                {/* Why */}
+                <section id="why" className="scroll-mt-20 border-t border-border-default bg-bg-card/40 px-6 py-20">
+                    <div className="mx-auto max-w-6xl">
+                        <h2 className="text-3xl font-bold sm:text-4xl">{t("why.heading")}</h2>
+                        <p className="mt-3 max-w-2xl text-text-secondary">{t("why.sub")}</p>
+                        <div className="mt-10 grid gap-6 sm:grid-cols-3">
+                            {WHY_CARDS.map(({ titleKey, descKey, icon: Icon }) => (
+                                <div key={titleKey} className="rounded-xl border border-border-default bg-bg-card p-6">
+                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-bg-muted text-accent">
+                                        <Icon className="h-5 w-5" />
+                                    </span>
+                                    <h3 className="mt-4 font-semibold">{t(titleKey)}</h3>
+                                    <p className="mt-2 text-sm text-text-secondary">{t(descKey)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Skills (input -> output) */}
+                <section id="skills" className="scroll-mt-20 border-t border-border-default px-6 py-20">
+                    <div className="mx-auto max-w-5xl">
+                        <h2 className="text-3xl font-bold sm:text-4xl">{t("skills.heading")}</h2>
+                        <p className="mt-3 max-w-2xl text-text-secondary">{t("skills.sub")}</p>
+                        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                            {SKILLS.map(({ groupKey, titleKey, descKey, icon: Icon }) => (
+                                <div key={titleKey} className="rounded-xl border border-border-default bg-bg-card p-6">
+                                    <div className="flex items-center justify-between">
+                                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-bg-muted text-accent">
+                                            <Icon className="h-5 w-5" />
+                                        </span>
+                                        <span className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{t(groupKey)}</span>
+                                    </div>
+                                    <h3 className="mt-4 font-semibold">{t(titleKey)}</h3>
+                                    <p className="mt-2 text-sm text-text-secondary">{t(descKey)}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="mt-8 max-w-2xl text-sm text-text-tertiary">{t("skills.who")}</p>
+                    </div>
+                </section>
+
                 {/* Features */}
-                <section id="features" className="scroll-mt-20 border-t border-border-default px-6 py-20">
+                <section id="features" className="scroll-mt-20 border-t border-border-default bg-bg-card/40 px-6 py-20">
                     <div className="mx-auto max-w-6xl">
                         <h2 className="text-3xl font-bold sm:text-4xl">{t("features.heading")}</h2>
                         <p className="mt-3 max-w-2xl text-text-secondary">{t("features.sub")}</p>
                         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {FEATURES.map(({ titleKey, descKey, icon: Icon, learn }) => (
+                            {FEATURES.map(({ titleKey, descKey, tagKey, icon: Icon }) => (
                                 <div key={titleKey} className="flex flex-col rounded-xl border border-border-default bg-bg-card p-6">
                                     <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-bg-muted text-accent">
                                         <Icon className="h-5 w-5" />
                                     </span>
                                     <h3 className="mt-4 font-semibold">{t(titleKey)}</h3>
                                     <p className="mt-2 text-sm text-text-secondary">{t(descKey)}</p>
-                                    <a href={`${MANUAL_URL}/${learn}`} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1 self-start text-sm font-medium text-accent hover:underline">
-                                        {t("features.link")}
-                                        <ArrowRight className="h-4 w-4" />
-                                    </a>
+                                    <p className="mt-4 text-xs font-medium uppercase tracking-wide text-text-tertiary">
+                                        {t("features.tag.skills")}: {t(tagKey)}
+                                    </p>
                                 </div>
                             ))}
                         </div>
@@ -154,7 +228,7 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                 </section>
 
                 {/* How it works */}
-                <section id="how" className="scroll-mt-20 border-t border-border-default bg-bg-card/40 px-6 py-20">
+                <section id="how" className="scroll-mt-20 border-t border-border-default px-6 py-20">
                     <div className="mx-auto max-w-5xl">
                         <h2 className="text-3xl font-bold sm:text-4xl">{t("how.heading")}</h2>
                         <p className="mt-3 max-w-2xl text-text-secondary">{t("how.sub")}</p>
@@ -172,6 +246,21 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
 
                 {/* Download */}
                 <DownloadSection t={t} release={release} platform={platform} />
+
+                {/* FAQ */}
+                <section id="faq" className="scroll-mt-20 border-t border-border-default bg-bg-card/40 px-6 py-20">
+                    <div className="mx-auto max-w-3xl">
+                        <h2 className="text-3xl font-bold sm:text-4xl">{t("faq.heading")}</h2>
+                        <div className="mt-8 divide-y divide-border-default">
+                            {FAQ_ITEMS.map(({ qKey, aKey }) => (
+                                <div key={qKey} className="py-5">
+                                    <h3 className="font-semibold">{t(qKey)}</h3>
+                                    <p className="mt-2 text-sm text-text-secondary">{t(aKey)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
 
                 {/* Privacy */}
                 <section id="privacy" className="scroll-mt-20 border-t border-border-default px-6 py-20">
@@ -202,10 +291,14 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                             <Code2 className="h-4 w-4" />
                             {t("footer.github")}
                         </a>
+                        <a href={MANUAL_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-text-primary">
+                            {t("footer.docs")}
+                        </a>
                         <a href="#privacy" className="hover:text-text-primary">{t("footer.privacy")}</a>
                     </div>
-                    <span className="text-center sm:text-right">{t("footer.builtWith")}</span>
+                    <span className="text-center sm:text-right">{t("footer.motto")}</span>
                 </div>
+                <p className="mx-auto mt-6 max-w-6xl text-center text-xs text-text-tertiary sm:text-left">{t("footer.builtWith")}</p>
             </footer>
         </div>
     );
@@ -279,6 +372,11 @@ function DownloadSection({
                             </a>
                         );
                     })}
+                </div>
+
+                <div className="mt-6 space-y-1 text-sm text-text-tertiary">
+                    <p>{t("download.platforms")}</p>
+                    <p>{t("download.firstRun")}</p>
                 </div>
 
                 <a href={release?.html_url ?? RELEASES_URL} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-1.5 text-sm text-accent hover:underline">
