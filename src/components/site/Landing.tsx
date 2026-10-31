@@ -1,9 +1,9 @@
 import {
     Headphones,
+    BookOpen,
     Layers,
     Mic,
-    Cpu,
-    RefreshCw,
+    NotebookPen,
     Bot,
     Code2,
     ArrowRight,
@@ -36,14 +36,17 @@ import SignInCta from "./SignInCta";
 
 const LOGO = "/icon-512.png";
 const APP_HREF = "/home";
+// The user manual lives in the fms-app repo under docs/manual; each feature card
+// links to the page that explains it in depth.
+const MANUAL_URL = `${REPO_URL}/blob/main/docs/manual`;
 
-const FEATURES: { titleKey: DictKey; descKey: DictKey; icon: LucideIcon }[] = [
-    { titleKey: "features.dictation.title", descKey: "features.dictation.desc", icon: Headphones },
-    { titleKey: "features.cards.title", descKey: "features.cards.desc", icon: Layers },
-    { titleKey: "features.readaloud.title", descKey: "features.readaloud.desc", icon: Mic },
-    { titleKey: "features.stt.title", descKey: "features.stt.desc", icon: Cpu },
-    { titleKey: "features.sync.title", descKey: "features.sync.desc", icon: RefreshCw },
-    { titleKey: "features.agent.title", descKey: "features.agent.desc", icon: Bot },
+const FEATURES: { titleKey: DictKey; descKey: DictKey; icon: LucideIcon; learn: string }[] = [
+    { titleKey: "features.dictation.title", descKey: "features.dictation.desc", icon: Headphones, learn: "dictation.md" },
+    { titleKey: "features.books.title", descKey: "features.books.desc", icon: BookOpen, learn: "books.md" },
+    { titleKey: "features.readaloud.title", descKey: "features.readaloud.desc", icon: Mic, learn: "read_aloud.md" },
+    { titleKey: "features.cards.title", descKey: "features.cards.desc", icon: Layers, learn: "cards.md" },
+    { titleKey: "features.wiki.title", descKey: "features.wiki.desc", icon: NotebookPen, learn: "wiki.md" },
+    { titleKey: "features.agent.title", descKey: "features.agent.desc", icon: Bot, learn: "agents.md" },
 ];
 
 const STEPS: { titleKey: DictKey; descKey: DictKey }[] = [
@@ -95,7 +98,7 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
 
                     <div className="flex items-center gap-3">
                         <LanguageToggle locale={locale} />
-                        <SignInCta signedIn={signedIn} appHref={APP_HREF} className="hidden items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover sm:inline-flex">
+                        <SignInCta signedIn={signedIn} appHref={APP_HREF} className="hidden items-center gap-1.5 rounded-lg bg-accent-hover px-3.5 py-2 text-sm font-medium text-bg-body transition-colors hover:bg-accent sm:inline-flex">
                             {ctaLabel}
                             <ArrowRight className="h-4 w-4" />
                         </SignInCta>
@@ -111,7 +114,7 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                         <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">{t("hero.title")}</h1>
                         <p className="mt-6 text-lg text-text-secondary">{t("hero.subtitle")}</p>
                         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                            <a href="#download" className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-3 font-medium text-white transition-colors hover:bg-accent-hover">
+                            <a href="#download" className="inline-flex items-center gap-2 rounded-lg bg-accent-hover px-5 py-3 font-medium text-bg-body transition-colors hover:bg-accent">
                                 {t("hero.ctaDownload")}
                                 <ArrowRight className="h-4 w-4" />
                             </a>
@@ -120,6 +123,10 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                             </SignInCta>
                         </div>
                         <p className="mt-6 text-sm text-text-tertiary">{t("hero.note")}</p>
+                        <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-text-tertiary">
+                            <ShieldCheck className="h-4 w-4 text-accent" />
+                            {t("hero.techStrip")}
+                        </p>
                     </div>
                 </section>
 
@@ -129,13 +136,17 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                         <h2 className="text-3xl font-bold sm:text-4xl">{t("features.heading")}</h2>
                         <p className="mt-3 max-w-2xl text-text-secondary">{t("features.sub")}</p>
                         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {FEATURES.map(({ titleKey, descKey, icon: Icon }) => (
-                                <div key={titleKey} className="rounded-xl border border-border-default bg-bg-card p-6">
-                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent-bg text-accent">
+                            {FEATURES.map(({ titleKey, descKey, icon: Icon, learn }) => (
+                                <div key={titleKey} className="flex flex-col rounded-xl border border-border-default bg-bg-card p-6">
+                                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-bg-muted text-accent">
                                         <Icon className="h-5 w-5" />
                                     </span>
                                     <h3 className="mt-4 font-semibold">{t(titleKey)}</h3>
                                     <p className="mt-2 text-sm text-text-secondary">{t(descKey)}</p>
+                                    <a href={`${MANUAL_URL}/${learn}`} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1 self-start text-sm font-medium text-accent hover:underline">
+                                        {t("features.link")}
+                                        <ArrowRight className="h-4 w-4" />
+                                    </a>
                                 </div>
                             ))}
                         </div>
@@ -150,7 +161,7 @@ export default function Landing({ locale, signedIn, release, platform }: Landing
                         <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                             {STEPS.map(({ titleKey, descKey }, i) => (
                                 <li key={titleKey} className="relative rounded-xl border border-border-default bg-bg-card p-6">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-white">{i + 1}</span>
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-bg-body">{i + 1}</span>
                                     <h3 className="mt-4 font-semibold">{t(titleKey)}</h3>
                                     <p className="mt-2 text-sm text-text-secondary">{t(descKey)}</p>
                                 </li>
@@ -241,7 +252,7 @@ function DownloadSection({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-disabled={disabled || undefined}
-                                className={`group flex flex-col rounded-xl border p-5 transition-colors ${isDetected ? "border-accent bg-accent-bg" : "border-border-default bg-bg-card hover:border-accent"} ${disabled ? "opacity-50" : ""}`}
+                                className={`group flex flex-col rounded-xl border p-5 transition-colors ${isDetected ? "border-accent bg-bg-card ring-1 ring-accent" : "border-border-default bg-bg-card hover:border-accent"} ${disabled ? "opacity-50" : ""}`}
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="flex items-center gap-2 font-semibold text-text-primary">
